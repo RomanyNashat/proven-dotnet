@@ -1,0 +1,14 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+.DS_Store
+__pycache__/
+*.pyc
+nupkg/
+TestResults/
+# Claude Code working files
+.claude/journal.md
+.claude/.journal-raw.md
+.claude/settings.local.json
