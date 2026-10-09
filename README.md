@@ -12,6 +12,18 @@ dependencies, and the tests have caught real mistakes in the advice itself.
 **v0.1.0, being built.** The pieces are moving in from a harness that has been in daily use since
 March 2026. Until v1.0.0 there is nothing to install yet.
 
+## How it installs
+
+Into your `~/.claude`, next to what you already have, and it never touches your own files:
+
+- Its always-on rules go in `~/.claude/rules/proven/`. Your `CLAUDE.md` is left alone.
+- An update removes only files it installed before and no longer ships. A skill or setting of yours
+  with the same name is kept, and you get a warning.
+- `settings.json` is merged key by key. A value you've set, or changed later, stays yours.
+- `uninstall` takes out exactly what it put in.
+
+The installer is `tools/layer.py`, and its tests run on Linux and Windows on every change.
+
 ## License
 
 [MIT](LICENSE)

@@ -1,0 +1,4 @@
+{
+  "env": {"PROVEN_FIXTURE": "1"},
+  "hooks": {"Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "python {HOOKS}/hello.py"}]}]}
+}
