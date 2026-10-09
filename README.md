@@ -10,8 +10,8 @@ dependencies, and the tests have caught real mistakes in the advice itself.
 ## Status
 
 **Being built.** The pieces are moving in from a harness that has been in daily use since March 2026:
-the installer, the rules, the tested skills, the hooks and the Roslyn server are here; agents and commands come next. Until
-v1.0.0 there is nothing to install yet. See [CHANGELOG.md](CHANGELOG.md).
+the installer, the rules, the skills, the hooks, the Roslyn server, the agents and the commands are here;
+handover, stories, lessons, scaffolding and service docs come next. Until v1.0.0 there is nothing to install yet. See [CHANGELOG.md](CHANGELOG.md).
 
 ## How it installs
 

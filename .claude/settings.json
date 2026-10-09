@@ -114,5 +114,8 @@
       "Bash(> /dev/sd*)",
       "Bash(chmod 777*)"
     ]
+  },
+  "worktree": {
+    "baseRef": "head"
   }
 }
