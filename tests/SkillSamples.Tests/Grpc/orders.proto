@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package orders.v1;
+
+option csharp_namespace = "SkillSamples.GrpcSamples.V1";
+
+import "google/protobuf/timestamp.proto";
+
+service Orders {
+  rpc GetOrder (GetOrderRequest) returns (OrderReply);
+  rpc CreateOrder (CreateOrderRequest) returns (OrderReply);
+  rpc WatchOrder (WatchOrderRequest) returns (stream OrderStatusChanged);
+}
+
+// Keys are int (column rules): int32, not a string to parse.
+message GetOrderRequest {
+  int32 order_id = 1;
+}
+
+message CreateOrderRequest {
+  int32 customer_id = 1;
+  repeated OrderLine lines = 2;
+  optional string notes = 3;
+}
+
+message OrderLine {
+  int32 product_id = 1;
+  int32 quantity = 2;
+}
+
+message OrderReply {
+  int32 id = 1;
+  OrderStatus status = 2;
+  Money total = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+// Zero is "not set": a client built before a new value sees 0, not a wrong status.
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING = 1;
+  ORDER_STATUS_PAID = 2;
+  ORDER_STATUS_CANCELLED = 3;
+}
+
+// Protobuf has no decimal. Same shape as google.type.Money: nanos has the sign of units.
+message Money {
+  int64 units = 1;
+  int32 nanos = 2;
+  string currency = 3;
+}
+
+message WatchOrderRequest {
+  int32 order_id = 1;
+}
+
+message OrderStatusChanged {
+  int32 order_id = 1;
+  OrderStatus status = 2;
+  google.protobuf.Timestamp changed_at = 3;
+}

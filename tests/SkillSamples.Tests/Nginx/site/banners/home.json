@@ -1,0 +1,45 @@
+{
+  "version": 7,
+  "items": [
+    {
+      "id": 1,
+      "titleEn": "Book your annual check-up 1",
+      "titleAr": "احجز فحصك السنوي في أقرب مركز صحي",
+      "imageKey": "banners/checkup-1.webp",
+      "startsAt": "2026-10-01T00:00:00Z",
+      "endsAt": "2026-10-31T23:59:59Z"
+    },
+    {
+      "id": 2,
+      "titleEn": "Book your annual check-up 2",
+      "titleAr": "احجز فحصك السنوي في أقرب مركز صحي",
+      "imageKey": "banners/checkup-2.webp",
+      "startsAt": "2026-10-01T00:00:00Z",
+      "endsAt": "2026-10-31T23:59:59Z"
+    },
+    {
+      "id": 3,
+      "titleEn": "Book your annual check-up 3",
+      "titleAr": "احجز فحصك السنوي في أقرب مركز صحي",
+      "imageKey": "banners/checkup-3.webp",
+      "startsAt": "2026-10-01T00:00:00Z",
+      "endsAt": "2026-10-31T23:59:59Z"
+    },
+    {
+      "id": 4,
+      "titleEn": "Book your annual check-up 4",
+      "titleAr": "احجز فحصك السنوي في أقرب مركز صحي",
+      "imageKey": "banners/checkup-4.webp",
+      "startsAt": "2026-10-01T00:00:00Z",
+      "endsAt": "2026-10-31T23:59:59Z"
+    },
+    {
+      "id": 5,
+      "titleEn": "Book your annual check-up 5",
+      "titleAr": "احجز فحصك السنوي في أقرب مركز صحي",
+      "imageKey": "banners/checkup-5.webp",
+      "startsAt": "2026-10-01T00:00:00Z",
+      "endsAt": "2026-10-31T23:59:59Z"
+    }
+  ]
+}

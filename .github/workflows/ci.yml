@@ -44,6 +44,8 @@ jobs:
           python-version: '3.12'
       - name: Content checks
         run: python tools/check-content.py
+      - name: Skill samples match their tested files
+        run: python tools/ci/check-skill-samples.py
       - name: The layer installs and uninstalls cleanly
         run: |
           sb="$(mktemp -d)/.claude"
