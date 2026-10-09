@@ -3,6 +3,17 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.3 — the hooks
+- Python hooks, installed in `~/.claude/hooks/proven/` and wired into `settings.json` by the installer:
+  session start and checkpoint, the work journal (raw capture with personal data and secrets masked),
+  formatting after edits, pre-compact state, the end-of-turn hook, the subagent log, and a guard that
+  stops a Roslyn rename from editing the main checkout while working in a worktree.
+- The installer starts hooks with the right Python for the machine (`python3` on macOS and Linux,
+  `python` or the `py` launcher on Windows), so they don't fail where `python` doesn't exist.
+- Settings this layer adds: its hook profile, the task list switch, and a deny list for destructive
+  shell commands. Nothing else of yours is changed.
+- Checked with a real Claude Code session: the hooks fire from the installed paths.
+
 ## 0.1.2 — the tested skills
 - 23 skills whose code runs in CI against real dependencies: API design, auth, CQRS, Dapper, DDD,
   EF Core, encryption, gRPC, Kafka, localization, MongoDB, nginx, outbox, OWASP, PII masking, Polly,

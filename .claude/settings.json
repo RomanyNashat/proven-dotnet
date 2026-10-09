@@ -1,0 +1,116 @@
+{
+  "env": {
+    "PROVEN_HOOK_PROFILE": "standard",
+    "PROVEN_COMPRESS_OUTPUT": "0",
+    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{PYTHON} {HOOKS}/session-start.py",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{PYTHON} {HOOKS}/post-compact.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{PYTHON} {HOOKS}/post-edit-format.py",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{PYTHON} {HOOKS}/pre-compact.py",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{PYTHON} {HOOKS}/stop.py",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{PYTHON} {HOOKS}/journal.py prompt",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__proven-roslyn__rename_symbol",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{PYTHON} {HOOKS}/worktree-guard.py"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{PYTHON} {HOOKS}/subagent-log.py",
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)",
+      "Bash(curl * | sh)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | sh)",
+      "Bash(curl * | sudo)",
+      "Bash(wget * | sudo)",
+      "Bash(mkfs*)",
+      "Bash(dd if=*)",
+      "Bash(> /dev/sd*)",
+      "Bash(chmod 777*)"
+    ]
+  }
+}

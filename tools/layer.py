@@ -26,7 +26,7 @@ What the layer owns is recorded in .layers/registry.json. Install is also update
     only while it still holds the value the layer wrote. Hook entries are this layer's when their command
     runs a script from hooks/<id>/.
 Placeholders in settings.json: {HOOKS} -> ~/.claude/hooks/<id>, {FILES} -> the absolute path of <id>/
-(forward slashes, which Windows accepts).
+(forward slashes, which Windows accepts), {PYTHON} -> how this machine starts Python 3.
 """
 from __future__ import annotations
 
@@ -162,10 +162,22 @@ def prune_empty_dirs(claude: Path, directory: Path) -> None:
 # settings.json
 
 
+def python_command() -> str:
+    """How hooks start Python on this machine: python3 on macOS and Linux (where "python" often doesn't
+    exist), python or the py launcher on Windows (never the Microsoft Store placeholder)."""
+    if os.name == "nt":
+        found = shutil.which("python")
+        if found and "WindowsApps" not in found:
+            return "python"
+        return "py -3" if shutil.which("py") else "python"
+    return "python3" if shutil.which("python3") else "python"
+
+
 def fill_placeholders(value, layer_id: str, claude: Path):
     if isinstance(value, str):
         files = (claude / layer_id).resolve().as_posix()
-        return value.replace("{HOOKS}", f"~/.claude/hooks/{layer_id}").replace("{FILES}", files)
+        return (value.replace("{HOOKS}", f"~/.claude/hooks/{layer_id}").replace("{FILES}", files)
+                .replace("{PYTHON}", python_command()))
     if isinstance(value, list):
         return [fill_placeholders(v, layer_id, claude) for v in value]
     if isinstance(value, dict):
