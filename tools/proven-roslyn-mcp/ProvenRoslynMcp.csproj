@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    proven-dotnet Roslyn MCP Server
+    A small Model Context Protocol server that gives Claude Code semantic, token-cheap
+    navigation of a .NET solution via Roslyn — instead of reading whole files.
+
+    Build/install as a global tool (see README.md).
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- net10.0 — the current LTS (shipped Nov 2025, supported to Nov 2028) and the runtime
+         you're already on. If you ever need to run on an older runtime, you can lower this to
+         net8.0, but net10.0 is the right default here. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RollForward>LatestMajor</RollForward>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Packaging as a global tool -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>proven-roslyn-mcp</ToolCommandName>
+    <PackageId>Proven.Roslyn.Mcp</PackageId>
+    <!-- Stamped from VERSION so each release is a distinct tool version. -->
+    <Version>0.1.4</Version>
+    <Description>proven-dotnet Roslyn MCP server — semantic .NET navigation for Claude Code.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Versions below are known-good starting points. If `dotnet restore` reports a newer
+      preview of the MCP SDK or a different Roslyn version, update these to the versions your
+      feed offers (e.g. `dotnet add package ModelContextProtocol`). This is expected for the
+      one compiled component — see README "Build" section.
+    -->
+    <PackageReference Include="ModelContextProtocol" Version="0.3.0-preview.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Build.Locator" Version="1.7.8" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" />
+    <!-- 5.0.0: first line that reads .slnx (depends on Microsoft.VisualStudio.SolutionPersistence).
+         4.14 failed on .slnx with "No file format header found". Both packages must stay on the same version. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.0.0" />
+
+  <!--
+    NU1903 on Microsoft.Build.* / System.Security.Cryptography.Xml — ACCEPTED, not ignored.
+
+    zero-vulns says a vulnerable package (direct or transitive) is a hard fail. This is a
+    recorded exception, with reasons:
+
+    1. NOT SUSCEPTIBLE. CVE-2025-26646 states plainly: "Projects which do not utilize the
+       DownloadFile build task are not susceptible." This server never invokes DownloadFile —
+       it uses MSBuildWorkspace to read solutions. The advisory is really about the SDK.
+    2. THE ASSEMBLIES ARE NOT LOADED. Microsoft.Build.Locator registers the SDK's own MSBuild
+       at runtime; the packaged MSBuild assemblies are deliberately excluded from output.
+    3. CHASING VERSIONS DOES NOT WORK. The same advisories are reported against 17.11.4,
+       17.12.6, 17.14.8 and 18.x. Pinning 17.11.4 (tried earlier) still warned, ADDED two
+       advisories, and broke the build by violating MSBuildLocator's ExcludeAssets rule.
+    4. SCOPE. This is a local developer tool that reads .sln files on the developer's own
+       machine. It is not deployed, exposed, or handed untrusted input.
+
+    If a Microsoft.Build.* PackageReference is ever added here it MUST carry
+    ExcludeAssets="runtime", or MSBuildLocator fails the build.
+    Revisit when Microsoft.CodeAnalysis.Workspaces.MSBuild ships against a clean MSBuild line.
+  -->
+
+  </ItemGroup>
+
+</Project>

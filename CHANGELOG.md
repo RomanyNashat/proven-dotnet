@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.4 — the Roslyn server
+- `proven-roslyn-mcp`, an MCP server that answers symbol questions (who calls this, where is it
+  defined, what implements it, is it dead) from Roslyn instead of text search, plus a safe rename.
+  Install it with `install-roslyn.sh` / `install-roslyn.ps1`; it registers as `proven-roslyn`.
+- Built and packed on Linux and Windows in CI, with regression tests for the load failures seen in real
+  use (a warm-up that waited on itself, `.slnx` files, several solutions under one folder).
+- The layer's settings raise the MCP connect timeout so a large solution can finish loading.
+
 ## 0.1.3 — the hooks
 - Python hooks, installed in `~/.claude/hooks/proven/` and wired into `settings.json` by the installer:
   session start and checkpoint, the work journal (raw capture with personal data and secrets masked),
