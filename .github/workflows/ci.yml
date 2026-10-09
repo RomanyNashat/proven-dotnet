@@ -72,6 +72,8 @@ jobs:
         run: bash tools/ci/test-subagent-log.sh
       - name: Worktree guard
         run: bash tools/ci/test-worktree-guard.sh
+      - name: Handover helper scripts
+        run: bash tools/ci/test-handover-scripts.sh
       - name: Every hook command in settings points at a script the layer installs
         run: |
           python - <<'PY'

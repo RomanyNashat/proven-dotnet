@@ -3,6 +3,20 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.6 — handover, stories, lessons, scaffolding and service docs
+- `/handover`: a vacation handover across all your repos. One read-only analyst per repo reads the
+  journal, surviving sessions, checkpoints, ADRs and git in parallel; every item says where it came
+  from, and anything git alone shows becomes a question for you. Writes Markdown, Teams and Notion.
+  A team layer can add a `handover-<team>` skill with its own pre-fills.
+- `/stories`: epics, stories and sub-tasks from requirements or from existing code, with a reviewer
+  that grades the draft and fixes it before you see it. Exports Markdown and a Jira CSV.
+- `/lessons` and `/improve`: capture what a session taught, fold it in one approved change at a time,
+  and audit the harness against its own rules.
+- `/scaffold` (including from existing SQL) and `/document` (a service page grounded in the code, with
+  its own review gate).
+- Settings keep session history for 120 days, so `/handover` can still read it after a long stretch.
+- CI checks that reviewers and analysts stay read-only, and tests the handover helper scripts.
+
 ## 0.1.5 — agents and commands
 - 15 agents: planner, architect, tdd-guide, the three read-only reviewers (code, security, DBA),
   e2e-runner, build-error-resolver, refactor-cleaner, doc-updater, devops-engineer, coverage-analyst,
