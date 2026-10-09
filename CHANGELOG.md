@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.5 — agents and commands
+- 15 agents: planner, architect, tdd-guide, the three read-only reviewers (code, security, DBA),
+  e2e-runner, build-error-resolver, refactor-cleaner, doc-updater, devops-engineer, coverage-analyst,
+  health-analyst, pattern-analyst and the opt-in compliance-auditor. All run on Opus.
+- 20 commands, among them `/plan-feature`, `/tdd`, `/full-review`, `/quality-gate`, `/coverage`,
+  `/health-check`, `/checkpoint`, `/sleep`, `/wake-up` and `/version` (which now reads the installer's
+  registry, so it shows every layer installed).
+- 21 more skills behind them: the plain-writing layer, the parity gate for refactors, coverage and
+  health grading, TDD, zero known vulnerabilities, caching, scheduling (Quartz, Hangfire, CronJobs),
+  Docker, Kubernetes, Aspire, Azure, k6, OpenIddict and others.
+- The settings start worktrees from the current commit (`worktree.baseRef: head`), which the parity
+  gate relies on.
+
 ## 0.1.4 — the Roslyn server
 - `proven-roslyn-mcp`, an MCP server that answers symbol questions (who calls this, where is it
   defined, what implements it, is it dead) from Roslyn instead of text search, plus a safe rename.
