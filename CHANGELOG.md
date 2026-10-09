@@ -10,6 +10,10 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
 - `tests/SkillSamples.Tests`: the code the skills show, run against PostgreSQL 17, SQL Server 2022,
   MongoDB 7 (replica set), Redis 7, Kafka 3.9 and nginx, in two parallel CI jobs. A skill marks each
   tested block with `<!-- sample: path -->`, and CI fails if the block and the file drift apart.
+- Fixed a flaky test setup found on the first public run: test classes run in parallel (the runner
+  config that said otherwise was never copied to the output), and the MongoDB fixture dropped every
+  test database when its class finished, including another class's database mid-test. Each fixture now
+  drops only its own; the misleading config is gone.
 
 ## 0.1.1 — the rules
 - The always-on instructions (`core.md`) and the ten rule files: architecture, ASP.NET Core, C#,

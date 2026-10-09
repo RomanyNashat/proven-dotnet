@@ -18,15 +18,24 @@ public sealed class MongoFixture : IAsyncLifetime
 
     public IMongoClient Client { get; } = new MongoClient(Url);
 
-    public IMongoDatabase NewDatabase() => Client.GetDatabase($"samples_{Guid.NewGuid():N}");
+    // Test classes run in parallel, so each fixture drops only the databases it created. Dropping every
+    // "samples_" database here once dropped another class's database in the middle of its test.
+    private readonly System.Collections.Concurrent.ConcurrentBag<string> _created = [];
+
+    public IMongoDatabase NewDatabase()
+    {
+        var name = $"samples_{Guid.NewGuid():N}";
+        _created.Add(name);
+        return Client.GetDatabase(name);
+    }
 
     public Task InitializeAsync() => Task.CompletedTask;
 
     public async Task DisposeAsync()
     {
-        foreach (var name in await (await Client.ListDatabaseNamesAsync()).ToListAsync())
+        foreach (var name in _created)
         {
-            if (name.StartsWith("samples_", StringComparison.Ordinal)) await Client.DropDatabaseAsync(name);
+            await Client.DropDatabaseAsync(name);
         }
     }
 
