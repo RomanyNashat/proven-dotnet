@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.7 — production diagnostics
+- `production-diagnostics`: turn "slow, leaking, restarting, starving" into evidence from logs and APM,
+  with a symptom playbook, the container GC facts behind restarts, and safe requests to whoever runs the
+  cluster (no memory dumps by default). Its runtime heartbeat, one log line a minute with the runtime's
+  own counters, is tested in CI.
+- Every skill and command the content mentions now exists, and the content check fails if one goes
+  missing.
+
 ## 0.1.6 — handover, stories, lessons, scaffolding and service docs
 - `/handover`: a vacation handover across all your repos. One read-only analyst per repo reads the
   journal, surviving sessions, checkpoints, ADRs and git in parallel; every item says where it came

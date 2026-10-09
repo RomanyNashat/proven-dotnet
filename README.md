@@ -11,7 +11,7 @@ dependencies, and the tests have caught real mistakes in the advice itself.
 
 **Being built.** The pieces are moving in from a harness that has been in daily use since March 2026:
 the installer, the rules, the skills, the hooks, the Roslyn server, the agents and the commands are all
-here. Left before v1.0.0: a production-diagnostics skill and a full run-through on real projects. Until v1.0.0 there is nothing to install yet. See [CHANGELOG.md](CHANGELOG.md).
+here. Left before v1.0.0: a full run-through on real projects. Until v1.0.0 there is nothing to install yet. See [CHANGELOG.md](CHANGELOG.md).
 
 ## How it installs
 

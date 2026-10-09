@@ -7,8 +7,7 @@ Fails on:
   - a read-only agent (reviewers, analysts) that has a tool able to change files;
   - session history kept for less than 120 days (/handover reads it), or a handover helper script that
     could change a repo.
-Reports, without failing until v1.0.0, every skill or command the content mentions that doesn't exist
-yet: the content is still moving in, and this is the list of what's left to bring.
+Also fails on any skill or command the content mentions that doesn't exist.
 """
 import pathlib
 import re
@@ -58,6 +57,7 @@ for script in sorted(scripts.glob("*.py")) if scripts.is_dir() else []:
 
 skills = {p.name for p in (claude / "skills").iterdir()} if (claude / "skills").is_dir() else set()
 commands = {p.stem for p in (claude / "commands").glob("*.md")} if (claude / "commands").is_dir() else set()
+commands |= {"compact", "introspect", "metrics"}   # Claude Code built-ins and URL paths, not our commands
 for md in sorted(claude.rglob("*.md")):
     text = md.read_text(encoding="utf-8")
     rel = md.relative_to(root).as_posix()
@@ -73,7 +73,7 @@ if csproj.exists():
     stamped = re.search(r"<Version>([^<]+)</Version>", csproj.read_text(encoding="utf-8"))
     if not stamped or stamped.group(1) != version:
         problems.append(f"ProvenRoslynMcp.csproj <Version> is {stamped.group(1) if stamped else 'missing'}, VERSION is {version}")
-strict = int(version.split(".")[0]) >= 1
+strict = True   # every reference resolves since 0.1.7; keep it that way
 for what, where in sorted(missing.items()):
     msg = f"{what} is mentioned but not here yet ({', '.join(sorted(where))})"
     print(f"::{'error' if strict else 'notice'} title=Missing reference::{msg}")
