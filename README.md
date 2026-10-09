@@ -25,6 +25,10 @@ Into your `~/.claude`, next to what you already have, and it never touches your 
 
 The installer is `tools/layer.py`, and its tests run on Linux and Windows on every change.
 
+Skills for technologies only some services use (Cassandra, FHIR, BigQuery, Firebase, SignalR, NATS,
+RabbitMQ, CAP, GitHub Actions) aren't installed. They're in [`project-skills/`](project-skills/), to copy
+into the repos that need them.
+
 ## License
 
 [MIT](LICENSE)
