@@ -46,7 +46,7 @@ CORE_FILES = {
 }
 CORE_SETTINGS = {
     "env": {"PROVEN_HOOK_PROFILE": "standard"},
-    "hooks": {"Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "python {HOOKS}/stop.py"}]}]},
+    "hooks": {"Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "{PYTHON} {HOOKS}/stop.py"}]}]},
     "permissions": {"ask": ["Bash(git push:*)"], "deny": ["Read(./.env)"]},
     "statusLine": {"type": "command", "command": "powershell -File {FILES}/statusline.ps1"},
     "attribution": {"commit": ""},
@@ -100,7 +100,8 @@ class LayerTests(unittest.TestCase):
         self.assertTrue((self.claude / "proven/statusline.ps1").is_file())
         s = self.settings()
         self.assertEqual("standard", s["env"]["PROVEN_HOOK_PROFILE"])
-        self.assertIn("python ~/.claude/hooks/proven/stop.py", json.dumps(s["hooks"]))
+        self.assertIn(f"{layer.python_command()} ~/.claude/hooks/proven/stop.py", json.dumps(s["hooks"]))
+        self.assertNotIn("{PYTHON}", json.dumps(s))
         self.assertIn((self.claude / "proven").resolve().as_posix(), s["statusLine"]["command"])
         self.assertEqual({"commit": ""}, s["attribution"])
         self.assertIn("Bash(git push:*)", s["permissions"]["ask"])

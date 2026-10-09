@@ -54,3 +54,36 @@ jobs:
           python tools/layer.py uninstall proven --claude-dir "$sb"
           left="$(find "$sb" -type f -not -path '*/.layers/*' | wc -l)"
           [ "$left" -le 1 ] || { find "$sb" -type f; exit 1; }   # at most the settings.json it created
+
+  hooks:
+    name: Hooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Every hook compiles
+        run: python -m py_compile .claude/hooks/*.py .claude/hooks/lib/*.py
+      - name: Journal keeps no personal data or secrets
+        run: bash tools/ci/test-journal.sh
+      - name: Subagent log
+        run: bash tools/ci/test-subagent-log.sh
+      - name: Worktree guard
+        run: bash tools/ci/test-worktree-guard.sh
+      - name: Every hook command in settings points at a script the layer installs
+        run: |
+          python - <<'PY'
+          import json, re, sys
+          s = json.load(open(".claude/settings.json"))
+          missing = []
+          for event, groups in s["hooks"].items():
+              for g in groups:
+                  for h in g["hooks"]:
+                      m = re.search(r"\{HOOKS\}/(\S+\.py)", h["command"])
+                      if not m or not __import__("os").path.isfile(".claude/hooks/" + m.group(1)):
+                          missing.append(f"{event}: {h['command']}")
+          print("\n".join(missing) or "all hook commands resolve")
+          sys.exit(1 if missing else 0)
+          PY
