@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Checks the installable content in .claude/ before it ships.
+
+Fails on:
+  - core.md over 200 lines (it loads in every session; adherence drops as it grows);
+  - a .ps1 file that isn't pure ASCII (Windows PowerShell 5.1 reads a BOM-less file as Windows-1252).
+Reports, without failing until v1.0.0, every skill or command the content mentions that doesn't exist
+yet: the content is still moving in, and this is the list of what's left to bring.
+"""
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(__file__).resolve().parents[1]
+claude = root / ".claude"
+problems, missing = [], {}
+
+core = claude / "core.md"
+if core.exists() and len(core.read_text(encoding="utf-8").splitlines()) > 200:
+    problems.append(f"core.md has {len(core.read_text(encoding='utf-8').splitlines())} lines; keep it under 200")
+
+for ps1 in root.rglob("*.ps1"):
+    if ".git" in ps1.parts:
+        continue
+    try:
+        ps1.read_bytes().decode("ascii")
+    except UnicodeDecodeError:
+        problems.append(f"{ps1.relative_to(root)} isn't pure ASCII")
+
+skills = {p.name for p in (claude / "skills").iterdir()} if (claude / "skills").is_dir() else set()
+commands = {p.stem for p in (claude / "commands").glob("*.md")} if (claude / "commands").is_dir() else set()
+for md in sorted(claude.rglob("*.md")):
+    text = md.read_text(encoding="utf-8")
+    rel = md.relative_to(root).as_posix()
+    names = set(re.findall(r"skills/([a-z0-9-]+)/", text)) | set(re.findall(r"`([a-z0-9-]+)` skill", text))
+    for name in names - skills:
+        missing.setdefault(f"skill {name}", set()).add(rel)
+    for name in set(re.findall(r"`/([a-z][a-z0-9-]+)`", text)) - commands:
+        missing.setdefault(f"command /{name}", set()).add(rel)
+
+version = (root / "VERSION").read_text(encoding="utf-8").strip()
+strict = int(version.split(".")[0]) >= 1
+for what, where in sorted(missing.items()):
+    msg = f"{what} is mentioned but not here yet ({', '.join(sorted(where))})"
+    print(f"::{'error' if strict else 'notice'} title=Missing reference::{msg}")
+    if strict:
+        problems.append(msg)
+
+for p in problems:
+    print(f"::error title=Content check::{p}")
+print(f"content check: {len(problems)} problem(s), {len(missing)} reference(s) still to bring in")
+sys.exit(1 if problems else 0)

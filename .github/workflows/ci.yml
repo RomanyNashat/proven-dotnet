@@ -32,3 +32,23 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tests/installer/e2e.ps1
+
+  content:
+    name: Content
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Content checks
+        run: python tools/check-content.py
+      - name: The layer installs and uninstalls cleanly
+        run: |
+          sb="$(mktemp -d)/.claude"
+          python tools/layer.py install .claude --claude-dir "$sb"
+          test -f "$sb/rules/proven/core.md"
+          python tools/layer.py uninstall proven --claude-dir "$sb"
+          left="$(find "$sb" -type f -not -path '*/.layers/*' | wc -l)"
+          [ "$left" -le 1 ] || { find "$sb" -type f; exit 1; }   # at most the settings.json it created
