@@ -2,7 +2,9 @@
   "env": {
     "PROVEN_HOOK_PROFILE": "standard",
     "PROVEN_COMPRESS_OUTPUT": "0",
-    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
+    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1",
+    "MCP_TIMEOUT": "120000",
+    "CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT": "600000"
   },
   "hooks": {
     "SessionStart": [

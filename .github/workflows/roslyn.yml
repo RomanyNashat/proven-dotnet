@@ -1,0 +1,47 @@
+# The Roslyn MCP server: a real NuGet build + pack on Linux and Windows, and the regression tests.
+# Runs only when the server or its tests change.
+name: roslyn
+
+on:
+  pull_request:
+    paths: ['tools/proven-roslyn-mcp/**', 'tests/ProvenRoslynMcp.Tests/**', '.github/workflows/roslyn.yml']
+  push:
+    branches: [main]
+    paths: ['tools/proven-roslyn-mcp/**', 'tests/ProvenRoslynMcp.Tests/**', '.github/workflows/roslyn.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build + pack (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build tools/proven-roslyn-mcp/ProvenRoslynMcp.csproj -c Release
+      # Same packaging step install-roslyn runs, so a broken tool package fails here, not on the laptop.
+      - run: dotnet pack tools/proven-roslyn-mcp/ProvenRoslynMcp.csproj -c Release -o nupkg
+
+  tests:
+    name: Regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: bash tools/ci/annotate.sh dotnet test tests/ProvenRoslynMcp.Tests -c Release --logger "console;verbosity=normal" --blame-hang-timeout 4m --blame-hang-dump-type none
+        env:
+          ANNOTATE_TIMEOUT: '600'
+          MSBUILDDISABLENODEREUSE: '1'
+          DOTNET_CLI_USE_MSBUILD_SERVER: '0'

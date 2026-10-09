@@ -39,6 +39,11 @@ for md in sorted(claude.rglob("*.md")):
         missing.setdefault(f"command /{name}", set()).add(rel)
 
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
+csproj = root / "tools" / "proven-roslyn-mcp" / "ProvenRoslynMcp.csproj"
+if csproj.exists():
+    stamped = re.search(r"<Version>([^<]+)</Version>", csproj.read_text(encoding="utf-8"))
+    if not stamped or stamped.group(1) != version:
+        problems.append(f"ProvenRoslynMcp.csproj <Version> is {stamped.group(1) if stamped else 'missing'}, VERSION is {version}")
 strict = int(version.split(".")[0]) >= 1
 for what, where in sorted(missing.items()):
     msg = f"{what} is mentioned but not here yet ({', '.join(sorted(where))})"

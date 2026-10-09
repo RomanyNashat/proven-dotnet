@@ -1,0 +1,15 @@
+{
+  "//": "proven-dotnet Roslyn MCP server registration for Claude Code.",
+  "//build": "After installing the tool (see README.md), Claude Code launches it over stdio.",
+  "//scope": "Place this in your PROJECT root as .mcp.json, or merge the 'mcpServers' block into your existing config.",
+  "//solution": "Set PROVEN_SOLUTION_PATH to your .sln, or omit it to auto-detect a single .sln in the project.",
+  "mcpServers": {
+    "proven-roslyn": {
+      "command": "proven-roslyn-mcp",
+      "args": [],
+      "env": {
+        "PROVEN_SOLUTION_PATH": ""
+      }
+    }
+  }
+}
