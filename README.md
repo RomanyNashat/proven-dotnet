@@ -9,8 +9,9 @@ dependencies, and the tests have caught real mistakes in the advice itself.
 
 ## Status
 
-**v0.1.0, being built.** The pieces are moving in from a harness that has been in daily use since
-March 2026. Until v1.0.0 there is nothing to install yet.
+**Being built.** The pieces are moving in from a harness that has been in daily use since March 2026:
+the installer and the rules are here; the tested skills, agents, commands and hooks come next. Until
+v1.0.0 there is nothing to install yet. See [CHANGELOG.md](CHANGELOG.md).
 
 ## How it installs
 
