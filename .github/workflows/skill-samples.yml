@@ -1,0 +1,87 @@
+# Builds and runs the code samples that the skills show, against real dependencies, so a sample can't
+# drift into code that doesn't compile or doesn't behave as the skill says.
+name: skill-samples
+
+on:
+  pull_request:
+    paths: ['.claude/skills/**', 'tests/SkillSamples.Tests/**', 'tests/SkillSamples.OrdersApi/**', 'tools/ci/service.sh', '.github/workflows/skill-samples.yml']
+  push:
+    branches: [main]
+    paths: ['.claude/skills/**', 'tests/SkillSamples.Tests/**', 'tests/SkillSamples.OrdersApi/**', 'tools/ci/service.sh', '.github/workflows/skill-samples.yml']
+
+jobs:
+  samples:
+    # Two jobs in parallel: the database samples, and everything else. Each starts only the services its
+    # tests use. The SQL list below decides the split by namespace; a new namespace runs in "other" by
+    # default, so a test that needs a database and isn't listed fails loudly there.
+    name: Skill samples (${{ matrix.title }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: sql
+            title: PostgreSQL, SQL Server
+            services: pg mssql
+          - group: other
+            title: MongoDB, Redis, Kafka, nginx, in-process
+            services: mongo redis kafka nginx
+    env:
+      SERVICES: ${{ matrix.services }}
+      SQL_NAMESPACES: Auth DapperReads Ddd EfCore EfOutbox Integration Localization MsSql Postgres Secrets Workers
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      # The packages restore from the runner's cache when the project files haven't changed.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('tests/SkillSamples.Tests/*.csproj', 'tests/SkillSamples.OrdersApi/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+      # One step per stage, so the run shows where the time went. The downloads start first and run in the
+      # background while the samples build; each service then has its own step that waits for it, with a
+      # timeout, and a notice on the run with its timing. tools/ci/service.sh holds the docker commands.
+      - name: Start downloading this job's services
+        run: for s in $SERVICES; do bash tools/ci/service.sh start "$s"; done
+      - name: Build the samples
+        run: bash tools/ci/annotate.sh dotnet build tests/SkillSamples.Tests -c Release
+      - name: PostgreSQL 17
+        if: contains(matrix.services, 'pg')
+        timeout-minutes: 8
+        run: bash tools/ci/service.sh wait pg
+      - name: SQL Server 2022
+        if: contains(matrix.services, 'mssql')
+        timeout-minutes: 8
+        run: bash tools/ci/service.sh wait mssql
+      - name: MongoDB 7 (replica set)
+        if: contains(matrix.services, 'mongo')
+        timeout-minutes: 8
+        run: bash tools/ci/service.sh wait mongo
+      - name: Redis 7
+        if: contains(matrix.services, 'redis')
+        timeout-minutes: 8
+        run: bash tools/ci/service.sh wait redis
+      - name: Kafka 3.9
+        if: contains(matrix.services, 'kafka')
+        timeout-minutes: 8
+        run: bash tools/ci/service.sh wait kafka
+      - name: nginx 1.27 with the skill's configs
+        if: contains(matrix.services, 'nginx')
+        timeout-minutes: 8
+        run: bash tools/ci/service.sh wait nginx
+      - name: Run this job's samples
+        run: |
+          if [ "${{ matrix.group }}" = sql ]; then op='~'; join='|'; else op='!~'; join='&'; fi
+          filter=""
+          for ns in $SQL_NAMESPACES; do filter="${filter:+$filter$join}FullyQualifiedName${op}SkillSamples.$ns."; done
+          echo "filter: $filter"
+          bash tools/ci/annotate.sh dotnet test tests/SkillSamples.Tests -c Release --no-build --filter "$filter" --logger "console;verbosity=normal"
+        env:
+          MONGO_URL: mongodb://localhost:27017/?replicaSet=rs0&directConnection=true
+          REDIS_URL: localhost:6379
+          KAFKA_BOOTSTRAP: localhost:9092
+          PG_URL: Host=localhost;Username=postgres;Password=postgres;Database=postgres
+          MSSQL_URL: Server=localhost,1433;User Id=sa;Password=Samples-2026!;Encrypt=True;TrustServerCertificate=True
