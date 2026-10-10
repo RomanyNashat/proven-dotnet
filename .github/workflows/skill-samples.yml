@@ -77,9 +77,27 @@ jobs:
           if [ "${{ matrix.group }}" = sql ]; then op='~'; join='|'; else op='!~'; join='&'; fi
           filter=""
           for ns in $SQL_NAMESPACES; do filter="${filter:+$filter$join}FullyQualifiedName${op}SkillSamples.$ns."; done
-          echo "filter: $filter"
-          bash tools/ci/annotate.sh dotnet test tests/SkillSamples.Tests -c Release --no-build --filter "$filter" --logger "console;verbosity=normal"
+          echo "filter: ($filter)&Kind!=Production"
+          bash tools/ci/annotate.sh dotnet test tests/SkillSamples.Tests -c Release --no-build --filter "($filter)&Kind!=Production" --logger "console;verbosity=normal"
         env:
+          MONGO_URL: mongodb://localhost:27017/?replicaSet=rs0&directConnection=true
+          REDIS_URL: localhost:6379
+          KAFKA_BOOTSTRAP: localhost:9092
+          PG_URL: Host=localhost;Username=postgres;Password=postgres;Database=postgres
+          MSSQL_URL: Server=localhost,1433;User Id=sa;Password=Samples-2026!;Encrypt=True;TrustServerCertificate=True
+      # Production tests run again under a slim image's conditions: no ICU, no time-zone database, UTC.
+      # Each test checks the conditions first (tests/SkillSamples.Tests/Production/ProductionConditions.cs).
+      - name: Run this job's production tests (no ICU, no tzdata, UTC)
+        run: |
+          if [ "${{ matrix.group }}" = sql ]; then op='~'; join='|'; else op='!~'; join='&'; fi
+          filter=""
+          for ns in $SQL_NAMESPACES; do filter="${filter:+$filter$join}FullyQualifiedName${op}SkillSamples.$ns."; done
+          echo "filter: ($filter)&Kind=Production"
+          bash tools/ci/annotate.sh dotnet test tests/SkillSamples.Tests -c Release --no-build --filter "($filter)&Kind=Production" --logger "console;verbosity=normal"
+        env:
+          DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: '1'
+          TZDIR: /nonexistent-tzdata
+          TZ: UTC
           MONGO_URL: mongodb://localhost:27017/?replicaSet=rs0&directConnection=true
           REDIS_URL: localhost:6379
           KAFKA_BOOTSTRAP: localhost:9092

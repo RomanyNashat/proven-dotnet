@@ -38,7 +38,8 @@ public static class QuartzSetup
             q.UseDefaultThreadPool(pool => pool.MaxConcurrency = 10);
 
             // Cron runs in the scheduler's local time zone unless told otherwise, and pods run in UTC.
-            var riyadh = TimeZoneInfo.FindSystemTimeZoneById("Asia/Riyadh");
+            // RiyadhTime falls back to a fixed UTC+3 zone on images without tzdata (`localization` §7).
+            var riyadh = RiyadhTime.Zone;
             q.AddJob<DailyReportJob>(job => job.WithIdentity(DailyReportJob.Key).StoreDurably());
             q.AddTrigger(trigger => trigger
                 .ForJob(DailyReportJob.Key)
@@ -65,8 +66,9 @@ public static class QuartzSetup
 - **Registering jobs on every start is safe:** tested, a second start updates the stored job and
   trigger instead of failing on them.
 - **Time zones:** a cron trigger runs in the scheduler's local time zone, and pods run in UTC. Tested:
-  `0 0 2 * * ?` in `Asia/Riyadh` fires at 23:00 UTC. Use IANA ids (`Asia/Riyadh`); Windows ids need ICU
-  on Linux.
+  `0 0 2 * * ?` in `Asia/Riyadh` fires at 23:00 UTC. Don't call `FindSystemTimeZoneById` bare: it
+  throws on images without tzdata (Alpine, chiseled). `RiyadhTime` (`localization` §7) falls back to a fixed
+  UTC+3 zone; the production test runs the setup with no tzdata and gets 23:00 UTC.
 - **Misfires:** a run missed while every pod was down is handled by the trigger's misfire rule.
   `FireAndProceed` runs it once at start-up; `DoNothing` skips it. Pick per job; the default for cron is
   `FireAndProceed` too, but say it so the next reader knows it was a choice.
@@ -209,6 +211,6 @@ with `ObjectDisposedException: LoggerFactory`.
 - Persistent store and clustering when more than one pod runs the service; same scheduler name, `AUTO` id.
 - Quartz's schema from its script with `DropDb = 0`, applied by the pipeline; a recorded exception to the
   column rules.
-- Cron triggers in an explicit time zone (IANA id); an explicit misfire rule.
+- Cron triggers in an explicit time zone that works without tzdata; an explicit misfire rule.
 - `[DisallowConcurrentExecution]` on jobs that must not overlap; `context.CancellationToken` everywhere.
 - No `UseMicrosoftDependencyInjectionJobFactory()`: DI is the default.

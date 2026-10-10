@@ -1,4 +1,5 @@
 using Hangfire;
+using SkillSamples.Localization;
 
 namespace SkillSamples.Jobs;
 
@@ -11,9 +12,9 @@ public static class RecurringJobs
 {
     public static void Register(IRecurringJobManager recurring)
     {
-        // The IANA id works on Linux and Windows. "Arab Standard Time" (the Windows id) needs ICU on Linux,
-        // which Alpine images don't have unless they add it.
-        var riyadh = TimeZoneInfo.FindSystemTimeZoneById("Asia/Riyadh");
+        // Not FindSystemTimeZoneById("Asia/Riyadh"): it throws on images without tzdata. RiyadhTime falls
+        // back to a fixed UTC+3 zone there (`localization` §7). Windows ids need ICU on Linux as well.
+        var riyadh = RiyadhTime.Zone;
 
         recurring.AddOrUpdate<IDailyReport>(
             "daily-report", "low",

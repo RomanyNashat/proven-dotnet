@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
+using SkillSamples.Localization;
 
 namespace SkillSamples.Scheduling;
 
@@ -25,7 +26,8 @@ public static class QuartzSetup
             q.UseDefaultThreadPool(pool => pool.MaxConcurrency = 10);
 
             // Cron runs in the scheduler's local time zone unless told otherwise, and pods run in UTC.
-            var riyadh = TimeZoneInfo.FindSystemTimeZoneById("Asia/Riyadh");
+            // RiyadhTime falls back to a fixed UTC+3 zone on images without tzdata (`localization` §7).
+            var riyadh = RiyadhTime.Zone;
             q.AddJob<DailyReportJob>(job => job.WithIdentity(DailyReportJob.Key).StoreDurably());
             q.AddTrigger(trigger => trigger
                 .ForJob(DailyReportJob.Key)

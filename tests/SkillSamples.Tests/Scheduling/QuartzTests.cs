@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using Quartz;
 using SkillSamples.Postgres;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Scheduling;
@@ -23,9 +24,11 @@ public sealed class SlowReports : IDailyReportBuilder
     private int _running;
     public int MaxConcurrent;
     public int Runs;
+    public readonly System.Collections.Concurrent.ConcurrentQueue<DateTimeOffset> ScheduledFor = new();
 
     public async Task BuildAsync(DateTimeOffset scheduledFor, CancellationToken ct)
     {
+        ScheduledFor.Enqueue(scheduledFor);
         var now = Interlocked.Increment(ref _running);
         InterlockedMax(ref MaxConcurrent, now);
         await Task.Delay(300, ct);
@@ -104,6 +107,52 @@ public sealed class QuartzTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsy
         Assert.NotNull(next);
         Assert.Equal((23, 0), (next!.Value.UtcDateTime.Hour, next.Value.UtcDateTime.Minute));
         Assert.True(next.Value - now <= TimeSpan.FromDays(1));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ServiceWasDownWhenTheReportWasDue_ItRunsOnceWhenItComesBack()
+    {
+        // Given: the service has run before, and every instance was down when the report fell due
+        using (var first = Build())
+        {
+            await first.StartAsync();
+            await first.StopAsync();
+        }
+        var due = DateTimeOffset.UtcNow.AddMinutes(-10);
+        await db.ExecuteAsync(
+            "UPDATE qrtz_triggers SET next_fire_time = @ticks WHERE trigger_name = 'daily-report-trigger'",
+            new { ticks = due.UtcTicks });
+
+        // When: the service starts again
+        using var host = Build();
+        await host.StartAsync();
+        try
+        {
+            // Then: the missed report runs once, not zero times and not twice
+            await Task.Delay(TimeSpan.FromSeconds(8));
+            var runs = Volatile.Read(ref _reports.Runs);
+            Assert.True(runs == 1, $"runs: {runs}; scheduled for: {string.Join(", ", _reports.ScheduledFor)}; due was {due:O}");
+        }
+        finally
+        {
+            await host.StopAsync();
+        }
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public void Production_NoTzdata_TheTriggerStillFiresAtElevenPmUtc()
+    {
+        ProductionConditions.Require();
+        using var host = Build();
+        var trigger = host.Services.GetRequiredService<IOptions<QuartzOptions>>().Value.Triggers
+            .Single(t => t.Key.Name == "daily-report-trigger");
+
+        var next = trigger.GetFireTimeAfter(DateTimeOffset.UtcNow);
+
+        Assert.NotNull(next);
+        Assert.Equal((23, 0), (next!.Value.UtcDateTime.Hour, next.Value.UtcDateTime.Minute));
     }
 
     [Theory]

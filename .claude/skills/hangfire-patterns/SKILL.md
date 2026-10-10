@@ -67,6 +67,9 @@ public static class HangfireSetup
 builder.Services.AddJobStorage(connectionString).AddJobServers();
 ```
 
+  Tested as a story: a receipt queued while no worker runs (a deploy, a crash) goes out once when a
+  worker starts.
+
 ### The schema: applied by the pipeline, and an exception to the column rules
 
 - `PrepareSchemaIfNecessary = false`. Like migrations, the app never changes the schema at boot
@@ -164,9 +167,9 @@ public static class RecurringJobs
 {
     public static void Register(IRecurringJobManager recurring)
     {
-        // The IANA id works on Linux and Windows. "Arab Standard Time" (the Windows id) needs ICU on Linux,
-        // which Alpine images don't have unless they add it.
-        var riyadh = TimeZoneInfo.FindSystemTimeZoneById("Asia/Riyadh");
+        // Not FindSystemTimeZoneById("Asia/Riyadh"): it throws on images without tzdata. RiyadhTime falls
+        // back to a fixed UTC+3 zone there (`localization` §7). Windows ids need ICU on Linux as well.
+        var riyadh = RiyadhTime.Zone;
 
         recurring.AddOrUpdate<IDailyReport>(
             "daily-report", "low",
@@ -177,7 +180,7 @@ public static class RecurringJobs
 }
 ```
 
-Tested: the next run is stored as 23:00 UTC, and the queue travels with the job (`RecurringJobDto.Job.Queue`;
+Tested, also with no tzdata on the machine: the next run is stored as 23:00 UTC, and the queue travels with the job (`RecurringJobDto.Job.Queue`;
 the older `RecurringJobDto.Queue` still reads `default`). Register through `IRecurringJobManager` (injected, so it can
 be tested) at startup; `AddOrUpdate` with the same id replaces the job, so registering on every start is
 safe. Remove one that's gone with `RemoveIfExists`.
@@ -249,5 +252,5 @@ public async Task SendAsync_OrderMissing_SendsNothing()
 - Queue order is a preference: urgent queues get their own server.
 - Small, stable arguments (`int` ids); `CancellationToken.None` in the expression, used in the job.
 - Jobs run at least once: idempotent side effects.
-- Time zones by IANA id (`Asia/Riyadh`), not Windows ids.
+- Time zones that work without tzdata (`RiyadhTime`, `localization` §7), never a bare `FindSystemTimeZoneById`.
 - Dashboard behind an authorization policy, with the local-only default removed.

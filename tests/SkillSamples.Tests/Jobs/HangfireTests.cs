@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using SkillSamples.Postgres;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Jobs;
@@ -208,6 +209,46 @@ public sealed class HangfireTests(PgDatabase db) : IClassFixture<PgDatabase>, IA
         {
             await host.StopAsync();
         }
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ReceiptQueuedWhileNoWorkerRuns_GoesOutWhenAWorkerStarts()
+    {
+        // Given: the API queues a receipt while no job server is running (a deploy, a crash)
+        string jobId;
+        using (var api = Build(services => { }))   // storage only, like an API that only enqueues
+        {
+            jobId = api.Services.GetRequiredService<OrderJobs>().QueueReceipt(77);
+        }
+
+        // When: a worker starts later
+        using var worker = Build();
+        await worker.StartAsync();
+        try
+        {
+            // Then: the receipt goes out once
+            await Until(() => State(worker, jobId) == "Succeeded", "the queued receipt");
+            Assert.Single(_calls.Log, entry => entry == "receipt:77");
+        }
+        finally
+        {
+            await worker.StopAsync();
+        }
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public void Production_NoTzdata_RecurringJobStillRunsAtElevenPmUtc()
+    {
+        ProductionConditions.Require();
+        using var host = Build();
+        RecurringJobs.Register(host.Services.GetRequiredService<IRecurringJobManager>());
+
+        using var connection = host.Services.GetRequiredService<JobStorage>().GetConnection();
+        var job = connection.GetRecurringJobs().Single(j => j.Id == "daily-report");
+
+        Assert.Equal(23, job.NextExecution!.Value.ToUniversalTime().Hour);
     }
 
     [Fact]
