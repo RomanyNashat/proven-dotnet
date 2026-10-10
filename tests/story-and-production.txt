@@ -22,3 +22,7 @@ mongodb-patterns
 redis-patterns
 outbox
 cqrs-eventsourcing
+polly-resilience
+worker-patterns
+kafka-patterns
+grpc-patterns

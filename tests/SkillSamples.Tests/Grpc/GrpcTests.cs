@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SkillSamples.GrpcSamples.V1;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.GrpcSamples;
@@ -175,6 +176,54 @@ public sealed class GrpcTests
         Assert.Equal(20m, read.Total.ToDecimal());
         Assert.Equal(OrderStatus.Pending, read.Status);
         Assert.Equal(StatusCode.InvalidArgument, empty.StatusCode);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_AReceptionistSendsAZeroQuantity_IsToldWhy_FixesIt_AndAMissingOrderStillSaysNotFound()
+    {
+        await using var app = await StartAsync(new InMemoryOrderStore());
+        var client = ClientFor(app);
+
+        // Given: an order with a line of quantity 0
+        var refused = await Assert.ThrowsAsync<RpcException>(() => client.CreateOrderAsync(new CreateOrderRequest
+        {
+            CustomerId = 7, Lines = { new OrderLine { ProductId = 3, Quantity = 0 } },
+        }).ResponseAsync);
+
+        // When: she fixes it and sends it again, then the app looks up an order that isn't there
+        var created = await client.CreateOrderAsync(new CreateOrderRequest
+        {
+            CustomerId = 7, Lines = { new OrderLine { ProductId = 3, Quantity = 1 }, new OrderLine { ProductId = 4, Quantity = 2 } },
+        });
+        var missing = await Assert.ThrowsAsync<RpcException>(() => client.GetOrderAsync(new GetOrderRequest { OrderId = 999 }).ResponseAsync);
+
+        // Then: the refusal said why and stored nothing (the fixed order is the first), the total is exact,
+        // and "not there" stays NotFound, so the app shows "no such order" rather than "try again later"
+        Assert.Equal(StatusCode.InvalidArgument, refused.StatusCode);
+        Assert.Contains("quantity", refused.Status.Detail, StringComparison.Ordinal);
+        Assert.Equal(1, created.Id);
+        Assert.Equal((30L, 0, "SAR"), (created.Total.Units, created.Total.Nanos, created.Total.Currency));
+        Assert.Equal(StatusCode.NotFound, missing.StatusCode);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_OrdersRoundTrip_WithUtcTimestampsAndExactMoney()
+    {
+        ProductionConditions.Require();
+        await using var app = await StartAsync(new InMemoryOrderStore());
+        var client = ClientFor(app);
+        var before = TimeProvider.System.GetUtcNow();
+
+        var created = await client.CreateOrderAsync(new CreateOrderRequest { CustomerId = 7, Lines = { new OrderLine { ProductId = 3, Quantity = 2 } } });
+        var read = await client.GetOrderAsync(new GetOrderRequest { OrderId = created.Id });
+
+        var at = read.CreatedAt.ToDateTimeOffset();
+        Assert.Equal(TimeSpan.Zero, at.Offset);
+        Assert.InRange(at, before.AddSeconds(-1), TimeProvider.System.GetUtcNow().AddSeconds(1));
+        Assert.Equal(20m, read.Total.ToDecimal());
+        Assert.Equal(-12.5m, (-12.5m).ToMoney("SAR").ToDecimal());
     }
 
     [Fact]

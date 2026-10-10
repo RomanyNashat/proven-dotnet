@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.22 — story and production tests for the messaging skills
+- `polly-resilience`, `worker-patterns`, `kafka-patterns` and `grpc-patterns` each have a story test and a
+  production test (no ICU, no tzdata, UTC). Stories: a payment provider's bad minute (the status check is
+  retried, the charge is sent once); a deploy with 20 reminders queued and a failing SMS gateway; a lab
+  result parked on the dead-letter topic and replayed after the fix; a zero quantity refused with the
+  reason. On a slim image: an Arabic payment reference is percent-encoded, Arabic Kafka keys and values
+  flow, and gRPC orders keep UTC timestamps and exact money.
+
 ## 0.1.21 — CI pinned to Ubuntu 24.04
 - GitHub moves `ubuntu-latest` to Ubuntu 26 from 19 October, three days before the release candidate.
   The workflows now name `ubuntu-24.04`, so the move happens on purpose, in its own change, after 0.2.0.

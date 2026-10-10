@@ -1,7 +1,7 @@
 ---
 name: kafka-patterns
 description: Kafka for .NET with Confluent.Kafka: idempotent producer keyed by aggregate, at-least-once consumer (store-after-handle, retry, dead-letter topic), routing, idempotent handling. Core code tested in CI. See outbox for reliable publishing.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Kafka Patterns
@@ -9,7 +9,10 @@ version: 1.1.0
 The producer and the consumer below are compiled and tested in CI against a real Kafka 3.9
 (`tests/SkillSamples.Tests/Kafka`): a transient failure is retried in order, a poison message goes to
 the dead-letter topic while the rest flows, and a pod stopped mid-message replays that message and
-nothing before it.
+nothing before it. As a story: a lab result the service can't read waits on the dead-letter topic while
+the others go through; after the fix ships, an operator puts the parked copy back on the topic and it's
+handled once. The parked copy names its source and the error type, never the error text. On a slim image
+(no ICU, no tzdata), Arabic keys and values flow and the typed event deserializes.
 
 ## Topic Naming Convention
 

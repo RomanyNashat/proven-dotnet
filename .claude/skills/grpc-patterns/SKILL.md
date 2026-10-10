@@ -1,7 +1,7 @@
 ---
 name: grpc-patterns
 description: gRPC for .NET — int ids and enums in the proto, error mapping that keeps NotFound and DeadlineExceeded, a default client deadline, retries in the service config (not the HTTP resilience handler), streaming with cancellation, money without decimal. Tested in CI over real HTTP/2.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # gRPC Patterns
@@ -215,6 +215,10 @@ Tested:
   deadline each report DeadlineExceeded.
 - An unexpected exception is Internal with a fixed text; its message, which can carry patient data, goes
   to the log only. Tested with a national ID in the message.
+- As a story: a receptionist sends a line with quantity 0 and gets InvalidArgument with the reason, and
+  nothing is stored; she fixes it, the order is created with an exact total; a lookup of an order that
+  isn't there is NotFound, so the app says "no such order" rather than "try again later". On a slim image
+  (no ICU, no tzdata), orders round-trip over HTTP/2 with UTC timestamps and exact money.
 - Expected outcomes (not found, not allowed, conflict) are the service's decision: return them as a
   status from the method, not as exceptions to be mapped.
 
