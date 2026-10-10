@@ -5,6 +5,7 @@ using Polly;
 using Polly.CircuitBreaker;
 using Polly.Registry;
 using Polly.Timeout;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Resilience;
@@ -55,6 +56,54 @@ public sealed class ResilienceTests
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Equal(1, handler.Calls);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ThePaymentProviderHasABadMinute_StatusChecksRecover_AndTheChargeIsNeverSentTwice()
+    {
+        // Given: the provider answers 503 once to a status check, then 503 to a charge
+        var (client, handler, sp) = PaymentClientWith(HttpStatusCode.ServiceUnavailable, HttpStatusCode.OK, HttpStatusCode.ServiceUnavailable);
+        using var _ = sp;
+
+        // When: the app checks a payment, then charges a card
+        var status = await client.GetStatusAsync("PAY-7", default);
+        var charge = await client.ChargeAsync("PAY-8", 150m, default);
+
+        // Then: the check succeeds on its retry; the charge is tried once and the failure goes back to the
+        // caller, who asks the provider what happened instead of charging again
+        Assert.Equal(HttpStatusCode.OK, status.StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, charge.StatusCode);
+        Assert.Equal(3, handler.Calls);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_AnArabicReferenceIsEscaped_AndTheRetryStillWorks()
+    {
+        ProductionConditions.Require();
+        var seen = new List<string>();
+        var calls = 0;
+        var services = new ServiceCollection();
+        services.AddPaymentClient(new Uri("https://payments.test/"))
+            .ConfigurePrimaryHttpMessageHandler(() => new LambdaHandler(request =>
+            {
+                seen.Add(request.RequestUri!.AbsolutePath);
+                return new HttpResponseMessage(++calls == 1 ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK);
+            }));
+        using var sp = services.BuildServiceProvider();
+
+        var response = await sp.GetRequiredService<PaymentClient>().GetStatusAsync("دفع ٧", default);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, seen.Count);
+        Assert.All(seen, path => Assert.Equal("/payments/%D8%AF%D9%81%D8%B9%20%D9%A7", path));
+    }
+
+    private sealed class LambdaHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            Task.FromResult(respond(request));
     }
 
     private static ResiliencePipeline Pipeline(DownstreamResilienceOptions options) =>

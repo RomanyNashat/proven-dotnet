@@ -22,3 +22,4 @@ mongodb-patterns
 redis-patterns
 outbox
 cqrs-eventsourcing
+polly-resilience

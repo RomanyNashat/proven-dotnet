@@ -1,7 +1,7 @@
 ---
 name: polly-resilience
 description: Resilience for .NET with Polly v8: the standard HTTP handler (no retries on POST), custom pipelines, strategy order, timeouts, circuit breaker, fallback. Code tested in CI.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Polly v8 Resilience Patterns
@@ -62,6 +62,11 @@ payment or booking POST that timed out may have succeeded on the other side, so 
 book twice. `DisableForUnsafeHttpMethods()` stops that. It needs **`Microsoft.Extensions.Http.Resilience`
 9.8.0 or later**: earlier versions ignored it and still retried POST (dotnet/extensions #6548). Retry a
 POST only when the other side honours an idempotency key you send.
+
+Tested as a story: the payment provider has a bad minute. A status check gets a 503, is retried and
+succeeds; a charge gets a 503 and is sent once, and the failure goes back to the caller, who asks the
+provider what happened rather than charging again. On a slim image (no ICU, no tzdata), an Arabic
+reference is percent-encoded in the path and the retry works the same.
 
 ## Custom pipelines (non-HTTP calls)
 
