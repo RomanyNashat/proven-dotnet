@@ -3,6 +3,17 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.16 — testing-architecture tested
+- `testing-architecture` 2.0.0. The rules run in CI against two copies of a small service, one laid out
+  properly and one with the usual mistakes, with story and production tests. What they found:
+  - **A rule that selects no types passes.** A renamed namespace turned every NetArchTest rule into one
+    that could never fail. Each rule now checks its selection isn't empty.
+  - The package version in the skill (`1.4.0`) doesn't exist; 1.3.2 is the latest. ArchUnitNET was called
+    a fork; it's a separate library.
+  - Rules now return the failing type names, so a failure says which type broke which rule.
+  - Assembly scanning registers whatever implements the interface in the assembly: the CQRS samples
+    picked up the architecture samples' handlers until those got interfaces of their own.
+
 ## 0.1.15 — openiddict-server tested
 - `openiddict-server` 2.0.0, tested end to end against SQL Server: login, the code flow with PKCE,
   reference tokens, introspection by an API, refresh, revocation and logout, with story and production
