@@ -51,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Scheduling/*.sql" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Compliance/*.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Protobuf Include="Grpc/orders.proto" GrpcServices="Both" />

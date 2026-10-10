@@ -3,6 +3,23 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.14 — healthcare-compliance tested
+- `healthcare-compliance` 2.0.0, its code tested in CI against PostgreSQL, with story and production
+  tests. What the rewrite and the tests found:
+  - **The PHI audit was written beside the save, before it ran:** a failed save still left an audit row
+    saying it happened, and new records were audited with id 0. The audit rows now go into the same
+    `SaveChanges` (HiLo keys give new records their id first), they name the changed columns but never the
+    values, and the service's database role can add audit rows but not change or delete them (tested:
+    `42501`).
+  - **Consent was checked for the signed-in user**, who is the doctor, not the patient. The command now
+    names the patient whose consent is checked.
+  - **Data residency was enforced from a request header** the client could leave out. It's now checked in
+    configuration at start-up.
+  - Legal references cut to the ones verified against published sources (PDPL Articles 4 and 29, the
+    72-hour breach notification and five-year processing records from the Implementing Regulations,
+    HIPAA §164.312 and §164.316(b)(2)). The invented SDAIA client and the "HIPAA recommended 15 minutes"
+    are gone.
+
 ## 0.1.13 — testing-tdd tested
 - `testing-tdd` 2.0.0. Its examples are now real tests of a small booking aggregate, run in CI with story
   and production tests. What they found:
