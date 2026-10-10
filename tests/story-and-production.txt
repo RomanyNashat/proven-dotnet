@@ -9,3 +9,5 @@ testing-tdd
 healthcare-compliance
 openiddict-server
 testing-architecture
+signalr
+nats

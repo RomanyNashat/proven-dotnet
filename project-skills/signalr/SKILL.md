@@ -1,72 +1,88 @@
 ---
 name: signalr
-description: SignalR real-time hubs for .NET and scaling: Redis backplane for multi-pod plus the two gotchas (sticky sessions required; messages lost on outage).
+description: SignalR real-time hubs for .NET across several pods — the Redis backplane, why sticky sessions are still needed, sending to a user instead of client-chosen groups, and what's lost when Redis is down. Tested in CI with two in-process pods and Redis.
+version: 2.0.0
 ---
 
-# SignalR — real-time hubs, and how they break at scale
+# SignalR: real-time hubs, and how they break at scale
 
-Server-to-client push over WebSockets (with fallbacks). Great for live notifications, presence,
-dashboards, chat. The interesting part isn't the single-server hub — it's what happens when you run
-more than one pod, which is where SignalR quietly stops working unless you set it up right.
+Server-to-client push over WebSockets (with fallbacks): live notifications, dashboards, presence. One
+server is easy. With more than one pod it quietly stops working unless it's set up right.
 
-## The hub (single-server basics)
+## The hub: the server decides who gets what
+
+<!-- sample: tests/SkillSamples.Tests/SignalR/NotificationsHub.cs -->
 ```csharp
-public class NotificationsHub : Hub
+// No method lets a client join a group by name: a client that could would join anyone's. Messages for a
+// patient go to that user (Clients.User), whose id comes from the token.
+[Authorize]
+public sealed class NotificationsHub : Hub;
+
+public sealed class PatientNotifier(IHubContext<NotificationsHub> hub)
 {
-    public async Task JoinGroup(string groupName) =>
-        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+    public Task NotifyAsync(string patientId, string message, CancellationToken ct) =>
+        hub.Clients.User(patientId).SendAsync("Notify", message, ct);
 }
-// Program.cs
-builder.Services.AddSignalR();
-app.MapHub<NotificationsHub>("/hubs/notifications");
-// Push from anywhere via IHubContext<NotificationsHub>:
-await hubContext.Clients.Group("patient-42").SendAsync("Update", payload);
 ```
-Clients connect, join groups, and receive server pushes. Fine on one server.
 
-## The scale-out problem (the reason this skill exists)
-SignalR keeps its connection registry **in the memory of the pod that holds the connection**. With
-multiple pods behind a load balancer:
-- Client A connects to **pod 1**; client B connects to **pod 2**.
-- Code on pod 2 calls `Clients.Group("x").SendAsync(...)`.
-- Pod 2 only knows about *its own* connections → client A on pod 1 **never gets the message.**
+The old version of this skill had a `JoinGroup(string groupName)` hub method and sent patient updates
+to `patient-42`. Any signed-in client could call `JoinGroup("patient-42")` and receive another patient's
+updates. Send to `Clients.User(id)` (the id is the token's `sub`, through `IUserIdProvider`), and when you
+do need groups (a ward, a team), add connections to them in `OnConnectedAsync` from the user's claims,
+never from a name the client sends.
 
-So a plain multi-pod SignalR deployment silently drops messages to clients on other pods. Two things
-fix it, and you need **both**:
+Tested as a story: a message for patient 42 reaches patient 42, and patient 43, connected to the same
+pod, gets nothing.
 
-### 1. A backplane — Redis
-The backplane relays hub messages across all pods, so a send on pod 2 reaches connections on pod 1:
+## Several pods: the Redis backplane
+
+<!-- sample: tests/SkillSamples.Tests/SignalR/RealtimeSetup.cs -->
 ```csharp
-builder.Services.AddSignalR().AddStackExchangeRedis("redis:6379", o =>
+public static class RealtimeSetup
 {
-    o.Configuration.ChannelPrefix = RedisChannel.Literal("myapp-signalr");
-});
+    // Each pod knows only its own connections. The Redis backplane passes every send to all pods, so a
+    // message sent on one reaches a client connected to another. The prefix keeps apps that share a
+    // Redis apart.
+    public static ISignalRServerBuilder AddRealtime(this IServiceCollection services, string redis, string channelPrefix)
+    {
+        services.AddSingleton<PatientNotifier>();
+        return services.AddSignalR().AddStackExchangeRedis(redis, o =>
+            o.Configuration.ChannelPrefix = RedisChannel.Literal(channelPrefix));
+    }
+}
 ```
-Every pod publishes/subscribes through Redis; now `Clients.Group(...)` reaches the whole fleet. Set a
-**channel prefix** so multiple apps sharing one Redis don't cross-talk.
 
-### 2. Sticky sessions (still required)
-Even with a backplane, a single client's connection (and its negotiate + reconnect handshake) must
-keep hitting the **same pod**. Without sticky sessions (session affinity) at the load balancer, the
-handshake and long-poll fallback break. **The backplane fixes cross-pod *delivery*; sticky sessions
-keep each *connection* stable.** You need both — this is the most common "it works locally, breaks in
-k8s" SignalR bug.
+Tested as stories, with two pods in one process and a real Redis:
+- **The patient is connected to pod A and pod B sends the update:** it arrives.
+- **Without the backplane, the same send never arrives;** a send from pod A does.
 
-## The honest gotcha: backplane outage = lost messages
-The Redis backplane is **not durable**. If Redis goes down (or a message is published while a pod is
-briefly disconnected from it), those real-time messages are **lost** — SignalR does not buffer and
-replay them. Design around it:
-- Real-time is best-effort. For anything that *must* arrive, back it with a durable path (the client
-  re-fetches state on reconnect, or the event also goes through a persistent queue/outbox).
-- Don't use SignalR alone as the source of truth for critical state changes.
+## Sticky sessions: still needed
 
-## Azure SignalR (the managed alternative)
-Azure SignalR Service offloads connection management and scale-out to a managed service — no
-self-hosted backplane, no sticky-session wrangling. Trade-off: a managed dependency and cost. Worth it
-when connection counts are high or you don't want to operate the backplane.
+The backplane fixes delivery between pods. It doesn't make a connection portable: the negotiate request
+and every request after it (long polling, Server-Sent Events, reconnects) must reach the same pod. Tested
+as a story: negotiate on pod A, the next request on pod B, and the connection fails to start.
+
+Turn on session affinity at the ingress (cookie-based). The one setup that needs none is WebSockets
+only with `SkipNegotiation = true` on the client: one request, one pod. Clients behind proxies that
+block WebSockets then can't connect at all.
+
+## Redis down means messages lost
+
+The backplane isn't durable. A message sent while Redis is unreachable, or while a pod is reconnecting to
+it, is gone; SignalR doesn't buffer or replay. Treat real-time as best-effort:
+- When the client reconnects, it fetches the current state from the API.
+- Anything that must arrive also goes through a durable path (the database, an outbox).
+
+Tested with no ICU: Arabic text crosses pods intact.
+
+## Azure SignalR Service
+
+The managed alternative: it holds the connections, so no backplane and no affinity to run. A managed
+dependency and its cost; worth it at high connection counts.
 
 ## Rules
-- Multi-pod → **Redis backplane AND sticky sessions**. Both, always. One without the other is broken.
-- Set a channel prefix when sharing Redis across apps.
-- Treat real-time delivery as best-effort; back critical state with a durable path + reconnect refetch.
-- Authorize hub methods and group membership — a client can ask to join any group otherwise.
+- More than one pod: the Redis backplane and session affinity, both.
+- A channel prefix per app on a shared Redis.
+- Send to users (`Clients.User`) or to groups the server assigns from claims; no client-named groups.
+- `[Authorize]` on the hub.
+- Real-time is best-effort: refetch on reconnect, and a durable path for what must arrive.

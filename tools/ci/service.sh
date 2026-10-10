@@ -2,7 +2,7 @@
 # The services the skill samples run against, one at a time, so each has its own step in CI.
 #   bash tools/ci/service.sh start <name>   download and start it in the background, return at once
 #   bash tools/ci/service.sh wait <name>    block until it answers; fail with its log if it can't
-# Names: mongo redis kafka pg mssql nginx.
+# Names: mongo redis kafka pg mssql nginx nats rabbitmq.
 #
 # The downloads run while the samples build; each service's own "wait" step then shows how long that
 # service took, and a notice on the run says it ("SQL Server 2022: ready 74s after start"). A download or
@@ -17,6 +17,7 @@ label() {
   case $name in
     mongo) echo "MongoDB 7" ;; redis) echo "Redis 7" ;; kafka) echo "Kafka 3.9" ;;
     pg) echo "PostgreSQL 17" ;; mssql) echo "SQL Server 2022" ;; nginx) echo "nginx 1.27" ;;
+    nats) echo "NATS 2.10" ;; rabbitmq) echo "RabbitMQ 4.1" ;;
     *) echo "$name" ;;
   esac
 }
@@ -53,6 +54,11 @@ run_container() {
       docker run -d --name nginx --network host \
         -v "$PWD/tests/SkillSamples.Tests/Nginx/conf:/etc/nginx/conf.d:ro" \
         -v "$PWD/tests/SkillSamples.Tests/Nginx/site:/srv/repo:ro" nginx:1.27-alpine ;;
+    nats)
+      docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2.10 -m 8222 ;;
+    rabbitmq)
+      # guest may only connect from inside the container, so a user of its own.
+      docker run -d --name rabbitmq -p 5672:5672 -e RABBITMQ_DEFAULT_USER=samples -e RABBITMQ_DEFAULT_PASS=samples rabbitmq:4.1 ;;
     *)
       echo "unknown service: $name"; return 2 ;;
   esac
@@ -66,6 +72,8 @@ answers() {
     pg) docker exec pg pg_isready -U postgres >/dev/null 2>&1 ;;
     mssql) docker exec mssql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Samples-2026!' -Q "SELECT 1" >/dev/null 2>&1 ;;
     nginx) curl -fs http://localhost:8088/home.json >/dev/null 2>&1 ;;
+    nats) curl -fs http://localhost:8222/healthz >/dev/null 2>&1 ;;
+    rabbitmq) docker exec rabbitmq rabbitmq-diagnostics -q check_port_connectivity >/dev/null 2>&1 ;;
   esac
 }
 

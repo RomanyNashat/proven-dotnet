@@ -11,7 +11,9 @@ import sys
 root = pathlib.Path(__file__).resolve().parents[2]
 pattern = re.compile(r"<!-- sample: (?P<path>[^ ]+) -->\s*\n```[a-z]*\n(?P<code>.*?)\n```", re.S)
 problems, checked = [], 0
-for skill in sorted((root / ".claude" / "skills").glob("*/SKILL.md")):
+# Installed skills and the per-project ones a repo copies in: both show tested code.
+skills = sorted([*(root / ".claude" / "skills").glob("*/SKILL.md"), *(root / "project-skills").glob("*/SKILL.md")])
+for skill in skills:
     for m in pattern.finditer(skill.read_text(encoding="utf-8")):
         checked += 1
         source = root / m["path"]
@@ -26,7 +28,7 @@ for skill in sorted((root / ".claude" / "skills").glob("*/SKILL.md")):
 required = {l.strip() for l in (root / "tests" / "story-and-production.txt").read_text(encoding="utf-8").splitlines()
             if l.strip() and not l.startswith("#")}
 pending = []
-for skill in sorted((root / ".claude" / "skills").glob("*/SKILL.md")):
+for skill in skills:
     paths = [m["path"] for m in pattern.finditer(skill.read_text(encoding="utf-8"))]
     if not paths:
         continue
@@ -39,7 +41,7 @@ for skill in sorted((root / ".claude" / "skills").glob("*/SKILL.md")):
         problems.append(f"{name}: no {' and no '.join(k.lower() for k in missing)} test")
     elif missing:
         pending.append(name)
-for name in sorted(required - {s.parent.name for s in (root / ".claude" / "skills").glob("*/SKILL.md")}):
+for name in sorted(required - {s.parent.name for s in skills}):
     problems.append(f"tests/story-and-production.txt lists {name}, which isn't a skill")
 if pending:
     print(f"::notice title=Story and production tests::not yet for {len(pending)} skill(s): {', '.join(pending)}")
