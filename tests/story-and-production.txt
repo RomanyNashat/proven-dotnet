@@ -14,3 +14,11 @@ nats
 rabbitmq-patterns
 cap-library
 fhir
+efcore-patterns
+dapper-patterns
+postgresql-patterns
+sqlserver-patterns
+mongodb-patterns
+redis-patterns
+outbox
+cqrs-eventsourcing
