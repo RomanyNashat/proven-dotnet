@@ -1,6 +1,7 @@
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.MsSql;
@@ -61,6 +62,50 @@ public sealed class SqlServerTests(SqlDatabase db) : IClassFixture<SqlDatabase>
         }));
 
         Assert.Equal(1, await db.ScalarAsync<int>("SELECT COUNT(*) FROM product_inventory WHERE product_id = 1"));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_TwoScannersCountANewProductAtOnce_WithoutHintsOneFails_WithThemTheSecondWaitsAndUpdates()
+    {
+        await CreateInventoryAsync();
+        const string update = "UPDATE product_inventory SET quantity = @q WHERE product_id = @p AND warehouse_id = 1; SELECT @@ROWCOUNT;";
+        const string insert = "INSERT INTO product_inventory (product_id, warehouse_id, quantity) VALUES (@p, 1, @q)";
+
+        // Given: two scanners record product 30 at the same moment, without lock hints. Both update nothing.
+        await using (var scannerA = await db.OpenAsync())
+        await using (var scannerB = await db.OpenAsync())
+        {
+            await using var txA = scannerA.BeginTransaction();
+            await using var txB = scannerB.BeginTransaction();
+            Assert.Equal(0, await scannerA.ExecuteScalarAsync<int>(update, new { p = 30, q = 5 }, txA));
+            Assert.Equal(0, await scannerB.ExecuteScalarAsync<int>(update, new { p = 30, q = 7 }, txB));
+            await scannerA.ExecuteAsync(insert, new { p = 30, q = 5 }, txA);
+            await txA.CommitAsync();
+
+            // When: the second inserts too. Then: the primary key refuses it, and that count is lost
+            var lost = await Assert.ThrowsAsync<SqlException>(() => scannerB.ExecuteAsync(insert, new { p = 30, q = 7 }, txB));
+            Assert.Equal(2627, lost.Number);
+        }
+
+        // Given: the same with the skill's SaveAsync (UPDLOCK, HOLDLOCK), scanner A still in its transaction
+        await using var holder = await db.OpenAsync();
+        await using var tx = holder.BeginTransaction();
+        await holder.ExecuteAsync("""
+            UPDATE product_inventory WITH (UPDLOCK, HOLDLOCK) SET quantity = 5 WHERE product_id = 31 AND warehouse_id = 1;
+            INSERT INTO product_inventory (product_id, warehouse_id, quantity) VALUES (31, 1, 5);
+            """, transaction: tx);
+
+        // When: scanner B saves while A hasn't committed
+        await using var scannerB2 = await db.OpenAsync();
+        var second = Inventory.SaveAsync(scannerB2, productId: 31, warehouseId: 1, quantity: 7, CancellationToken.None);
+        await Task.Delay(500);
+        Assert.False(second.IsCompleted);   // waiting on A's key-range lock, not racing it
+        await tx.CommitAsync();
+        await second;
+
+        // Then: one row, with B's count
+        Assert.Equal(7, await db.ScalarAsync<int>("SELECT quantity FROM product_inventory WHERE product_id = 31"));
     }
 
     [Fact]
@@ -272,5 +317,27 @@ public sealed class SqlServerTests(SqlDatabase db) : IClassFixture<SqlDatabase>
             using var context = new TemporalDbContext(options);
             Assert.True(context.Database.IsSqlServer());
         }
+    }
+}
+
+// No database fixture: under these conditions SqlClient can't open a connection to create one.
+public sealed class SqlServerSlimImageTests
+{
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcu_TheServiceStarts_AndItsFirstQueryFails()
+    {
+        ProductionConditions.Require();
+        var server = Environment.GetEnvironmentVariable("MSSQL_URL")
+            ?? "Server=localhost,1433;User Id=sa;Password=Samples-2026!;Encrypt=True;TrustServerCertificate=True";
+
+        // Building the connection is fine, so nothing fails at start-up unless a check opens one...
+        await using var connection = new SqlConnection(server);
+
+        // ...and the first request's query is where it breaks: Dapper opens the connection and SqlClient refuses.
+        var refused = await Assert.ThrowsAsync<NotSupportedException>(() =>
+            connection.QueryAsync<int>("SELECT 1"));
+
+        Assert.Contains("Globalization Invariant Mode is not supported", refused.Message);
     }
 }
