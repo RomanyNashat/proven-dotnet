@@ -88,12 +88,16 @@ public sealed class HangfireTests(PgDatabase db) : IClassFixture<PgDatabase>, IA
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    private IHost Build(int workers = 2)
+    // servers: null → the sample's servers; otherwise a custom server setup for the test.
+    private IHost Build(Action<IServiceCollection>? servers = null)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Logging.ClearProviders();
-        builder.Services.AddJobs(db.ConnectionString);
-        builder.Services.Configure<BackgroundJobServerOptions>(o => o.WorkerCount = workers);
+        builder.Services.AddJobStorage(db.ConnectionString);
+        if (servers is null)
+            builder.Services.AddJobServers();
+        else
+            servers(builder.Services);
         builder.Services.AddSingleton(_calls);
         builder.Services.AddTransient<IReceiptSender, RecordingSender>();
         builder.Services.AddTransient<IStep, RecordingStep>();
@@ -162,28 +166,44 @@ public sealed class HangfireTests(PgDatabase db) : IClassFixture<PgDatabase>, IA
     }
 
     [Fact]
-    public async Task Queues_CriticalIsFetchedBeforeLow()
+    public async Task QueueListOrder_IsNotPriority_OnPostgreSql()
     {
-        using var host = Build(workers: 1);
+        // What the skill used to show: one server, queues listed most urgent first.
+        using var host = Build(services => services.AddHangfireServer(o =>
+        {
+            o.Queues = ["critical", "default", "low"];
+            o.WorkerCount = 1;
+        }));
         var jobs = host.Services.GetRequiredService<IBackgroundJobClient>();
         var low = jobs.Enqueue<IStep>("low", s => s.RunAsync("low", CancellationToken.None));
         var critical = jobs.Enqueue<IStep>("critical", s => s.RunAsync("critical", CancellationToken.None));
-
-        await using (var connection = new NpgsqlConnection(db.ConnectionString))
-        {
-            var rows = (await connection.QueryAsync<(long JobId, string Queue)>(
-                "SELECT jobid, queue FROM hangfire.jobqueue WHERE jobid IN (@low, @critical)",
-                new { low = long.Parse(low), critical = long.Parse(critical) })).ToList();
-            Assert.True(rows.Any(r => r.Queue == "critical") && rows.Any(r => r.Queue == "low"),
-                $"jobqueue rows: {string.Join(", ", rows)}");
-        }
 
         await host.StartAsync();
         try
         {
             await Until(() => State(host, low) == "Succeeded" && State(host, critical) == "Succeeded", "both jobs");
             var order = _calls.Log.Where(n => n is "low" or "critical").ToList();
-            Assert.True(order.SequenceEqual(new[] { "critical", "low" }), $"ran in this order: {string.Join(", ", order)}");
+            Assert.True(order.SequenceEqual(new[] { "low", "critical" }), $"ran in this order: {string.Join(", ", order)}");
+        }
+        finally
+        {
+            await host.StopAsync();
+        }
+    }
+
+    [Fact]
+    public async Task CriticalQueue_HasAServerOfItsOwn()
+    {
+        using var host = Build();
+        await host.StartAsync();
+        try
+        {
+            var monitoring = host.Services.GetRequiredService<JobStorage>().GetMonitoringApi();
+            await Until(() => monitoring.Servers().Count(s => s.Queues.SequenceEqual(new[] { "critical" })) == 1, "the critical-only server");
+
+            var jobId = host.Services.GetRequiredService<IBackgroundJobClient>()
+                .Enqueue<IStep>("critical", s => s.RunAsync("urgent", CancellationToken.None));
+            await Until(() => State(host, jobId) == "Succeeded", "the critical job");
         }
         finally
         {
@@ -225,8 +245,7 @@ public sealed class HangfireTests(PgDatabase db) : IClassFixture<PgDatabase>, IA
         using var connection = host.Services.GetRequiredService<JobStorage>().GetConnection();
         var job = connection.GetRecurringJobs().Single(j => j.Id == "daily-report");
 
-        var hash = connection.GetAllEntriesFromHash("recurring-job:daily-report") ?? new Dictionary<string, string>();
-        Assert.True(job.Queue == "low", $"queue {job.Queue}; stored: {string.Join("; ", hash.Select(e => $"{e.Key}={e.Value}"))}");
+        Assert.Equal("low", job.Job.Queue);   // kept with the job; RecurringJobDto.Queue still says "default"
         Assert.NotNull(job.NextExecution);
         Assert.Equal(23, job.NextExecution!.Value.ToUniversalTime().Hour);
     }

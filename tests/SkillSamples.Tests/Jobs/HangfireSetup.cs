@@ -6,8 +6,8 @@ namespace SkillSamples.Jobs;
 
 public static class HangfireSetup
 {
-    public static IServiceCollection AddJobs(this IServiceCollection services, string connectionString)
-    {
+    // Every service that enqueues needs the storage; only the ones that run jobs add the servers.
+    public static IServiceCollection AddJobStorage(this IServiceCollection services, string connectionString) =>
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()
@@ -21,9 +21,14 @@ public static class HangfireSetup
                     QueuePollInterval = TimeSpan.FromSeconds(1) // the default is 15 s: jobs wait that long to start
                 }));
 
+    public static IServiceCollection AddJobServers(this IServiceCollection services)
+    {
+        // The order of a server's queue list is not a priority (on PostgreSQL it's first come, first
+        // served), so urgent work gets its own server: a backlog of other jobs can't hold it up.
+        services.AddHangfireServer(options => options.Queues = ["critical"]);
         services.AddHangfireServer(options =>
         {
-            options.Queues = ["critical", "default", "low"];   // fetched in this order
+            options.Queues = ["default", "low"];
             options.SchedulePollingInterval = TimeSpan.FromSeconds(5);
         });
         return services;

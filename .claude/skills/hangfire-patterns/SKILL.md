@@ -24,8 +24,8 @@ Packages: `Hangfire.AspNetCore` 1.8.x and `Hangfire.PostgreSql` 1.20.x (or `Hang
 ```csharp
 public static class HangfireSetup
 {
-    public static IServiceCollection AddJobs(this IServiceCollection services, string connectionString)
-    {
+    // Every service that enqueues needs the storage; only the ones that run jobs add the servers.
+    public static IServiceCollection AddJobStorage(this IServiceCollection services, string connectionString) =>
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()
@@ -39,9 +39,14 @@ public static class HangfireSetup
                     QueuePollInterval = TimeSpan.FromSeconds(1) // the default is 15 s: jobs wait that long to start
                 }));
 
+    public static IServiceCollection AddJobServers(this IServiceCollection services)
+    {
+        // The order of a server's queue list is not a priority (on PostgreSQL it's first come, first
+        // served), so urgent work gets its own server: a backlog of other jobs can't hold it up.
+        services.AddHangfireServer(options => options.Queues = ["critical"]);
         services.AddHangfireServer(options =>
         {
-            options.Queues = ["critical", "default", "low"];   // fetched in this order
+            options.Queues = ["default", "low"];
             options.SchedulePollingInterval = TimeSpan.FromSeconds(5);
         });
         return services;
@@ -51,8 +56,15 @@ public static class HangfireSetup
 
 - **Poll interval:** Hangfire.PostgreSql checks the queues every **15 seconds** by default, so a
   fire-and-forget job can wait that long to start. Lower `QueuePollInterval` when that matters.
-- **Queue order:** the server fetches from its queues in the order listed (tested: with one worker, a
-  `critical` job enqueued after a `low` one runs first).
+- **A server's queue list is not a priority order.** Tested on PostgreSQL: one server listening to
+  `critical, default, low` with one worker ran a `low` job before a `critical` one enqueued after it.
+  For work that mustn't wait behind a backlog, give its queue a server of its own, as above.
+- **Storage and servers are separate.** An API that only enqueues adds the storage; the services that run
+  jobs add the servers too:
+
+```csharp
+builder.Services.AddJobStorage(connectionString).AddJobServers();
+```
 
 ### The schema: applied by the pipeline, and an exception to the column rules
 
@@ -164,7 +176,8 @@ public static class RecurringJobs
 }
 ```
 
-Tested: the next run is stored as 23:00 UTC. Register through `IRecurringJobManager` (injected, so it can
+Tested: the next run is stored as 23:00 UTC, and the queue travels with the job (`RecurringJobDto.Job.Queue`;
+the older `RecurringJobDto.Queue` still reads `default`). Register through `IRecurringJobManager` (injected, so it can
 be tested) at startup; `AddOrUpdate` with the same id replaces the job, so registering on every start is
 safe. Remove one that's gone with `RemoveIfExists`.
 
@@ -232,6 +245,7 @@ public async Task SendAsync_OrderMissing_SendsNothing()
 - Schema applied by the pipeline, never `PrepareSchemaIfNecessary = true`; Hangfire's own tables are a
   recorded exception to the column rules.
 - Filters (`[AutomaticRetry]`, `[Queue]`) on the interface method you enqueue through.
+- Queue order is not priority: urgent queues get their own server.
 - Small, stable arguments (`int` ids); `CancellationToken.None` in the expression, used in the job.
 - Jobs run at least once: idempotent side effects.
 - Time zones by IANA id (`Asia/Riyadh`), not Windows ids.

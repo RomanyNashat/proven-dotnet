@@ -42,7 +42,7 @@ public sealed class HangfireDashboardTests(PgDatabase db) : IClassFixture<PgData
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
-        builder.Services.AddJobs(db.ConnectionString);
+        builder.Services.AddJobStorage(db.ConnectionString);
         builder.Services.AddAuthentication("Header").AddScheme<AuthenticationSchemeOptions, RoleHeaderAuth>("Header", null);
         builder.Services.AddAuthorization(o => o.AddPolicy(HangfireDashboard.Policy, p => p.RequireRole("jobs-admin")));
         await using var app = builder.Build();
