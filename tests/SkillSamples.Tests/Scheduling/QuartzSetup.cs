@@ -37,6 +37,11 @@ public static class QuartzSetup
                     .WithMisfireHandlingInstructionFireAndProceed()));   // missed while down → run once on start
         });
 
+        // Every start re-registers the trigger above and, by default, replaces the stored one: its next
+        // fire time is worked out from now, so a run missed while the service was down is silently
+        // dropped. Scheduling it from the stored trigger's last run keeps the missed run for the misfire rule.
+        services.Configure<QuartzOptions>(options => options.Scheduling.ScheduleTriggerRelativeToReplacedTrigger = true);
+
         services.AddQuartzHostedService(options =>
         {
             options.WaitForJobsToComplete = true;

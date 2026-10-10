@@ -1,7 +1,7 @@
 ---
 name: quartz-scheduling
 description: Quartz.NET in-process scheduling on PostgreSQL — clustered persistent store with the schema applied by the pipeline, cron in a real time zone, misfires, no overlapping runs, a health check and admin endpoints. Tested in CI against PostgreSQL.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Quartz.NET Scheduling Patterns
@@ -49,6 +49,11 @@ public static class QuartzSetup
                     .WithMisfireHandlingInstructionFireAndProceed()));   // missed while down → run once on start
         });
 
+        // Every start re-registers the trigger above and, by default, replaces the stored one: its next
+        // fire time is worked out from now, so a run missed while the service was down is silently
+        // dropped. Scheduling it from the stored trigger's last run keeps the missed run for the misfire rule.
+        services.Configure<QuartzOptions>(options => options.Scheduling.ScheduleTriggerRelativeToReplacedTrigger = true);
+
         services.AddQuartzHostedService(options =>
         {
             options.WaitForJobsToComplete = true;
@@ -65,13 +70,21 @@ public static class QuartzSetup
   is what lets a trigger fire on one pod only; with the in-memory store each pod runs every job.
 - **Registering jobs on every start is safe:** tested, a second start updates the stored job and
   trigger instead of failing on them.
+- **But by default that update drops a missed run.** Each start replaces the stored trigger, and the new
+  one's next fire time is worked out from now. Tested as a story: the service is down at 02:00, comes
+  back, and with Quartz's defaults the report doesn't run at all (the next run is tomorrow's).
+  `ScheduleTriggerRelativeToReplacedTrigger = true` works the next fire time out from the stored
+  trigger's last run instead, so the missed run is still due and the misfire rule handles it. Tested:
+  with it, the report runs once, for the slot it missed. A changed cron in code still takes effect.
 - **Time zones:** a cron trigger runs in the scheduler's local time zone, and pods run in UTC. Tested:
   `0 0 2 * * ?` in `Asia/Riyadh` fires at 23:00 UTC. Don't call `FindSystemTimeZoneById` bare: it
   throws on images without tzdata (Alpine, chiseled). `RiyadhTime` (`localization` §7) falls back to a fixed
   UTC+3 zone; the production test runs the setup with no tzdata and gets 23:00 UTC.
-- **Misfires:** a run missed while every pod was down is handled by the trigger's misfire rule.
-  `FireAndProceed` runs it once at start-up; `DoNothing` skips it. Pick per job; the default for cron is
-  `FireAndProceed` too, but say it so the next reader knows it was a choice.
+- **Misfires:** a run missed while every pod was down is handled by the trigger's misfire rule (with
+  the setting above). `FireAndProceed` runs it once at start-up; `DoNothing` skips it. Pick per job; the
+  default for cron is `FireAndProceed` too, but say it so the next reader knows it was a choice. Several
+  missed slots still give one run: a job that must cover every day keeps its own record of the last day
+  it did and catches up from there.
 
 ### The schema: Quartz's script, applied by the pipeline
 
@@ -119,6 +132,8 @@ public sealed class DailyReportJob(IDailyReportBuilder reports, ILogger<DailyRep
 - `[DisallowConcurrentExecution]` applies per job key, across the cluster. Tested: three triggers of the
   same job ran one after another, never two at once.
 - Use `ScheduledFireTimeUtc` for "which day is this run for"; `FireTimeUtc` is when it actually ran.
+  Tested: a misfired run gets the slot it missed. Quartz keeps that in `qrtz_triggers.misfire_orig_fire_time`;
+  with a schema from an older script, without that column, it's the time the run was recovered.
 - Pass `context.CancellationToken` to every call: it's cancelled when the service stops.
 - `JobExecutionException(ex, refireImmediately: false)` records the failure without a tight retry loop.
   For retries with backoff inside one run, wrap the call in a `polly-resilience` pipeline.
@@ -211,6 +226,7 @@ with `ObjectDisposedException: LoggerFactory`.
 - Persistent store and clustering when more than one pod runs the service; same scheduler name, `AUTO` id.
 - Quartz's schema from its script with `DropDb = 0`, applied by the pipeline; a recorded exception to the
   column rules.
-- Cron triggers in an explicit time zone that works without tzdata; an explicit misfire rule.
+- Cron triggers in an explicit time zone that works without tzdata; an explicit misfire rule, and
+  `ScheduleTriggerRelativeToReplacedTrigger = true` so a restart doesn't drop the missed run.
 - `[DisallowConcurrentExecution]` on jobs that must not overlap; `context.CancellationToken` everywhere.
 - No `UseMicrosoftDependencyInjectionJobFactory()`: DI is the default.

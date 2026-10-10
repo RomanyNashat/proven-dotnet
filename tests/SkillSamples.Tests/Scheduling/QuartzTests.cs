@@ -70,7 +70,7 @@ public sealed class QuartzTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsy
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    private IHost Build()
+    private IHost Build(Action<IServiceCollection>? change = null)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Logging.ClearProviders();
@@ -78,6 +78,7 @@ public sealed class QuartzTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsy
         // breaks the next host. One factory that is never disposed avoids it.
         builder.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         builder.Services.AddScheduling(db.ConnectionString);
+        change?.Invoke(builder.Services);
         builder.Services.AddSingleton<IDailyReportBuilder>(_reports);
         builder.Services.AddHealthChecks().AddCheck<QuartzHealthCheck>("quartz");
         return builder.Build();
@@ -109,35 +110,78 @@ public sealed class QuartzTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsy
         Assert.True(next.Value - now <= TimeSpan.FromDays(1));
     }
 
-    [Fact]
-    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
-    public async Task Story_ServiceWasDownWhenTheReportWasDue_ItRunsOnceWhenItComesBack()
+    // The last 23:00 UTC slot (02:00 Riyadh) that is at least five minutes gone, so it counts as missed.
+    private static DateTimeOffset LastMissedSlot()
     {
-        // Given: the service has run before, and every instance was down when the report fell due
+        var now = DateTimeOffset.UtcNow;
+        var slot = new DateTimeOffset(now.Year, now.Month, now.Day, 23, 0, 0, TimeSpan.Zero);
+        while (now - slot < TimeSpan.FromMinutes(5))
+            slot = slot.AddDays(-1);
+        return slot;
+    }
+
+    // Given: the service has run for a while (the trigger was stored days ago), the report ran at
+    // yesterday's slot, and every instance was down when today's fell due.
+    private async Task<DateTimeOffset> ServiceWasDownAtTheSlot()
+    {
         using (var first = Build())
         {
             await first.StartAsync();
             await first.StopAsync();
         }
-        var due = DateTimeOffset.UtcNow.AddMinutes(-10);
+        var missed = LastMissedSlot();
         await db.ExecuteAsync(
-            "UPDATE qrtz_triggers SET next_fire_time = @ticks WHERE trigger_name = 'daily-report-trigger'",
-            new { ticks = due.UtcTicks });
+            """
+            UPDATE qrtz_triggers
+            SET start_time = @start, prev_fire_time = @prev, next_fire_time = @next, trigger_state = 'WAITING', misfire_orig_fire_time = NULL
+            WHERE trigger_name = 'daily-report-trigger'
+            """,
+            new { start = missed.AddDays(-7).UtcTicks, prev = missed.AddDays(-1).UtcTicks, next = missed.UtcTicks });
+        return missed;
+    }
 
-        // When: the service starts again
-        using var host = Build();
+    private async Task<int> RunsAfterStart(IHost host)
+    {
         await host.StartAsync();
         try
         {
-            // Then: the missed report runs once, not zero times and not twice
             await Task.Delay(TimeSpan.FromSeconds(8));
-            var runs = Volatile.Read(ref _reports.Runs);
-            Assert.True(runs == 1, $"runs: {runs}; scheduled for: {string.Join(", ", _reports.ScheduledFor)}; due was {due:O}");
+            return Volatile.Read(ref _reports.Runs);
         }
         finally
         {
             await host.StopAsync();
         }
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ServiceWasDownWhenTheReportWasDue_ItRunsOnceWhenItComesBack()
+    {
+        var missed = await ServiceWasDownAtTheSlot();
+
+        // When: the service starts again
+        using var host = Build();
+        var runs = await RunsAfterStart(host);
+
+        // Then: the missed report runs once, for the slot it missed
+        Assert.True(runs == 1, $"runs: {runs}; scheduled for: {string.Join(", ", _reports.ScheduledFor)}; missed slot {missed:O}");
+        Assert.Equal(missed, _reports.ScheduledFor.Single());
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_WithQuartzDefaults_TheMissedReportIsSilentlyDropped()
+    {
+        var missed = await ServiceWasDownAtTheSlot();
+
+        // When: the service starts again with Quartz's default, which replaces the stored trigger
+        using var host = Build(services => services.Configure<QuartzOptions>(
+            options => options.Scheduling.ScheduleTriggerRelativeToReplacedTrigger = false));
+        var runs = await RunsAfterStart(host);
+
+        // Then: nothing runs; the next run is tomorrow's. This is why the setup changes the default.
+        Assert.True(runs == 0, $"runs: {runs}; missed slot {missed:O}");
     }
 
     [Fact]
