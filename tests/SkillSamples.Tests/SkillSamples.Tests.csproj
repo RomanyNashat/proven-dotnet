@@ -41,10 +41,11 @@
     <PackageReference Include="Respawn" Version="6.*" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.*" />
     <PackageReference Include="Grpc.Net.ClientFactory" Version="2.*" />
-    <PackageReference Include="OpenIddict.Server.AspNetCore" Version="6.*" />
-    <PackageReference Include="OpenIddict.Validation.AspNetCore" Version="6.*" />
-    <PackageReference Include="OpenIddict.Validation.SystemNetHttp" Version="6.*" />
-    <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="6.*" />
+    <PackageReference Include="OpenIddict.Server.AspNetCore" Version="7.*" />
+    <PackageReference Include="OpenIddict.Validation.AspNetCore" Version="7.*" />
+    <PackageReference Include="OpenIddict.Validation.SystemNetHttp" Version="7.*" />
+    <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.*" />
     <!-- OpenIddict's HTTP integration brings Polly 7 along; keep it out of compilation so Polly 8's types
          (BrokenCircuitException, TimeoutRejectedException) aren't ambiguous in the resilience samples. -->
     <PackageReference Include="Polly" Version="7.*" ExcludeAssets="compile" PrivateAssets="all" />
