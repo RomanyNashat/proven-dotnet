@@ -79,9 +79,10 @@ jobs:
 
       - name: NuGet Vulnerability Check
         run: |
-          dotnet list package --vulnerable --include-transitive 2>&1 | \
-            tee /dev/stderr | \
-            grep -q "has the following vulnerable" && exit 1 || true
+          if dotnet list package --vulnerable --include-transitive 2>&1 | tee /dev/stderr | grep -q "has the following vulnerable"; then
+            echo "::error::A package has a known vulnerability."
+            exit 1
+          fi
 
       - name: Upload Coverage
         if: always()

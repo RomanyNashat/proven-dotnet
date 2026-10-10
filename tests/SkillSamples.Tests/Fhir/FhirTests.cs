@@ -46,7 +46,17 @@ public sealed class FhirTests
     {
         var request = FhirMessages.Request("eligibility-request", Us, Platform, Sara(), Now);
         var other = FhirMessages.Request("eligibility-request", Us, Platform, Sara(), Now);
-        var response = FhirMessages.Request("eligibility-response", Platform, Us, new CoverageEligibilityResponse(), Now);
+        var answer = new CoverageEligibilityResponse
+        {
+            Status = FinancialResourceStatusCodes.Active,
+            Purpose = [CoverageEligibilityResponse.EligibilityResponsePurpose.Validation],
+            Patient = new ResourceReference("Patient/p1"),
+            Created = "2026-10-11",
+            Request = new ResourceReference("CoverageEligibilityRequest/r1"),
+            Outcome = ClaimProcessingCodes.Complete,
+            Insurer = new ResourceReference("Organization/insurer-1")
+        };
+        var response = FhirMessages.Request("eligibility-response", Platform, Us, answer, Now);
         FhirMessages.Header(response).Response = new MessageHeader.ResponseComponent
         {
             Identifier = FhirMessages.Header(request).Id,

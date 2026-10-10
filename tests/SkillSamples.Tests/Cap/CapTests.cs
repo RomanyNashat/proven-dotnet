@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using SkillSamples.AuthServer;
 using SkillSamples.Postgres;
 using SkillSamples.Production;
 using Xunit;
@@ -43,6 +44,7 @@ public sealed class CapTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncL
     private readonly string _role = $"cap_app_{Guid.NewGuid():N}";
     private readonly string _group = $"shipping-{Guid.NewGuid():N}";
     private readonly RecordingShipments _shipments = new();
+    private readonly ErrorLog _errors = new();
     private string ServiceConnection => new NpgsqlConnectionStringBuilder(db.ConnectionString) { Username = _role, Password = "samples" }.ConnectionString;
 
     // Stands in for the deploy: CAP's own schema script, run once by a role that may create tables, then
@@ -70,7 +72,7 @@ public sealed class CapTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncL
     private IHost Build(Action<IServiceCollection>? change = null)
     {
         var builder = Host.CreateApplicationBuilder();
-        builder.Logging.ClearProviders();
+        builder.Logging.ClearProviders().AddProvider(_errors);
         builder.Services.AddEventBus(ServiceConnection, RabbitMq, _group);
         builder.Services.AddSingleton(NpgsqlDataSource.Create(ServiceConnection));
         builder.Services.AddTransient<PlaceOrder>();
@@ -106,7 +108,7 @@ public sealed class CapTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncL
             return orderId;
         });
 
-        Assert.Single(_shipments.Created, o => o.OrderId == id);
+        Assert.True(_shipments.Created.Count(o => o.OrderId == id) == 1, $"shipments: {_shipments.Created.Count}; errors: {_errors}");
     }
 
     [Fact]
@@ -159,22 +161,31 @@ public sealed class CapTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncL
 
     [Fact]
     [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
-    public async Task Story_TheSchemaScriptWasntAppliedHere_CapStartsAnyway_TheCheckStopsTheDeploy()
+    public async Task Story_TheSchemaScriptWasntAppliedHere_CapKeepsRunning_TheCheckStopsTheService()
     {
         // Given: an environment where nobody ran the script (CAP's schema there doesn't exist)
         void Missing(IServiceCollection s) => s.Configure<PostgreSqlOptions>(o => o.Schema = "cap_missing");
 
-        // CAP's own initializer can't create it with the service role, logs the error and starts anyway
+        // CAP's own initializer can't create it with the service role: it logs the error and keeps running
         using (var plain = Build(s => { Missing(s); s.AddSingleton<IStorageInitializer, PostgreSqlStorageInitializer>(); }))
         {
-            await plain.StartAsync();
+            Assert.False(await StopsWithin(plain, TimeSpan.FromSeconds(5)), $"errors: {_errors}");
             await plain.StopAsync();
         }
 
-        // The check refuses to start
+        // With the check, CAP's start-up fails and the host stops (the pod restarts and the deploy fails)
         using var checkedHost = Build(Missing);
-        var refused = await Assert.ThrowsAsync<InvalidOperationException>(() => checkedHost.StartAsync());
-        Assert.Contains("reviewed CAP schema script", refused.Message);
+        Assert.True(await StopsWithin(checkedHost, TimeSpan.FromSeconds(15)), "the service kept running without CAP's tables");
+        Assert.Contains(_errors.Errors, e => e.Contains("reviewed CAP schema script"));
+    }
+
+    // CAP starts in a background service, so a failure there stops the host instead of failing StartAsync.
+    private static async Task<bool> StopsWithin(IHost host, TimeSpan time)
+    {
+        var stopping = new TaskCompletionSource();
+        host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping.Register(() => stopping.TrySetResult());
+        await host.StartAsync();
+        return await Task.WhenAny(stopping.Task, Task.Delay(time)) == stopping.Task;
     }
 
     [Fact]

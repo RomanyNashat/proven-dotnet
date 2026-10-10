@@ -64,8 +64,10 @@ public sealed class ReviewedSchemaCheck(IOptions<PostgreSqlOptions> options) : I
 `CREATE SCHEMA/TABLE/INDEX IF NOT EXISTS` on each start, against the rule that the running app never
 changes the schema (`rules/efcore-rules.md`). If that fails, CAP logs the error and starts anyway (only
 an `InvalidOperationException` stops it). Tested as a story: in an environment where the script wasn't
-applied, CAP's own initializer can't create the tables with the service's role, and the service starts;
-the first publish would fail. With `ReviewedSchemaCheck` the same deploy stops at start-up.
+applied, CAP's own initializer can't create the tables with the service's role, logs it, and keeps running;
+the first publish would fail. With `ReviewedSchemaCheck` the service stops: CAP starts in a background
+service, so the failure stops the host (and the pod restarts, failing the rollout) rather than failing
+`StartAsync`.
 
 So: apply CAP's schema as a deploy step, with a role that may create tables (the tests run CAP's own
 `PostgreSqlStorageInitializer` once that way), and run the service with a role that may only read and
