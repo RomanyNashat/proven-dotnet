@@ -23,8 +23,8 @@ public static class HangfireSetup
 
     public static IServiceCollection AddJobServers(this IServiceCollection services)
     {
-        // The order of a server's queue list is not a priority (on PostgreSQL it's first come, first
-        // served), so urgent work gets its own server: a backlog of other jobs can't hold it up.
+        // A server's queue order is a preference, not a reservation: its workers still fill up with other
+        // jobs. Urgent work gets a server of its own, so a backlog elsewhere can't hold it up.
         services.AddHangfireServer(options => options.Queues = ["critical"]);
         services.AddHangfireServer(options =>
         {

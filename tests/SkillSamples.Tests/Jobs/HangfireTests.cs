@@ -166,32 +166,6 @@ public sealed class HangfireTests(PgDatabase db) : IClassFixture<PgDatabase>, IA
     }
 
     [Fact]
-    public async Task QueueListOrder_IsNotPriority_OnPostgreSql()
-    {
-        // What the skill used to show: one server, queues listed most urgent first.
-        using var host = Build(services => services.AddHangfireServer(o =>
-        {
-            o.Queues = ["critical", "default", "low"];
-            o.WorkerCount = 1;
-        }));
-        var jobs = host.Services.GetRequiredService<IBackgroundJobClient>();
-        var low = jobs.Enqueue<IStep>("low", s => s.RunAsync("low", CancellationToken.None));
-        var critical = jobs.Enqueue<IStep>("critical", s => s.RunAsync("critical", CancellationToken.None));
-
-        await host.StartAsync();
-        try
-        {
-            await Until(() => State(host, low) == "Succeeded" && State(host, critical) == "Succeeded", "both jobs");
-            var order = _calls.Log.Where(n => n is "low" or "critical").ToList();
-            Assert.True(order.SequenceEqual(new[] { "low", "critical" }), $"ran in this order: {string.Join(", ", order)}");
-        }
-        finally
-        {
-            await host.StopAsync();
-        }
-    }
-
-    [Fact]
     public async Task CriticalQueue_HasAServerOfItsOwn()
     {
         using var host = Build();

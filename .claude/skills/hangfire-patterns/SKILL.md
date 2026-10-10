@@ -41,8 +41,8 @@ public static class HangfireSetup
 
     public static IServiceCollection AddJobServers(this IServiceCollection services)
     {
-        // The order of a server's queue list is not a priority (on PostgreSQL it's first come, first
-        // served), so urgent work gets its own server: a backlog of other jobs can't hold it up.
+        // A server's queue order is a preference, not a reservation: its workers still fill up with other
+        // jobs. Urgent work gets a server of its own, so a backlog elsewhere can't hold it up.
         services.AddHangfireServer(options => options.Queues = ["critical"]);
         services.AddHangfireServer(options =>
         {
@@ -56,9 +56,10 @@ public static class HangfireSetup
 
 - **Poll interval:** Hangfire.PostgreSql checks the queues every **15 seconds** by default, so a
   fire-and-forget job can wait that long to start. Lower `QueuePollInterval` when that matters.
-- **A server's queue list is not a priority order.** Tested on PostgreSQL: one server listening to
-  `critical, default, low` with one worker ran a `low` job before a `critical` one enqueued after it.
-  For work that mustn't wait behind a backlog, give its queue a server of its own, as above.
+- **Queue order is a preference, not a reservation.** A free worker takes from the first queue in its
+  list that has work, but every worker can be busy with `default` or `low` jobs when a `critical` one
+  arrives, and then it waits. Work that mustn't wait gets a server of its own, as above (tested: the
+  critical-only server is registered and runs its jobs).
 - **Storage and servers are separate.** An API that only enqueues adds the storage; the services that run
   jobs add the servers too:
 
@@ -245,7 +246,7 @@ public async Task SendAsync_OrderMissing_SendsNothing()
 - Schema applied by the pipeline, never `PrepareSchemaIfNecessary = true`; Hangfire's own tables are a
   recorded exception to the column rules.
 - Filters (`[AutomaticRetry]`, `[Queue]`) on the interface method you enqueue through.
-- Queue order is not priority: urgent queues get their own server.
+- Queue order is a preference: urgent queues get their own server.
 - Small, stable arguments (`int` ids); `CancellationToken.None` in the expression, used in the job.
 - Jobs run at least once: idempotent side effects.
 - Time zones by IANA id (`Asia/Riyadh`), not Windows ids.
