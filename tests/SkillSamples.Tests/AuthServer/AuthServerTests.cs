@@ -297,16 +297,14 @@ public sealed class AuthServerTests(SqlDatabase db) : IClassFixture<SqlDatabase>
     }
 
     [Fact]
-    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
-    public async Task Production_NoIcu_TheCodeFlowWorksAndTheEmailIsMatchedWhateverItsCase()
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_TheAdminTypesTheirEmailInAnotherCase_TheyStillSignIn()
     {
-        ProductionConditions.Require();
-
         var (browser, tokens) = await SignInAsync("Admin@Example.COM");
         using var _ = browser;
 
         var introspection = await IntrospectAsync(tokens.AccessToken);
         Assert.True(introspection.GetProperty("active").GetBoolean());
-        Assert.Equal(new[] { AuthServerSeed.SuperAdmin }, RolesIn(introspection));
+        Assert.Equal(Admin, introspection.GetProperty("name").GetString());
     }
 }

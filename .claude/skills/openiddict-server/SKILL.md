@@ -262,7 +262,13 @@ Tested as stories, end to end against SQL Server:
   `RevokeBySubjectAsync` ends every session of that user; to end one device only, revoke by the
   authorization id instead.
 
-Tested with no ICU: the whole flow works, and `Admin@Example.COM` signs in as `admin@example.com`.
+Tested as a story: `Admin@Example.COM` signs in as `admin@example.com`.
+
+**On SQL Server, the image needs ICU.** Tested on a slim image's conditions: `Microsoft.Data.SqlClient`
+refuses to open any connection in globalization-invariant mode (`NotSupportedException: Globalization
+Invariant Mode is not supported`). An Alpine image without `icu-libs`, or one with
+`DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1`, can't reach the database at all. Add ICU to the image
+(`localization` covers it). PostgreSQL (Npgsql) works without it.
 
 ## Clients and roles, seeded as rows
 
