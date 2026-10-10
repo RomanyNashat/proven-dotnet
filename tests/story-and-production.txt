@@ -12,3 +12,4 @@ testing-architecture
 signalr
 nats
 rabbitmq-patterns
+cap-library

@@ -25,6 +25,9 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.*" />
     <PackageReference Include="NATS.Net" Version="2.*" />
     <PackageReference Include="RabbitMQ.Client" Version="7.*" />
+    <PackageReference Include="DotNetCore.CAP" Version="10.*" />
+    <PackageReference Include="DotNetCore.CAP.PostgreSql" Version="10.*" />
+    <PackageReference Include="DotNetCore.CAP.RabbitMQ" Version="10.*" />
     <PackageReference Include="FluentValidation" Version="12.*" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.*" />
     <PackageReference Include="Serilog" Version="4.2.0" />
