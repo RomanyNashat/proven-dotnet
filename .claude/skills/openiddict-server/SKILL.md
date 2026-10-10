@@ -10,7 +10,13 @@ For a service that **issues** tokens: the OpenID Provider / authorization server
 **check** tokens (from this server or from an IdP such as Keycloak) follow `auth-patterns`.
 
 **OpenIddict** (Apache-2.0, OpenID-certified) handles the protocol and the crypto; **ASP.NET Core
-Identity** stores users, passwords and roles. You write login, the authorize and token handlers, and
+Identity** stores users, passwords and roles.
+
+**On .NET 10, use OpenIddict 7.** OpenIddict 6 was built against EF Core 9, and EF Core 10 changed the
+types behind `ExecuteUpdate`. Tested: with OpenIddict 6 on EF Core 10, logout failed with
+`TypeLoadException: Could not load type 'SetPropertyCalls`1'` the moment it revoked tokens in bulk. Sign-in,
+refresh and introspection still worked, so nothing looks wrong until someone logs out. A service that can't
+move yet calls `.DisableBulkOperations()` on `UseEntityFrameworkCore()`: tokens are then revoked one by one. You write login, the authorize and token handlers, and
 logout. The samples run on SQL Server and are tested end to end: a browser-like client signs in, runs
 the code flow with PKCE, and an API introspects the token.
 
