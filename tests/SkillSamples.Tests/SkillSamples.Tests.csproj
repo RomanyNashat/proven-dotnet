@@ -24,6 +24,7 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.*" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.*" />
     <PackageReference Include="NATS.Net" Version="2.*" />
+    <PackageReference Include="RabbitMQ.Client" Version="7.*" />
     <PackageReference Include="FluentValidation" Version="12.*" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.*" />
     <PackageReference Include="Serilog" Version="4.2.0" />

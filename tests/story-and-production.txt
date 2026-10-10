@@ -11,3 +11,4 @@ openiddict-server
 testing-architecture
 signalr
 nats
+rabbitmq-patterns
