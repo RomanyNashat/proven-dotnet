@@ -8,3 +8,4 @@ dotnet-core
 testing-tdd
 healthcare-compliance
 openiddict-server
+testing-architecture

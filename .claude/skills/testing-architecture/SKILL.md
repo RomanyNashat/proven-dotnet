@@ -1,263 +1,133 @@
 ---
 name: testing-architecture
-description: Architecture tests for .NET: enforce layer boundaries, naming, dependency rules (NetArchTest/ArchUnitNET).
-version: 1.0.0
+description: Architecture tests for .NET with NetArchTest — layer dependencies, handlers sealed and named, entities changed through methods, and a guard so a renamed namespace can't turn a rule into one that never fails. Tested in CI against a well-layered and a deliberately broken sample.
+version: 2.0.0
 ---
 
 # Architecture Testing Patterns
 
+The layer rules in `rules/architecture.md` hold only if something checks them. Architecture tests do,
+on every build: a domain class that reaches for the database fails the build with its name in the
+message.
+
 ## Setup
 
 ```xml
-<PackageReference Include="NetArchTest.Rules" Version="1.4.0" />
-<!-- Or the newer fork: -->
-<PackageReference Include="TngTech.ArchUnitNET.xUnit" Version="0.13.0" />
+<PackageReference Include="NetArchTest.Rules" Version="1.3.2" />
 ```
 
-## Layer Dependency Tests
+NetArchTest has had no release since 1.3.2; it still works on .NET 10 (the samples run on it). For rules
+it can't express (method-level dependencies, slices), ArchUnitNET is maintained and Apache-2.0.
 
+## The rules
+
+<!-- sample: tests/SkillSamples.Tests/Architecture/ArchitectureRules.cs -->
 ```csharp
-[Trait("Category", "Architecture")]
-public sealed class LayerDependencyTests
+// The layer namespaces of one service. With one project per layer, they're the projects' root namespaces.
+public sealed record Layers(string Domain, string Application, string Infrastructure, string Api);
+
+public static class ArchitectureRules
 {
-    private static readonly Assembly DomainAssembly = typeof(Order).Assembly;
-    private static readonly Assembly ApplicationAssembly = typeof(CreateOrderCommand).Assembly;
-    private static readonly Assembly InfrastructureAssembly = typeof(AppDbContext).Assembly;
-    private static readonly Assembly ApiAssembly = typeof(Program).Assembly;
+    private static readonly string[] InfrastructurePackages =
+        ["Microsoft.EntityFrameworkCore", "Npgsql", "Microsoft.Data.SqlClient", "Dapper", "MongoDB.Driver", "StackExchange.Redis", "Confluent.Kafka"];
 
-    [Fact]
-    public void Domain_ShouldNotDependOn_Application()
+    public static IReadOnlyList<string> DomainDependsOnNothing(Assembly assembly, Layers layers) =>
+        Check(assembly, layers.Domain, types => types
+            .ShouldNot().HaveDependencyOnAny([layers.Application, layers.Infrastructure, layers.Api, .. InfrastructurePackages]));
+
+    public static IReadOnlyList<string> ApplicationDependsOnDomainOnly(Assembly assembly, Layers layers) =>
+        Check(assembly, layers.Application, types => types
+            .ShouldNot().HaveDependencyOnAny([layers.Infrastructure, layers.Api, .. InfrastructurePackages]));
+
+    public static IReadOnlyList<string> ApiGoesThroughTheApplication(Assembly assembly, Layers layers) =>
+        Check(assembly, layers.Api, types => types
+            .ShouldNot().HaveDependencyOnAny([layers.Infrastructure, .. InfrastructurePackages]));
+
+    public static IReadOnlyList<string> HandlersAreSealedAndNamed(Assembly assembly, Layers layers) =>
+    [
+        .. Check(assembly, layers.Application, types => types.And().ImplementInterface(typeof(ICommandHandler<,>)).Should().BeSealed()),
+        .. Check(assembly, layers.Application, types => types.And().ImplementInterface(typeof(ICommandHandler<,>)).Should().HaveNameEndingWith("Handler"))
+    ];
+
+    // NetArchTest doesn't see whether a setter is init-only, so this rule uses reflection.
+    public static IReadOnlyList<string> DomainStateChangesThroughMethods(Assembly assembly, Layers layers) =>
+        Selected(assembly, layers.Domain).GetTypes()
+            .Where(t => t.IsClass && t.GetMethod("<Clone>$") is null)   // records are values: init is fine
+            .SelectMany(t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.SetMethod is { IsPublic: true } setter
+                            && !setter.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
+                .Select(p => $"{t.FullName}.{p.Name}"))
+            .ToList();
+
+    // A rule that selects no types passes. A renamed namespace would turn every rule into a test that
+    // can never fail, so each one first checks it selected something.
+    private static PredicateList Selected(Assembly assembly, string layer)
     {
-        var result = Types.InAssembly(DomainAssembly)
-            .ShouldNot()
-            .HaveDependencyOn(ApplicationAssembly.GetName().Name)
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue(
-            FormatFailures("Domain depends on Application", result));
+        var selection = Types.InAssembly(assembly).That().ResideInNamespace(layer);
+        return selection.GetTypes().Any()
+            ? selection
+            : throw new InvalidOperationException($"No types in {layer}: is the namespace right?");
     }
 
-    [Fact]
-    public void Domain_ShouldNotDependOn_Infrastructure()
+    private static IReadOnlyList<string> Check(Assembly assembly, string layer, Func<PredicateList, ConditionList> rule)
     {
-        var result = Types.InAssembly(DomainAssembly)
-            .ShouldNot()
-            .HaveDependencyOn(InfrastructureAssembly.GetName().Name)
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue(
-            FormatFailures("Domain depends on Infrastructure", result));
-    }
-
-    [Fact]
-    public void Domain_ShouldNotDependOn_Api()
-    {
-        var result = Types.InAssembly(DomainAssembly)
-            .ShouldNot()
-            .HaveDependencyOn(ApiAssembly.GetName().Name)
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue(
-            FormatFailures("Domain depends on API", result));
-    }
-
-    [Fact]
-    public void Application_ShouldNotDependOn_Infrastructure()
-    {
-        var result = Types.InAssembly(ApplicationAssembly)
-            .ShouldNot()
-            .HaveDependencyOn(InfrastructureAssembly.GetName().Name)
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue(
-            FormatFailures("Application depends on Infrastructure", result));
-    }
-
-    [Fact]
-    public void Application_ShouldNotDependOn_Api()
-    {
-        var result = Types.InAssembly(ApplicationAssembly)
-            .ShouldNot()
-            .HaveDependencyOn(ApiAssembly.GetName().Name)
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue(
-            FormatFailures("Application depends on API", result));
-    }
-
-    [Fact]
-    public void Domain_ShouldNotReference_ExternalPackages()
-    {
-        var result = Types.InAssembly(DomainAssembly)
-            .ShouldNot()
-            .HaveDependencyOnAny(
-                "Microsoft.EntityFrameworkCore",
-                "Npgsql",
-                "Dapper",
-                "MediatR",
-                "FluentValidation",
-                "Confluent.Kafka",
-                "StackExchange.Redis",
-                "MongoDB.Driver")
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue(
-            FormatFailures("Domain references external packages", result));
-    }
-
-    private static string FormatFailures(string rule, TestResult result)
-    {
-        if (result.IsSuccessful) return string.Empty;
-        var types = string.Join("\n  ", result.FailingTypes?.Select(t => t.FullName) ?? []);
-        return $"{rule}. Violating types:\n  {types}";
+        var result = rule(Selected(assembly, layer)).GetResult();
+        return result.IsSuccessful ? [] : [.. result.FailingTypes.Select(t => t.FullName!)];
     }
 }
 ```
 
-## Naming Convention Tests
+Each rule returns the names of the types that break it, so a failure reads "OrderPricing", not "expected
+true but found false".
+
+- **Layers by namespace.** With one project per layer, pass `typeof(SomeDomainType).Assembly` and the
+  project's root namespace; with one project, the namespaces do the same job.
+- **Domain depends on nothing:** no other layer, and no data or messaging package.
+- **`ImplementInterface` works with an open generic** (`typeof(ICommandHandler<,>)`, tested). It looks at
+  the interfaces a type declares itself, not ones it inherits from a base class.
+- **The guard against empty selections.** Tested as a story: with a typo in the namespace, NetArchTest
+  selects nothing and the rule passes; the guard turns that into a failure.
+
+## Tests
 
 ```csharp
 [Trait("Category", "Architecture")]
-public sealed class NamingConventionTests
+public sealed class ArchitectureTests
 {
-    [Fact]
-    public void CommandHandlers_ShouldEndWith_Handler()
-    {
-        var result = Types.InAssembly(typeof(CreateOrderHandler).Assembly)
-            .That()
-            .ImplementInterface(typeof(ICommandHandler<,>))
-            .Should()
-            .HaveNameEndingWith("Handler")
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue(
-            FormatFailures("Command/Query handlers must end with 'Handler'", result));
-    }
+    private static readonly Assembly Assembly = typeof(Order).Assembly;
+    private static readonly Layers Layers = new("Shop.Domain", "Shop.Application", "Shop.Infrastructure", "Shop.Api");
 
     [Fact]
-    public void Validators_ShouldEndWith_Validator()
+    public void Layers_FollowEveryRule()
     {
-        var result = Types.InAssembly(typeof(CreateOrderCommandValidator).Assembly)
-            .That()
-            .Inherit(typeof(AbstractValidator<>))
-            .Should()
-            .HaveNameEndingWith("Validator")
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Repositories_ShouldEndWith_Repository()
-    {
-        var result = Types.InAssembly(typeof(AppDbContext).Assembly)
-            .That()
-            .HaveNameEndingWith("Repository")
-            .Should()
-            .ImplementInterface(typeof(IOrderRepository).Assembly
-                .GetTypes()
-                .First(t => t.Name.EndsWith("Repository") && t.IsInterface))
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Interfaces_ShouldStartWith_I()
-    {
-        var result = Types.InAssembly(typeof(Order).Assembly)
-            .That()
-            .AreInterfaces()
-            .Should()
-            .HaveNameStartingWith("I")
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue();
+        ArchitectureRules.DomainDependsOnNothing(Assembly, Layers).Should().BeEmpty();
+        ArchitectureRules.ApplicationDependsOnDomainOnly(Assembly, Layers).Should().BeEmpty();
+        ArchitectureRules.ApiGoesThroughTheApplication(Assembly, Layers).Should().BeEmpty();
+        ArchitectureRules.HandlersAreSealedAndNamed(Assembly, Layers).Should().BeEmpty();
+        ArchitectureRules.DomainStateChangesThroughMethods(Assembly, Layers).Should().BeEmpty();
     }
 }
 ```
 
-## Design Constraint Tests
+The samples run every rule against two copies of a small service: one laid out properly (every rule
+passes) and one with the usual mistakes. Tested as stories, each mistake is caught and named:
+- a domain service that takes the `DbContext` (`OrderPricing`);
+- an endpoint that queries the database instead of going through the application layer;
+- a handler left unsealed, and another that implements the interface without the `Handler` suffix;
+- an entity with a public setter (`Invoice.Total`); `init` setters and records pass.
 
-```csharp
-[Trait("Category", "Architecture")]
-public sealed class DesignConstraintTests
-{
-    [Fact]
-    public void Handlers_ShouldBe_Sealed()
-    {
-        var result = Types.InAssembly(typeof(CreateOrderHandler).Assembly)
-            .That()
-            .HaveNameEndingWith("Handler")
-            .Should()
-            .BeSealed()
-            .GetResult();
+Tested with no ICU: the rules give the same answers.
 
-        result.IsSuccessful.Should().BeTrue();
-    }
-
-    [Fact]
-    public void DomainEntities_ShouldNotHave_PublicSetters()
-    {
-        var entityTypes = Types.InAssembly(typeof(Order).Assembly)
-            .That()
-            .Inherit(typeof(Entity<>))
-            .GetTypes();
-
-        foreach (var type in entityTypes)
-        {
-            var publicSetters = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.SetMethod is { IsPublic: true }
-                    && p.Name != "Id"  // Id with protected init is OK
-                    && p.SetMethod.ReturnParameter?.GetRequiredCustomModifiers()
-                        .All(m => m != typeof(System.Runtime.CompilerServices.IsExternalInit)) == true);
-
-            publicSetters.Should().BeEmpty(
-                $"{type.Name} has public setters: {string.Join(", ", publicSetters.Select(p => p.Name))}. " +
-                "Domain entities should use methods for state changes.");
-        }
-    }
-
-    [Fact]
-    public void ValueObjects_ShouldBe_Records()
-    {
-        // Convention: types in Domain/ValueObjects namespace should be records
-        var valueObjectTypes = Types.InAssembly(typeof(Money).Assembly)
-            .That()
-            .ResideInNamespaceEndingWith("ValueObjects")
-            .GetTypes();
-
-        foreach (var type in valueObjectTypes)
-        {
-            var isRecord = type.GetMethod("<Clone>$") is not null;
-            isRecord.Should().BeTrue($"{type.Name} in ValueObjects should be a record type");
-        }
-    }
-
-    [Fact]
-    public void Controllers_ShouldNotAccess_DbContext_Directly()
-    {
-        var result = Types.InAssembly(typeof(Program).Assembly)
-            .That()
-            .HaveNameEndingWith("Endpoints")
-            .Or()
-            .HaveNameEndingWith("Controller")
-            .ShouldNot()
-            .HaveDependencyOn("Microsoft.EntityFrameworkCore")
-            .GetResult();
-
-        result.IsSuccessful.Should().BeTrue(
-            "API layer should not access DbContext directly — use Application layer");
-    }
-}
-```
-
-## Running Architecture Tests
+## Running them
 
 ```bash
-# Run only architecture tests
 dotnet test --filter "Category=Architecture"
-
-# Include in CI pipeline as a quality gate
-dotnet test --filter "Category=Architecture" --logger "trx;LogFileName=arch-tests.trx"
 ```
+
+They run with the unit tests on every build; they need no database and take a second or two.
+
+## Rules
+- One architecture test project (or class) per service, run on every build.
+- Rules return the failing type names; assertions show them.
+- Every rule checks its selection isn't empty.
+- Layers: Domain → nothing; Application → Domain; Infrastructure → Domain and Application; Api → Application.
