@@ -29,7 +29,7 @@ jobs:
             services: mongo redis kafka nginx
     env:
       SERVICES: ${{ matrix.services }}
-      SQL_NAMESPACES: Auth DapperReads Ddd EfCore EfOutbox Integration Localization MsSql Postgres Secrets Workers
+      SQL_NAMESPACES: Auth DapperReads Ddd EfCore EfOutbox Integration Jobs Localization MsSql Postgres Secrets Workers
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v4
