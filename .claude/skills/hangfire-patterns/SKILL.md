@@ -26,18 +26,20 @@ public static class HangfireSetup
 {
     // Every service that enqueues needs the storage; only the ones that run jobs add the servers.
     public static IServiceCollection AddJobStorage(this IServiceCollection services, string connectionString) =>
-        services.AddHangfire(config => config
-            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UsePostgreSqlStorage(
-                options => options.UseNpgsqlConnection(connectionString),
-                new PostgreSqlStorageOptions
-                {
-                    SchemaName = "hangfire",
-                    PrepareSchemaIfNecessary = false,          // the schema is applied by the pipeline, not at boot
-                    QueuePollInterval = TimeSpan.FromSeconds(1) // the default is 15 s: jobs wait that long to start
-                }));
+        services
+            .AddSingleton<ITimeZoneResolver, TimeZoneResolver>()   // recurring jobs' zones on images without tzdata
+            .AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(
+                    options => options.UseNpgsqlConnection(connectionString),
+                    new PostgreSqlStorageOptions
+                    {
+                        SchemaName = "hangfire",
+                        PrepareSchemaIfNecessary = false,          // the schema is applied by the pipeline, not at boot
+                        QueuePollInterval = TimeSpan.FromSeconds(1) // the default is 15 s: jobs wait that long to start
+                    }));
 
     public static IServiceCollection AddJobServers(this IServiceCollection services)
     {
@@ -180,6 +182,20 @@ public static class RecurringJobs
 }
 ```
 
+Hangfire stores the zone by its id and looks it up again whenever it works out the next run, so passing
+a working zone isn't enough on an image without tzdata. Tested: without a resolver the production test
+threw `TimeZoneNotFoundException` for `Asia/Riyadh` though `RiyadhTime` had supplied the zone. Register
+one; the scheduler, the dashboard and `AddOrUpdate` all take it from DI (see `AddJobStorage` above):
+
+<!-- sample: tests/SkillSamples.Tests/Jobs/TimeZoneResolver.cs -->
+```csharp
+public sealed class TimeZoneResolver : ITimeZoneResolver
+{
+    public TimeZoneInfo GetTimeZoneById(string timeZoneId) =>
+        timeZoneId == RiyadhTime.Zone.Id ? RiyadhTime.Zone : TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+}
+```
+
 Tested, also with no tzdata on the machine: the next run is stored as 23:00 UTC, and the queue travels with the job (`RecurringJobDto.Job.Queue`;
 the older `RecurringJobDto.Queue` still reads `default`). Register through `IRecurringJobManager` (injected, so it can
 be tested) at startup; `AddOrUpdate` with the same id replaces the job, so registering on every start is
@@ -252,5 +268,6 @@ public async Task SendAsync_OrderMissing_SendsNothing()
 - Queue order is a preference: urgent queues get their own server.
 - Small, stable arguments (`int` ids); `CancellationToken.None` in the expression, used in the job.
 - Jobs run at least once: idempotent side effects.
-- Time zones that work without tzdata (`RiyadhTime`, `localization` §7), never a bare `FindSystemTimeZoneById`.
+- Time zones that work without tzdata (`RiyadhTime`, `localization` §7), never a bare `FindSystemTimeZoneById`,
+  and an `ITimeZoneResolver` in DI that resolves them again.
 - Dashboard behind an authorization policy, with the local-only default removed.

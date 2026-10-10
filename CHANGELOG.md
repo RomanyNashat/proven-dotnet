@@ -13,6 +13,9 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   - **Both samples crashed on an image without tzdata:** `FindSystemTimeZoneById("Asia/Riyadh")` throws
     there. They now use `RiyadhTime` (`localization` §7), which falls back to a fixed UTC+3 zone; the
     production tests get 23:00 UTC with no tzdata.
+  - **Hangfire lost the zone anyway:** it stores the zone's id and looks it up again by id, which throws
+    without tzdata. The setup now registers an `ITimeZoneResolver`, which Hangfire's scheduler, dashboard
+    and `AddOrUpdate` all take from DI.
   - **Quartz dropped a run missed while the service was down.** Every start replaces the stored trigger
     and, by default, works the next run out from now. `ScheduleTriggerRelativeToReplacedTrigger = true`
     keeps it; the story runs the missed report once, for the slot it missed, and a second story shows
