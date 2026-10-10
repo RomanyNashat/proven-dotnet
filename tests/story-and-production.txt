@@ -26,3 +26,4 @@ polly-resilience
 worker-patterns
 kafka-patterns
 grpc-patterns
+design-patterns
