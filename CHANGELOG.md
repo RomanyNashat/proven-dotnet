@@ -3,6 +3,11 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.8 — per-project skills
+- `project-skills/`: Cassandra, FHIR, BigQuery, Firebase, SignalR, NATS, RabbitMQ, CAP and GitHub
+  Actions. Not installed; copy one into the repo that uses it, so niche skills don't crowd the global
+  list. Their code isn't tested in CI yet, and the README says so.
+
 ## 0.1.7 — production diagnostics
 - `production-diagnostics`: turn "slow, leaking, restarting, starving" into evidence from logs and APM,
   with a symptom playbook, the container GC facts behind restarts, and safe requests to whoever runs the
