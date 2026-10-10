@@ -1,9 +1,17 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using NetArchTest.Rules;
-using SkillSamples.Cqrs;
 
 namespace SkillSamples.Architecture;
+
+// The samples' own command contracts. (The CQRS samples register every ICommandHandler they find in this
+// assembly, so these layers can't use theirs.)
+public interface ICommand<TResult>;
+
+public interface ICommandHandler<in TCommand, TResult> where TCommand : ICommand<TResult>
+{
+    Task<TResult> HandleAsync(TCommand command, CancellationToken ct);
+}
 
 // The layer namespaces of one service. With one project per layer, they're the projects' root namespaces.
 public sealed record Layers(string Domain, string Application, string Infrastructure, string Api);

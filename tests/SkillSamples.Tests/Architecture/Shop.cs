@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using SkillSamples.Architecture.Shop.Application;
 using SkillSamples.Architecture.Shop.Domain;
 using SkillSamples.Architecture.Shop.Domain.ValueObjects;
-using SkillSamples.Cqrs;
 
 // A small service laid out in the four layers, for the architecture rules to check. In a real solution
 // each layer is its own project; here each is a namespace, and the rules take either.

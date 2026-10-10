@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using SkillSamples.Cqrs;
 
 // The same layers with the mistakes the rules exist to catch.
 
