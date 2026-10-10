@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SkillSamples.Localization;
 
 namespace SkillSamples.EfOutbox;
 
@@ -28,7 +29,8 @@ public sealed class AppointmentBookedConsumer(ClinicDbContext db, TimeProvider t
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var now = time.GetUtcNow();
-        var day = DateOnly.FromDateTime(booked.StartsAt.UtcDateTime);
+        // The clinic's own day: a 01:00 appointment in Riyadh is 22:00 UTC the day before.
+        var day = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(booked.StartsAt, RiyadhTime.Zone).DateTime);
         if (db.Database.IsSqlServer())
         {
             // UPDLOCK + HOLDLOCK: a second delivery waits on the key range, then finds the row.
