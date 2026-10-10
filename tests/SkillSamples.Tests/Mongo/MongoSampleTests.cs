@@ -11,6 +11,7 @@ using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using SkillSamples.MongoOutbox;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Mongo;
@@ -423,5 +424,104 @@ public sealed class MongoSampleTests(MongoFixture mongo) : IClassFixture<MongoFi
 
         Assert.Equal(new[] { "a" }, failing.Handled);
         Assert.Equal(new[] { "b", "c" }, afterRestart);
+    }
+
+    // Sends a push once per notification, even when the change stream delivers it twice: the "sent" record
+    // is keyed by the notification's _id, so a second delivery finds it and sends nothing.
+    private sealed class OncePerNotificationPush(IMongoDatabase db, string? killedAfterSending = null) : INotificationHandler
+    {
+        private readonly IMongoCollection<BsonDocument> _sent = db.GetCollection<BsonDocument>("sentPushes");
+
+        public List<string> Delivered { get; } = [];
+        public List<string> Pushed { get; } = [];
+
+        public async Task HandleAsync(Notification notification, CancellationToken ct)
+        {
+            lock (Delivered)
+            {
+                Delivered.Add(notification.Title);
+            }
+
+            try
+            {
+                await _sent.InsertOneAsync(new BsonDocument("_id", notification.Id), cancellationToken: ct);
+            }
+            catch (MongoWriteException e) when (e.WriteError.Category == ServerErrorCategory.DuplicateKey)
+            {
+                return;   // pushed before the last crash
+            }
+
+            lock (Pushed)
+            {
+                Pushed.Add(notification.Title);
+            }
+
+            if (notification.Title == killedAfterSending)
+            {
+                throw new InvalidOperationException("pod killed before saving its position");
+            }
+        }
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ThePushPodIsKilledAfterSendingButBeforeSavingItsPlace_TheUserStillGetsEachPushOnce()
+    {
+        var db = mongo.NewDatabase();
+        var notifications = db.GetCollection<Notification>("notifications");
+        var tokens = new ResumeTokens(db);
+        await db.CreateCollectionAsync("notifications");
+        await SaveCurrentPositionAsync(notifications, tokens);
+
+        // Given: three results are ready, and the pod sending pushes dies right after sending the second
+        await notifications.InsertManyAsync([For(7, "a"), For(7, "b"), For(7, "c")]);
+        var dying = new OncePerNotificationPush(db, killedAfterSending: "b");
+        using (var watcher = new NewNotificationsWatcher(db, tokens, dying))
+        {
+            await watcher.StartAsync(CancellationToken.None);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => watcher.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(20)));
+        }
+
+        // When: the replacement pod starts from the last saved place
+        var replacement = new OncePerNotificationPush(db);
+        using (var watcher = new NewNotificationsWatcher(db, tokens, replacement))
+        {
+            await watcher.StartAsync(CancellationToken.None);
+            var clock = Stopwatch.StartNew();
+            while (clock.Elapsed < TimeSpan.FromSeconds(20) && !Seen("c"))
+            {
+                await Task.Delay(100);
+            }
+
+            await watcher.StopAsync(CancellationToken.None);
+        }
+
+        // Then: the stream delivered "b" again (at least once), and the user got one push each
+        bool Seen(string title)
+        {
+            lock (replacement.Delivered)
+            {
+                return replacement.Delivered.Contains(title);
+            }
+        }
+
+        Assert.Equal(new[] { "a", "b" }, dying.Delivered);
+        Assert.Equal(new[] { "b", "c" }, replacement.Delivered);
+        Assert.Equal(new[] { "a", "b", "c" }, dying.Pushed.Concat(replacement.Pushed).ToArray());
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_ArabicTitlesAndUtcDatesRoundTrip_AndPagingWorks()
+    {
+        ProductionConditions.Require();
+        var db = mongo.NewDatabase();
+        var notifications = db.GetCollection<Notification>("notifications");
+        await notifications.InsertManyAsync([For(9, "نتيجة التحليل جاهزة"), For(9, "موعدك غداً الساعة ٩")]);
+
+        var page = await new NotificationQueries(db).GetPageAsync(userId: 9, after: null, size: 10, CancellationToken.None);
+
+        Assert.Equal(new[] { "موعدك غداً الساعة ٩", "نتيجة التحليل جاهزة" }, page.Select(n => n.Title).ToArray());
+        Assert.All(page, n => Assert.Equal((Now, DateTimeKind.Utc), (n.CreatedAt, n.CreatedAt.Kind)));
     }
 }
