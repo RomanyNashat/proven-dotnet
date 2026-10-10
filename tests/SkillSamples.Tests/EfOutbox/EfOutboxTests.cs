@@ -213,7 +213,10 @@ public abstract class EfOutboxTests<TFixture>(TFixture pg) where TFixture : Clin
     }
 }
 
-public sealed class PostgresOutboxTests(PostgresClinic pg) : EfOutboxTests<PostgresClinic>(pg), IClassFixture<PostgresClinic>
+public sealed class PostgresOutboxTests(PostgresClinic pg) : EfOutboxTests<PostgresClinic>(pg), IClassFixture<PostgresClinic>;
+
+/// <summary>The slim image's conditions. PostgreSQL only: SqlClient can't connect without ICU.</summary>
+public sealed class PostgresOutboxProductionTests(PostgresClinic pg) : IClassFixture<PostgresClinic>
 {
     [Fact]
     [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
