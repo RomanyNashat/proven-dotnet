@@ -70,7 +70,9 @@ block WebSockets then can't connect at all.
 
 The backplane isn't durable. A message sent while Redis is unreachable, or while a pod is reconnecting to
 it, is gone; SignalR doesn't buffer or replay. Treat real-time as best-effort:
-- When the client reconnects, it fetches the current state from the API.
+- When the client connects or reconnects, it fetches the current state from the API. In the tests, a
+  message sent from another pod in the first moments after a client connected was once missed: that
+  pod was still subscribing to the backplane.
 - Anything that must arrive also goes through a durable path (the database, an outbox).
 
 Tested with no ICU: Arabic text crosses pods intact.
