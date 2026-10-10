@@ -1,3 +1,4 @@
+using DotNetCore.CAP;
 using DotNetCore.CAP.Persistence;
 using DotNetCore.CAP.PostgreSql;
 using Microsoft.Extensions.DependencyInjection;
