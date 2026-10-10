@@ -4,3 +4,4 @@
 # samples gets a notice until it's added here.
 hangfire-patterns
 quartz-scheduling
+dotnet-core
