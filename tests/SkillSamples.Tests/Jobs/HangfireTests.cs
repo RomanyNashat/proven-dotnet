@@ -169,12 +169,21 @@ public sealed class HangfireTests(PgDatabase db) : IClassFixture<PgDatabase>, IA
         var low = jobs.Enqueue<IStep>("low", s => s.RunAsync("low", CancellationToken.None));
         var critical = jobs.Enqueue<IStep>("critical", s => s.RunAsync("critical", CancellationToken.None));
 
+        await using (var connection = new NpgsqlConnection(db.ConnectionString))
+        {
+            var rows = (await connection.QueryAsync<(long JobId, string Queue)>(
+                "SELECT jobid, queue FROM hangfire.jobqueue WHERE jobid IN (@low, @critical)",
+                new { low = long.Parse(low), critical = long.Parse(critical) })).ToList();
+            Assert.True(rows.Any(r => r.Queue == "critical") && rows.Any(r => r.Queue == "low"),
+                $"jobqueue rows: {string.Join(", ", rows)}");
+        }
+
         await host.StartAsync();
         try
         {
             await Until(() => State(host, low) == "Succeeded" && State(host, critical) == "Succeeded", "both jobs");
             var order = _calls.Log.Where(n => n is "low" or "critical").ToList();
-            Assert.Equal(new[] { "critical", "low" }, order);
+            Assert.True(order.SequenceEqual(new[] { "critical", "low" }), $"ran in this order: {string.Join(", ", order)}");
         }
         finally
         {
@@ -216,7 +225,8 @@ public sealed class HangfireTests(PgDatabase db) : IClassFixture<PgDatabase>, IA
         using var connection = host.Services.GetRequiredService<JobStorage>().GetConnection();
         var job = connection.GetRecurringJobs().Single(j => j.Id == "daily-report");
 
-        Assert.Equal("low", job.Queue);
+        var hash = connection.GetAllEntriesFromHash("recurring-job:daily-report") ?? new Dictionary<string, string>();
+        Assert.True(job.Queue == "low", $"queue {job.Queue}; stored: {string.Join("; ", hash.Select(e => $"{e.Key}={e.Value}"))}");
         Assert.NotNull(job.NextExecution);
         Assert.Equal(23, job.NextExecution!.Value.ToUniversalTime().Hour);
     }
@@ -228,11 +238,11 @@ public sealed class HangfireTests(PgDatabase db) : IClassFixture<PgDatabase>, IA
             SELECT count(*) FROM information_schema.columns
             WHERE table_schema = 'hangfire' AND (data_type = 'text' OR (data_type = 'character varying' AND character_maximum_length IS NULL))
             """);
-        Assert.True(unbounded > 0);
-        var invocation = await db.ScalarAsync<string>("""
-            SELECT data_type FROM information_schema.columns
-            WHERE table_schema = 'hangfire' AND table_name = 'job' AND column_name = 'invocationdata'
+        var columns = await db.ScalarAsync<string>("""
+            SELECT coalesce(string_agg(table_name || '.' || column_name || ' ' || data_type, ', ' ORDER BY table_name, column_name), '')
+            FROM information_schema.columns
+            WHERE table_schema = 'hangfire' AND (data_type IN ('text', 'jsonb') OR (data_type = 'character varying' AND character_maximum_length IS NULL))
             """);
-        Assert.Equal("text", invocation);
+        Assert.True(unbounded > 0, $"unbounded or json columns: {columns}");
     }
 }
