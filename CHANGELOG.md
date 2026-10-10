@@ -3,6 +3,20 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.9 — hangfire-patterns tested
+- `hangfire-patterns` 2.0.0, its code tested in CI against PostgreSQL. What the tests found in the old text:
+  - `[AutomaticRetry]` on the job class is ignored when the job is enqueued through its interface:
+    the job kept retrying. Filters go on the interface method.
+  - The schema was created by the app at startup (`PrepareSchemaIfNecessary = true`), against the
+    migrations rule. It's now a pipeline step, and Hangfire's unbounded columns are a recorded exception.
+  - A Windows time-zone id that fails on Alpine without ICU; now `Asia/Riyadh`, and 02:00 there is
+    tested as 23:00 UTC.
+  - Guid job arguments (now `int`), an "idempotent" job that would send twice after a crash, and a
+    dashboard filter that left the default local-only filter in place.
+  - Queue order is a preference, not a reservation: urgent work gets its own server.
+- Also tested: fire-and-forget gets Hangfire's cancellable token, continuations never run after a failed
+  parent, and the dashboard returns 401/403/200 by policy.
+
 ## 0.1.8 — per-project skills
 - `project-skills/`: Cassandra, FHIR, BigQuery, Firebase, SignalR, NATS, RabbitMQ, CAP and GitHub
   Actions. Not installed; copy one into the repo that uses it, so niche skills don't crowd the global
