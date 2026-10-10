@@ -1,7 +1,7 @@
 ---
 name: worker-patterns
 description: Background workers for .NET: BackgroundService vs IHostedService, Channel<T> queues that drain on shutdown, PeriodicTimer with TimeProvider, worker health checks, graceful shutdown. Code tested in CI.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Worker & Background Service Patterns
@@ -220,6 +220,10 @@ public sealed class NotificationDispatchWorker(
 `base.StopAsync()`" looks like a drain, but `base.StopAsync` cancels `stoppingToken` at once, and the
 read loop stops with messages still queued. A test in CI shows it losing them; the version above sends
 all of them, and still stops when the host's shutdown timeout runs out.
+
+Tested as a story: a deploy stops the pod with 20 reminders queued, and the SMS gateway fails on one. That
+one is logged and skipped; the other 19 go out, in order, before the pod exits; a reminder offered after
+shutdown began is refused, so the caller sends it to another pod. The same drain runs on a slim image.
 
 Several consumers on one queue: start N copies of the read loop with `Task.WhenAll`. Message order is
 then not kept.

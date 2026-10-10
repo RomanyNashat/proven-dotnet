@@ -4,6 +4,8 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
+using SkillSamples.Production;
+using Threading = System.Threading.Channels;
 using Xunit;
 
 namespace SkillSamples.Workers;
@@ -88,6 +90,75 @@ public sealed class WorkerTests
 
         await host.StopAsync();
         return SlowSender.Sent.Count;
+    }
+
+    // Records what was sent; fails on the ids it's told to, as an SMS gateway sometimes does.
+    public sealed class RecordingSender(ConcurrentQueue<int> sent, int[] failOn) : INotificationSender
+    {
+        public Task SendAsync(NotificationMessage message, CancellationToken ct) =>
+            failOn.Contains(message.Id) ? throw new HttpRequestException("gateway said 500") : Record(message.Id);
+
+        private Task Record(int id)
+        {
+            sent.Enqueue(id);
+            return Task.CompletedTask;
+        }
+    }
+
+    private static async Task<(int[] Sent, bool RefusedDuringShutdown)> DeployWhileQueuedAsync(int[] failOn)
+    {
+        var sent = new ConcurrentQueue<int>();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.Services.AddSingleton<NotificationQueue>();
+        builder.Services.AddScoped<INotificationSender>(_ => new RecordingSender(sent, failOn));
+        builder.Services.AddHostedService<NotificationDispatchWorker>();
+        using var host = builder.Build();
+        await host.StartAsync();
+        var queue = host.Services.GetRequiredService<NotificationQueue>();
+        for (var i = 1; i <= 20; i++)
+        {
+            await queue.EnqueueAsync(new NotificationMessage(i, "موعدك غداً"), default);
+        }
+
+        await host.StopAsync();
+        var refused = false;
+        try
+        {
+            await queue.EnqueueAsync(new NotificationMessage(21, "late"), default);
+        }
+        catch (Threading.ChannelClosedException)
+        {
+            refused = true;
+        }
+
+        return ([.. sent], refused);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ADeployRollsThePodWith20RemindersQueued_AndTheGatewayFailsOne_TheOther19StillGoOut()
+    {
+        // Given: 20 reminders queued, and the SMS gateway fails on reminder 5
+        // When: the deploy stops the pod
+        var (sent, refusedDuringShutdown) = await DeployWhileQueuedAsync(failOn: [5]);
+
+        // Then: the failure is logged and skipped, the other 19 go out before the pod exits, in order,
+        // and a reminder offered after shutdown began is refused (the caller tries another pod)
+        Assert.Equal(Enumerable.Range(1, 20).Where(i => i != 5).ToArray(), sent);
+        Assert.True(refusedDuringShutdown);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_TheQueueDrainsOnShutdown()
+    {
+        ProductionConditions.Require();
+
+        var (sent, refusedDuringShutdown) = await DeployWhileQueuedAsync(failOn: []);
+
+        Assert.Equal(20, sent.Length);
+        Assert.True(refusedDuringShutdown);
     }
 
     [Fact]
