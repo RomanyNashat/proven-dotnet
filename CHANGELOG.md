@@ -3,6 +3,13 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.18 — evals for /full-review and /health-check
+- `tests/evals/full-review/PharmacyRefills`: a small service with twelve planted findings (SQL injection, two
+  IDORs, PHI in logs, a swallowed `.Result`, a dual write, an unbounded column, an N+1, `System.Text.Json`
+  8.0.4 with CVE-2024-43485...) and three distractors, among them a `FromSql($"...")` call that is
+  parameterized. Cases in `tests/evals/full-review/evals.md` and `code-health/evals/evals.md`, run per
+  `skill-evals`: a fresh subagent per case, with and without proven-dotnet.
+
 ## 0.1.17 — the per-project skills tested
 - Most per-project skills now show code that runs in CI, with story and production tests. NATS 2.10 and
   RabbitMQ 4.1 join the CI services; the workflows in `cicd-github-actions` are checked by actionlint and
