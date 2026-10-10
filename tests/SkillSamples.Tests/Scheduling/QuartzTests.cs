@@ -162,7 +162,15 @@ public sealed class QuartzTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsy
         try
         {
             var health = host.Services.GetRequiredService<HealthCheckService>();
-            Assert.Equal(HealthStatus.Healthy, (await health.CheckHealthAsync()).Status);
+            // AwaitApplicationStarted: the scheduler starts just after the host does, not inside StartAsync.
+            var status = HealthStatus.Unhealthy;
+            for (var i = 0; i < 100 && status != HealthStatus.Healthy; i++)
+            {
+                status = (await health.CheckHealthAsync()).Status;
+                if (status != HealthStatus.Healthy)
+                    await Task.Delay(100);
+            }
+            Assert.Equal(HealthStatus.Healthy, status);
 
             var scheduler = await host.Services.GetRequiredService<ISchedulerFactory>().GetScheduler();
             await scheduler.Standby();

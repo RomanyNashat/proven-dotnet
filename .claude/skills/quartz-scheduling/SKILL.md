@@ -158,7 +158,9 @@ public sealed class QuartzHealthCheck(ISchedulerFactory schedulerFactory) : IHea
 }
 ```
 
-Tested: healthy while running, unhealthy in standby.
+Tested: healthy while running, unhealthy in standby. With `AwaitApplicationStarted` the scheduler starts
+just after the host does, so the check is unhealthy for a moment at start-up: register it as a
+readiness check (`tags: ["ready"]`), not liveness, or a slow start restarts the pod.
 
 ## Admin endpoints
 
