@@ -24,7 +24,7 @@
     <ToolCommandName>proven-roslyn-mcp</ToolCommandName>
     <PackageId>Proven.Roslyn.Mcp</PackageId>
     <!-- Stamped from VERSION so each release is a distinct tool version. -->
-    <Version>0.1.17</Version>
+    <Version>0.1.18</Version>
     <Description>proven-dotnet Roslyn MCP server — semantic .NET navigation for Claude Code.</Description>
   </PropertyGroup>
 
