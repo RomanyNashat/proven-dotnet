@@ -3,6 +3,22 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.12 — dotnet-core tested
+- `dotnet-core` 2.0.0, its code tested in CI, with story and production tests. It now covers what its
+  description promised (the host, DI lifetimes, options) and wasn't there. What the tests found:
+  - **In Production the host doesn't check service lifetimes.** A singleton that takes a scoped service
+    builds fine and gives two requests the same "scoped" instance (for a DbContext: two users on one
+    context). The skill turns `ValidateScopes` and `ValidateOnBuild` on everywhere; `ValidateOnBuild`
+    alone doesn't catch it.
+  - **`required` doesn't protect options:** the binder leaves a missing setting null. `[Required]` with
+    `ValidateOnStart()` stops the deploy instead of the first request; custom checks must be null-safe,
+    or their `NullReferenceException` hides the real message.
+  - **A base address without its trailing `/`, or a call path with a leading one, drops the path**
+    (`/api/` disappears). Checked at start-up now.
+  - The typed-client sample didn't compile (`EnsureSuccessStatusCode` on a `Task`), the named client had
+    a URL in code, the `field` sample cached a slug that went stale, the extension-block sample put a
+    constraint where C# doesn't allow one, and the anti-patterns code block was never closed.
+
 ## 0.1.11 — story and production tests
 - A new bar for tested skills: besides the code samples, each one gets **story tests** (a real situation,
   Given / When / Then) and **production tests** (the same code under a slim image: no ICU, no tzdata,
