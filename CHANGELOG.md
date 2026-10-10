@@ -3,6 +3,24 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.15 — openiddict-server tested
+- `openiddict-server` 2.0.0, tested end to end against SQL Server: login, the code flow with PKCE,
+  reference tokens, introspection by an API, refresh, revocation and logout, with story and production
+  tests. What they found:
+  - **OpenIddict 6 breaks on .NET 10.** It's built against EF Core 9; on EF Core 10 every bulk revoke
+    (logout) throws `TypeLoadException` for `SetPropertyCalls`. Sign-in and refresh still work, so it
+    shows up only when someone logs out. The samples use OpenIddict 7; a service that can't move yet
+    calls `DisableBulkOperations()`.
+  - **SqlClient refuses to connect without ICU** ("Globalization Invariant Mode is not supported"): a SQL
+    Server service on a slim image without ICU can't reach its database.
+  - **Revoking only the refresh token leaves the access token working**; the skill said otherwise. Logout
+    now revokes every token of the user.
+  - **Without a token-endpoint handler, a refresh keeps the roles from sign-in** for the refresh token's
+    lifetime. The handler reloads them.
+  - Identity's string columns were unbounded and its keys GUIDs; now bounded, `int` users, `bigint`
+    tokens, and OpenIddict's own JSON columns are the recorded exception. Password rules favour length
+    over composition. The company-specific phase notes are gone.
+
 ## 0.1.14 — healthcare-compliance tested
 - `healthcare-compliance` 2.0.0, its code tested in CI against PostgreSQL, with story and production
   tests. What the rewrite and the tests found:
