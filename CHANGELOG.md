@@ -3,6 +3,10 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.21 — CI pinned to Ubuntu 24.04
+- GitHub moves `ubuntu-latest` to Ubuntu 26 from 19 October, three days before the release candidate.
+  The workflows now name `ubuntu-24.04`, so the move happens on purpose, in its own change, after 0.2.0.
+
 ## 0.1.20 — story and production tests for the data skills
 - `efcore-patterns`, `dapper-patterns`, `postgresql-patterns`, `sqlserver-patterns`, `mongodb-patterns`,
   `redis-patterns`, `outbox` and `cqrs-eventsourcing` now each have a story test and a production test (no
