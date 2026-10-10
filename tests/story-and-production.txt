@@ -24,3 +24,4 @@ outbox
 cqrs-eventsourcing
 polly-resilience
 worker-patterns
+kafka-patterns

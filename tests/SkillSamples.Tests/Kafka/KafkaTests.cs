@@ -4,6 +4,7 @@ using Confluent.Kafka;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Kafka;
@@ -163,5 +164,67 @@ public sealed class KafkaTests : IDisposable
 
         Assert.Equal("m2", second.Handled.First());   // replayed, not lost; m1 not replayed
         Assert.DoesNotContain("m1", second.Handled);
+    }
+
+    private ConsumeResult<string, string>? ReadParked()
+    {
+        using var dlq = new ConsumerBuilder<string, string>(new ConsumerConfig
+        {
+            BootstrapServers = Bootstrap, GroupId = $"{_group}-dlq-{Guid.NewGuid():N}", AutoOffsetReset = AutoOffsetReset.Earliest,
+        }).Build();
+        dlq.Subscribe($"{_topic}.dlq");
+        var parked = dlq.Consume(TimeSpan.FromSeconds(30));
+        dlq.Close();
+        return parked;
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ALabResultCantBeReadUntilAFixShips_ItWaitsOnTheDeadLetterTopic_ThenIsReplayedOnce()
+    {
+        // Given: three lab results, the second in a shape the service can't read yet
+        await PublishAsync("result-1", "result-2", "result-3");
+        var canRead2 = false;
+        var handler = new RecordingHandler
+        {
+            Behaviour = (value, _, _) => value == "result-2" && !canRead2 ? throw new FormatException("unknown unit") : Task.CompletedTask,
+        };
+
+        using var host = Worker(handler);
+        await host.StartAsync();
+        await WaitUntil(() => handler.Handled.Count == 3, "results 1, 3 and the typed event");
+
+        // When: it's parked, the fix ships, and an operator puts the parked copy back on the topic
+        var parked = ReadParked();
+        Assert.NotNull(parked);
+        canRead2 = true;
+        await _producer.ProduceAsync(_topic, new Message<string, string> { Key = parked.Message.Key, Value = parked.Message.Value });
+        await WaitUntil(() => handler.Handled.Contains("result-2"), "the replayed result");
+        await host.StopAsync();
+
+        // Then: the others didn't wait for it, it was handled once after the fix, and the parked copy said
+        // where it came from without carrying the error text (which can hold patient data)
+        Assert.Equal(new[] { "result-1", "result-3" }, handler.Handled.Take(2).ToArray());
+        Assert.Single(handler.Handled, v => v == "result-2");
+        Assert.StartsWith($"{_topic}[", Encoding.UTF8.GetString(parked.Message.Headers.GetLastBytes("dlq-source")), StringComparison.Ordinal);
+        Assert.Equal("System.FormatException", Encoding.UTF8.GetString(parked.Message.Headers.GetLastBytes("dlq-error")));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_ArabicKeysAndValuesFlow_AndTheEventTypeHeaderIsSet()
+    {
+        ProductionConditions.Require();
+        await _producer.ProduceAsync(_topic, new Message<string, string> { Key = "موعد-٧", Value = "تم الحجز" });
+        await new KafkaPublisher(_producer).PublishAsync(_topic, "موعد-٧", new AppointmentBooked(7, 1), default);
+        var handler = new RecordingHandler();
+
+        using var host = Worker(handler);
+        await host.StartAsync();
+        await WaitUntil(() => handler.Handled.Count == 2, "both messages");
+        await host.StopAsync();
+
+        Assert.Equal("تم الحجز", handler.Handled.First());
+        Assert.Equal(new AppointmentBooked(7, 1), System.Text.Json.JsonSerializer.Deserialize<AppointmentBooked>(handler.Handled.Last()));
     }
 }
