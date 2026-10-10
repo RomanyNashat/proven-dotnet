@@ -14,11 +14,11 @@ notification service, and the labeled-campaign → BigQuery reporting loop at th
 `FirebaseApp` is a process-wide singleton — initialize it **once** at startup, never per-request. The
 repeated "try Create, catch, GetInstance" pattern is a smell; do it once in composition root.
 ```csharp
-FirebaseApp.Create(new AppOptions { Credential = GoogleCredential.FromFile("service-account.json") });
+FirebaseApp.Create(new AppOptions { Credential = GoogleCredential.GetApplicationDefault() });   // ADC, no key file
 // then resolve FirebaseMessaging.DefaultInstance / FirestoreDb where needed
 ```
-Credentials via a service account (file or, better, injected secret / Application Default Credentials);
-never hardcode.
+Credentials from Application Default Credentials (workload identity, or a key injected as a secret);
+never a key file in the repo or the image.
 
 ## FCM push — Notification vs Data payloads (the key distinction)
 ```csharp
@@ -41,9 +41,12 @@ var id = await FirebaseMessaging.DefaultInstance.SendAsync(message);
 
 ## Sending at scale + stale tokens
 - Batch with `SendEachForMulticastAsync` / `SendEachAsync` for many tokens.
-- Handle `FirebaseMessagingException` and inspect `MessagingErrorCode`. On `Unregistered` /
-  `InvalidArgument` for a token, that device token is **dead** — remove it from your store so you stop
-  sending to it. Stale-token cleanup is essential; FCM will keep failing otherwise.
+- Handle `FirebaseMessagingException` and inspect `MessagingErrorCode`. `Unregistered` means the device
+  token is **dead**: remove it from your store so you stop sending to it. Don't prune on
+  `InvalidArgument` alone: it's also what a malformed message gets (a bad payload would then delete
+  every token it was sent to). Prune on it only when the error says the registration token itself is
+  invalid. With `SendEachForMulticastAsync` (up to 500 tokens a call), read each `SendResponse` in order:
+  the index matches the token you sent.
 
 ## Firestore (if used)
 `FirestoreDb.Create(projectId)` (also a singleton). Document/collection model; async CRUD;

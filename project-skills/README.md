@@ -18,8 +18,19 @@ They cover technologies that only **some services** use, so they belong in those
 | `cap-library` | uses DotNetCore.CAP (turnkey outbox + event bus) |
 | `cicd-github-actions` | builds on GitHub Actions |
 
-**Not yet tested in CI.** Unlike the installed skills, the code in these hasn't been run against real
-dependencies yet. Treat it as a starting point and check it against the library's docs.
+**What's tested.** Most of these now show code that runs in CI against real dependencies, with story and
+production tests, like the installed skills:
+
+| Skill | Tested against |
+|-------|----------------|
+| `signalr` | two in-process pods and Redis |
+| `nats` | NATS 2.10 |
+| `rabbitmq-patterns` | RabbitMQ 4.1 |
+| `cap-library` | PostgreSQL and RabbitMQ 4.1 |
+| `fhir` | the Firely SDK in-process (messaging, parsing, FHIRPath) |
+| `cicd-github-actions` | actionlint and shellcheck (valid workflows, not a real deploy) |
+| `bigquery`, `firebase` | **not tested:** they need the Google services; the code is reviewed against the SDKs |
+| `cassandra` | no code: modelling guidance only |
 
 ## How to use one
 

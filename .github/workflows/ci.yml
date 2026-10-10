@@ -46,6 +46,13 @@ jobs:
         run: python tools/check-content.py
       - name: Skill samples match their tested files
         run: python tools/ci/check-skill-samples.py
+      # The workflows cicd-github-actions shows, and this repo's own, checked by actionlint (with shellcheck
+      # for their scripts). The sample caller points at a reusable workflow that lives in the service's repo.
+      - name: Workflows pass actionlint
+        run: |
+          curl -sSfL -o /tmp/actionlint.tgz https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz
+          tar -xzf /tmp/actionlint.tgz -C /tmp actionlint
+          /tmp/actionlint -ignore 'could not read reusable workflow file' tests/Workflows/*.yml .github/workflows/*.yml
       - name: The layer installs and uninstalls cleanly
         run: |
           sb="$(mktemp -d)/.claude"

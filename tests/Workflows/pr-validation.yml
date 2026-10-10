@@ -1,0 +1,98 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - '**/*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -warnaserror
+
+      - name: Unit Tests
+        run: |
+          dotnet test --no-build \
+            --filter "Category!=Integration" \
+            --logger "trx;LogFileName=unit-tests.trx" \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=cobertura \
+            /p:CoverletOutput=./coverage/ \
+            /p:Threshold=80 \
+            /p:ThresholdType=line
+
+      - name: Architecture Tests
+        run: dotnet test --no-build --filter "Category=Architecture"
+
+      - name: Integration Tests
+        env:
+          ConnectionStrings__PostgreSQL: "Host=localhost;Database=testdb;Username=test;Password=test"
+          Redis__ConnectionString: "localhost:6379"
+        run: |
+          dotnet test --no-build \
+            --filter "Category=Integration" \
+            --logger "trx;LogFileName=integration-tests.trx"
+
+      - name: NuGet Vulnerability Check
+        run: |
+          dotnet list package --vulnerable --include-transitive 2>&1 | \
+            tee /dev/stderr | \
+            grep -q "has the following vulnerable" && exit 1 || true
+
+      - name: Upload Coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: '**/coverage/*.cobertura.xml'
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/*.trx'

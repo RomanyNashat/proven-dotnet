@@ -1,0 +1,27 @@
+# .github/workflows/dotnet-service.yml (reusable)
+name: .NET Service CI
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        required: true
+        type: string
+      dockerfile-path:
+        required: true
+        type: string
+      dotnet-version:
+        required: false
+        type: string
+        default: '10.0.x'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+      - run: dotnet build -warnaserror
+      - run: dotnet test --filter "Category!=Integration"

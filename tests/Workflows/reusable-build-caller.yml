@@ -1,0 +1,9 @@
+# .github/workflows/ci.yml (in the service)
+name: Order Service CI
+on: [push, pull_request]
+jobs:
+  ci:
+    uses: ./.github/workflows/dotnet-service.yml
+    with:
+      service-name: order-service
+      dockerfile-path: src/OrderService.Api/Dockerfile
