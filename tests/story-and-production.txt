@@ -28,3 +28,4 @@ kafka-patterns
 grpc-patterns
 design-patterns
 ddd-patterns
+testing-integration

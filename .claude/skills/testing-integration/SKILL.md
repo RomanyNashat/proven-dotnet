@@ -1,7 +1,7 @@
 ---
 name: testing-integration
 description: Integration testing for .NET — WebApplicationFactory against a real PostgreSQL or SQL Server in Testcontainers, schema from SQL (never Migrate), Respawn between tests, a test auth handler, ownership checks. Factory and tests run in CI on both engines.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Integration Testing
@@ -211,7 +211,9 @@ One container per test class, empty tables per test:
 
 Tested on both engines: create returns 201 with its `Location`; a bad quantity returns a
 `ValidationProblem` naming the field; someone else's order is 404 (not 403, which tells the caller the id
-exists; `rules/security.md`); no user is 401; and each test starts with empty tables.
+exists; `rules/security.md`); no user is 401; and each test starts with empty tables. As a story: a
+patient guesses the order numbers next to theirs and gets 404 for each, and each patient's list holds only
+their own orders. On a slim image (no ICU, no tzdata), the API creates, reads and validates on PostgreSQL.
 - **Every endpoint that takes an id gets the other-user test.** Ids are sequential `int`s; this test is
   what catches a missing ownership check.
 - The test class takes the factory through `IClassFixture<T>` and resets in `InitializeAsync`
