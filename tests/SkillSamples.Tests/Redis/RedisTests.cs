@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Time.Testing;
+using SkillSamples.Production;
 using StackExchange.Redis;
 using Xunit;
 
@@ -99,5 +100,73 @@ public sealed class RedisTests(RedisFixture redis) : IClassFixture<RedisFixture>
         }
 
         Assert.Empty(await queue.ClaimAbandonedAsync("pod-b-2d1e", TimeSpan.Zero, 10));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_APatientTapsSendOtpOnTwoPhones_ThreePodsLetThreeThrough_AndAMinuteLaterOneMore()
+    {
+        // Given: three pods, each with its own connection, and an OTP limit of 3 a minute per patient
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 10, 9, 0, 0, TimeSpan.Zero));
+        var pods = new List<ConnectionMultiplexer>();
+        try
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                pods.Add(await ConnectionMultiplexer.ConnectAsync(Environment.GetEnvironmentVariable("REDIS_URL") ?? "localhost:6379"));
+            }
+
+            var limiters = pods.Select(p => new SlidingWindowRateLimiter(p.GetDatabase(), time)).ToList();
+            var patient = RedisFixture.Unique("patient");
+
+            // When: nine taps land on the pods in turn, a few milliseconds apart
+            var allowed = new List<bool>();
+            for (var tap = 0; tap < 9; tap++)
+            {
+                allowed.Add(await limiters[tap % 3].IsAllowedAsync(patient, "otp", limit: 3, TimeSpan.FromMinutes(1)));
+                time.Advance(TimeSpan.FromMilliseconds(5));
+            }
+
+            // Then: three pass in total, not three per pod; a minute later there's room again
+            Assert.Equal(3, allowed.Count(a => a));
+            Assert.Equal(new[] { true, true, true }, allowed.Take(3).ToArray());
+            time.Advance(TimeSpan.FromMinutes(1));
+            Assert.True(await limiters[1].IsAllowedAsync(patient, "otp", limit: 3, TimeSpan.FromMinutes(1)));
+        }
+        finally
+        {
+            foreach (var pod in pods)
+            {
+                await pod.DisposeAsync();
+            }
+        }
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_TheLockAndTheLimiterWork_OnTheRealClock()
+    {
+        ProductionConditions.Require();
+        var locks = new RedisLock(redis.Db);
+        var limiter = new SlidingWindowRateLimiter(redis.Db, TimeProvider.System);
+        var resource = RedisFixture.Unique("nightly-report");
+        var client = RedisFixture.Unique("client");
+
+        await using (var held = await locks.TryAcquireAsync(resource, TimeSpan.FromSeconds(30)))
+        {
+            Assert.NotNull(held);
+            Assert.Null(await locks.TryAcquireAsync(resource, TimeSpan.FromSeconds(30)));
+        }
+
+        // The window is Unix milliseconds from TimeProvider: no time zone is involved anywhere.
+        var results = new List<bool>();
+        for (var i = 0; i < 4; i++)
+        {
+            results.Add(await limiter.IsAllowedAsync(client, "otp", limit: 3, TimeSpan.FromMinutes(1)));
+        }
+
+        Assert.Equal(new[] { true, true, true, false }, results.ToArray());
+        await using var again = await locks.TryAcquireAsync(resource, TimeSpan.FromSeconds(30));
+        Assert.NotNull(again);
     }
 }

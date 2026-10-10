@@ -2,6 +2,7 @@ using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Postgres;
@@ -151,6 +152,68 @@ public sealed class PgSampleTests(PgDatabase db) : IClassFixture<PgDatabase>
         release.SetResult();
         Assert.True(await first);
         Assert.True(await runner.RunExclusiveAsync(42, (_, _) => Task.CompletedTask, CancellationToken.None));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ThePodRunningTheNightlyJobCrashes_TheLockGoesWithIt_AndTheNextPodRunsIt()
+    {
+        var runner = new ExclusiveRunner(db.DataSource);
+        await db.ExecuteAsync("CREATE TABLE nightly_runs (pod varchar(10) NOT NULL)");
+
+        // Given: pod A takes the nightly run and dies halfway through
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunExclusiveAsync(7, async (connection, tx) =>
+        {
+            await connection.ExecuteAsync("INSERT INTO nightly_runs VALUES ('a')", transaction: tx);
+            throw new InvalidOperationException("pod A killed");
+        }, CancellationToken.None));
+
+        // When: pod B tries next, and pod C starts while B is still running
+        var inside = new TaskCompletionSource();
+        var release = new TaskCompletionSource();
+        var podB = runner.RunExclusiveAsync(7, async (connection, tx) =>
+        {
+            await connection.ExecuteAsync("INSERT INTO nightly_runs VALUES ('b')", transaction: tx);
+            inside.SetResult();
+            await release.Task;
+        }, CancellationToken.None);
+        await inside.Task;
+        var podC = await runner.RunExclusiveAsync(7, (_, _) => throw new InvalidOperationException("C must not run"), CancellationToken.None);
+        release.SetResult();
+
+        // Then: A's lock and its half-done work are gone, B runs it once, C is turned away
+        Assert.True(await podB);
+        Assert.False(podC);
+        Assert.Equal("b", await db.ScalarAsync<string>("SELECT string_agg(pod, ',') FROM nightly_runs"));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_OnAPodInUtc_DateTimeNowLooksLikeUtc_ButIsStillRefused()
+    {
+        ProductionConditions.Require();
+        await db.ExecuteAsync("CREATE TABLE seen (at timestamptz NOT NULL)");
+
+        // On the pod, local time is UTC: the same clock reading, but Kind=Local, as DateTime.Now gives.
+        var local = TimeProvider.System.GetLocalNow().LocalDateTime;
+        Assert.Equal(DateTimeKind.Local, local.Kind);
+        Assert.Equal(TimeSpan.Zero, TimeZoneInfo.Local.GetUtcOffset(local));
+
+        await using var connection = await db.DataSource.OpenConnectionAsync();
+        var refused = await Assert.ThrowsAnyAsync<Exception>(() => Insert(local));
+        await Insert(local.ToUniversalTime());
+
+        // Npgsql checks the Kind, not the offset, so code that "worked on the pod" is refused the same way
+        // on every machine, rather than storing the wrong instant on a developer's laptop in UTC+3.
+        Assert.Contains("Kind=Local", refused.Message, StringComparison.Ordinal);
+        Assert.Equal(1, await db.ScalarAsync<int>("SELECT count(*)::int FROM seen"));
+
+        async Task Insert(DateTime at)
+        {
+            await using var command = new NpgsqlCommand("INSERT INTO seen VALUES (@at)", connection);
+            command.Parameters.Add(new NpgsqlParameter("at", NpgsqlTypes.NpgsqlDbType.TimestampTz) { Value = at });
+            await command.ExecuteNonQueryAsync();
+        }
     }
 
     [Fact]

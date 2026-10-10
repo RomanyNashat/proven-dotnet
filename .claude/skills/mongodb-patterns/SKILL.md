@@ -1,7 +1,7 @@
 ---
 name: mongodb-patterns
 description: MongoDB for .NET (C# driver 3.x) to MongoDB's official guidance — client setup with metrics that never log documents, schema patterns, a $jsonSchema validator and ESR indexes as mongosh scripts, keyset paging, transactions, change streams that never skip an event. Tested in CI against a real replica set.
-version: 3.0.0
+version: 3.1.0
 ---
 
 # MongoDB Patterns
@@ -312,6 +312,12 @@ public sealed class NewNotificationsWatcher(IMongoDatabase db, ResumeTokens toke
   twice.
 - Tested: when handling fails, the watcher stops without saving that event's token, and the restart gets
   the failed event again, then the rest.
+- Delivery is **at least once**: a pod killed after handling an event but before saving its token gets
+  that event again. Tested as a story: the push pod dies right after sending the second push; the
+  replacement receives it again, and the user still gets one push each, because the handler records what
+  it sent by the notification's `_id` (a unique key) and skips a repeat.
+- Tested on a slim image (no ICU, no tzdata): Arabic titles round-trip, dates come back `DateTimeKind.Utc`,
+  and keyset paging works. The driver doesn't need ICU.
 - If the saved token has fallen off the oplog, resuming fails (`ChangeStreamHistoryLost`) and a full resync
   is needed: alert on it, and size the oplog for the longest outage you expect.
 

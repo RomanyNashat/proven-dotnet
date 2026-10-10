@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Dapper;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.DapperReads;
@@ -41,6 +42,39 @@ public abstract class DapperTests<TEngine>(TEngine db) where TEngine : EngineFix
     }
 
     [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_AnOrderIsCancelledWhileTheCustomerScrolls_KeysetShowsTheNextOne_OffsetSkipsIt()
+    {
+        // Given: a customer with 25 orders has seen the first page of 10
+        await db.Reads().InsertManyAsync(Orders(5, 25), CancellationToken.None);
+        var first = await db.Reads().PageAsync(customerId: 5, afterId: 0, size: 10, CancellationToken.None);
+
+        // When: one order on that page is cancelled before they scroll on
+        await using (var connection = await db.OpenAsync(CancellationToken.None))
+        {
+            await connection.ExecuteAsync("DELETE FROM orders WHERE id = @id", new { id = first[4].Id });
+        }
+
+        var keyset = await db.Reads().PageAsync(customerId: 5, afterId: first[^1].Id, size: 10, CancellationToken.None);
+        var offset = await OffsetPageAsync(customerId: 5, skip: 10, size: 10);
+
+        // Then: keyset continues with the 11th order; OFFSET counts from the new start and skips it
+        var eleventh = first[^1].Id + 1;
+        Assert.Equal(eleventh, keyset[0].Id);
+        Assert.Equal(eleventh + 1, offset[0]);
+        Assert.DoesNotContain(eleventh, offset);
+    }
+
+    private async Task<List<int>> OffsetPageAsync(int customerId, int skip, int size)
+    {
+        var sql = db.Engine == Engine.PostgreSql
+            ? "SELECT id FROM orders WHERE customer_id = @customerId ORDER BY id OFFSET @skip LIMIT @size"
+            : "SELECT id FROM orders WHERE customer_id = @customerId ORDER BY id OFFSET @skip ROWS FETCH NEXT @size ROWS ONLY";
+        await using var connection = await db.OpenAsync(CancellationToken.None);
+        return (await connection.QueryAsync<int>(sql, new { customerId, skip, size })).AsList();
+    }
+
+    [Fact]
     public async Task ByIds_3000Ids_OneParameter()
     {
         await db.Reads().InsertManyAsync(Orders(3, 3000), CancellationToken.None);
@@ -78,7 +112,26 @@ public abstract class DapperTests<TEngine>(TEngine db) where TEngine : EngineFix
     }
 }
 
-public sealed class PostgresDapperTests(PostgresEngine db) : DapperTests<PostgresEngine>(db), IClassFixture<PostgresEngine>;
+public sealed class PostgresDapperTests(PostgresEngine db) : DapperTests<PostgresEngine>(db), IClassFixture<PostgresEngine>
+{
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_PagesAndListsWork_AndTimesComeBackUtc()
+    {
+        // Npgsql needs no ICU (SqlClient does: see AuthServer/SlimImageTests), and timestamptz comes back
+        // as a UTC DateTime whatever the pod's time zone is.
+        ProductionConditions.Require();
+
+        await Db.Reads().InsertManyAsync([new NewOrder(6, 10.50m), new NewOrder(6, 1234.56m)], CancellationToken.None);
+        var page = await Db.Reads().PageAsync(customerId: 6, afterId: 0, size: 10, CancellationToken.None);
+        var byIds = await Db.Reads().ByIdsAsync([.. page.Select(o => o.Id)], CancellationToken.None);
+
+        Assert.Equal(new[] { 10.50m, 1234.56m }, page.Select(o => o.Total).ToArray());
+        Assert.Equal(2, byIds.Count);
+        Assert.All(page, o => Assert.Equal(DateTimeKind.Utc, o.CreatedAt.Kind));
+        Assert.All(page, o => Assert.InRange(TimeProvider.System.GetUtcNow().UtcDateTime - o.CreatedAt, TimeSpan.FromMinutes(-1), TimeSpan.FromMinutes(1)));
+    }
+}
 
 public sealed class SqlServerDapperTests(SqlServerEngine db) : DapperTests<SqlServerEngine>(db), IClassFixture<SqlServerEngine>
 {

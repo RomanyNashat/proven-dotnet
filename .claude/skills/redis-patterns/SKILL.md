@@ -1,7 +1,7 @@
 ---
 name: redis-patterns
 description: Redis with StackExchange.Redis: cache-aside, a token-checked lock, an atomic sliding-window rate limiter, streams with claim of abandoned entries, leaderboards. Core code tested in CI.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Redis Patterns
@@ -414,6 +414,10 @@ The version this replaced had three bugs a test catches: two requests in the sam
 one (the member was the timestamp), it let one request over the limit (it compared the count before
 adding), and it read and wrote in separate steps, so concurrent requests could all pass. Get "now" from
 `TimeProvider`, which also makes the window testable.
+
+Tested as a story: a patient taps "send OTP" nine times across three pods, each with its own connection.
+Three get through in total, not three per pod, and a minute later there's room again. On a slim image the
+lock and the limiter work unchanged: the window is Unix milliseconds, so no time zone is involved.
 
 ## Redis Streams (lightweight event streaming)
 

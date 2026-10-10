@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
+using SkillSamples.Localization;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.EfCore;
@@ -174,6 +176,54 @@ public abstract class EfCoreTests<TFixture>(TFixture pg) where TFixture : Visits
     }
 
     [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_APatientEditsTheSameNoteOnTwoDevices_TheSecondSaveIsRefused_AndTheRetryWins()
+    {
+        // Given: a visit note, opened on the phone and on the tablet at the same moment
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 10, 9, 0, 0, TimeSpan.Zero));
+        await SeedAsync(811, "headache");
+        string phoneToken, tabletToken;
+        await using (var phone = pg.NewContext(811, time))
+        await using (var tablet = pg.NewContext(811, time))
+        {
+            phoneToken = VersionToken.Read(phone, await phone.Visits.SingleAsync());
+            tabletToken = VersionToken.Read(tablet, await tablet.Visits.SingleAsync());
+        }
+
+        // When: the phone saves first, then the tablet saves with the version it opened
+        time.Advance(TimeSpan.FromMinutes(1));
+        await SaveAsync(phoneToken, "headache since Monday");
+        time.Advance(TimeSpan.FromMinutes(1));
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => SaveAsync(tabletToken, "migraine"));
+
+        // ...and the tablet reloads, sees the phone's text, and saves on top of it
+        string reloaded;
+        await using (var tablet = pg.NewContext(811, time))
+        {
+            var visit = await tablet.Visits.SingleAsync();
+            reloaded = visit.Notes;
+            visit.Amend(visit.Notes + "; migraine");
+            await tablet.SaveChangesAsync();
+        }
+
+        // Then: nothing was lost, and the audit names the last edit
+        await using var check = pg.NewContext(811);
+        var saved = await check.Visits.SingleAsync();
+        Assert.Equal("headache since Monday", reloaded);
+        Assert.Equal("headache since Monday; migraine", saved.Notes);
+        Assert.Equal((811, time.GetUtcNow()), (saved.UpdatedBy!.Value, saved.UpdatedAt!.Value));
+
+        async Task SaveAsync(string token, string notes)
+        {
+            await using var device = pg.NewContext(811, time);
+            var visit = await device.Visits.SingleAsync();
+            VersionToken.Expect(device, visit, token);
+            visit.Amend(notes);
+            await device.SaveChangesAsync();
+        }
+    }
+
+    [Fact]
     public async Task ColumnTypes_FollowTheDbaRulesOnThisEngine()
     {
         await using var db = pg.NewContext(callerId: 0);
@@ -260,5 +310,44 @@ public sealed class FailOnceInterceptor(int failOnInsert, Func<Exception> transi
         }
 
         return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+    }
+}
+
+/// <summary>
+/// The slim image's conditions: no ICU, no tzdata, UTC. PostgreSQL only: SqlClient refuses to connect
+/// without ICU (see AuthServer/SlimImageTests).
+/// </summary>
+public sealed class PostgresEfCoreProductionTests(PostgresVisits pg) : IClassFixture<PostgresVisits>
+{
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_ARiyadhDayIsQueriedAsAUtcRange()
+    {
+        ProductionConditions.Require();
+
+        // Given: a visit at 23:30 and one at 00:30 the next day, Riyadh time, on a pod that runs in UTC
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 10, 20, 30, 0, TimeSpan.Zero));
+        await using (var db = pg.NewContext(821, time))
+        {
+            db.Visits.Add(new Visit(821, "late evening"));
+            await db.SaveChangesAsync();
+            time.Advance(TimeSpan.FromHours(1));
+            db.Visits.Add(new Visit(821, "after midnight"));
+            await db.SaveChangesAsync();
+        }
+
+        // When: the clinic asks for 10 October, its own day. Npgsql only takes a UTC DateTimeOffset for
+        // timestamptz, so the local day becomes a UTC range before the query.
+        var offset = RiyadhTime.Zone.GetUtcOffset(new DateTime(2026, 10, 10));
+        var from = new DateTimeOffset(2026, 10, 10, 0, 0, 0, offset).ToUniversalTime();
+        var to = from.AddDays(1);
+        await using var clinic = pg.NewContext(821);
+        var visits = await clinic.Visits.Where(v => v.CreatedAt >= from && v.CreatedAt < to).ToListAsync();
+
+        // Then: only the 23:30 visit, stored in UTC and shown back in Riyadh time
+        var visit = Assert.Single(visits);
+        Assert.Equal("late evening", visit.Notes);
+        Assert.Equal(TimeSpan.Zero, visit.CreatedAt.Offset);
+        Assert.Equal(new TimeOnly(23, 30), TimeOnly.FromDateTime(TimeZoneInfo.ConvertTime(visit.CreatedAt, RiyadhTime.Zone).DateTime));
     }
 }

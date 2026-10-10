@@ -1,7 +1,7 @@
 ---
 name: cqrs-eventsourcing
 description: CQRS without a mediator library: command/query split, plain handlers + decorators (validation, transaction, logging), EF write + Dapper read, domain events, Marten event sourcing. MediatR only by name.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # CQRS & Event Sourcing Patterns
@@ -339,7 +339,10 @@ services.AddValidatorsFromAssembly(typeof(CreateOrderCommandValidator).Assembly)
 services.AddCqrsHandlers(typeof(CreateOrderHandler).Assembly);
 ```
 Tested: the command runs inside the transaction after validation; an invalid command stops before
-the transaction; a query gets logging only; the outermost decorator is logging.
+the transaction; a query gets logging only; the outermost decorator is logging. As a story: a
+receptionist types 500 minutes; the refusal names `Minutes` and nothing starts; she types 30, the slot
+commits, and only then does the clinic hear about it. On a slim image (no ICU) FluentValidation falls
+back to its English messages; nothing throws.
 
 ### Endpoints call the handler they need
 ```csharp

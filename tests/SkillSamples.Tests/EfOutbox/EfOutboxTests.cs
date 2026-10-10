@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.EfOutbox;
@@ -144,6 +145,58 @@ public abstract class EfOutboxTests<TFixture>(TFixture pg) where TFixture : Clin
     }
 
     [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_TheBrokerIsDownAllMorning_BookingsStillSave_ThenGoOutInOrder_AndARedeliveryCountsOnce()
+    {
+        await ClearOutboxAsync();
+        var sent = new List<OutboxMessage>();
+        var brokerDown = true;
+        var publisher = new RecordingPublisher
+        {
+            Before = m =>
+            {
+                if (brokerDown)
+                {
+                    throw new TimeoutException("broker unavailable");
+                }
+
+                sent.Add(m);
+                return Task.CompletedTask;
+            },
+        };
+
+        // Given: three bookings while the broker is down. They save; the relay sends nothing.
+        for (var i = 0; i < 3; i++)
+        {
+            await BookAsync(clinicId: 12);
+        }
+
+        await using (var db = pg.NewContext())
+        {
+            Assert.Equal(0, await new OutboxRelay(db, publisher, TimeProvider.System).PublishPendingAsync(10, default));
+        }
+
+        // When: the broker comes back, and the consumer gets the second event twice (a redelivery)
+        brokerDown = false;
+        await using (var db = pg.NewContext())
+        {
+            Assert.Equal(3, await new OutboxRelay(db, publisher, TimeProvider.System).PublishPendingAsync(10, default));
+        }
+
+        foreach (var message in new[] { sent[0], sent[1], sent[1], sent[2] })
+        {
+            await using var db = pg.NewContext();
+            await new AppointmentBookedConsumer(db, TimeProvider.System)
+                .HandleAsync($"outbox-{message.Id}", JsonSerializer.Deserialize<AppointmentBooked>(message.Payload)!, default);
+        }
+
+        // Then: sent oldest first, and the clinic's count is three, not four
+        Assert.Equal(sent.Select(m => m.Id).Order().ToArray(), sent.Select(m => m.Id).ToArray());
+        await using var check = pg.NewContext();
+        Assert.Equal(3, (await check.DailyCounts.SingleAsync(c => c.ClinicId == 12)).Booked);
+    }
+
+    [Fact]
     public async Task Inbox_TenConcurrentDeliveries_AreAppliedOnce()
     {
         var booked = new AppointmentBooked(AppointmentId: 99, ClinicId: 8, Tomorrow);
@@ -161,5 +214,27 @@ public abstract class EfOutboxTests<TFixture>(TFixture pg) where TFixture : Clin
 }
 
 public sealed class PostgresOutboxTests(PostgresClinic pg) : EfOutboxTests<PostgresClinic>(pg), IClassFixture<PostgresClinic>;
+
+/// <summary>The slim image's conditions. PostgreSQL only: SqlClient can't connect without ICU.</summary>
+public sealed class PostgresOutboxProductionTests(PostgresClinic pg) : IClassFixture<PostgresClinic>
+{
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_A0130RiyadhBooking_CountsOnTheClinicsDay_NotTheUtcOne()
+    {
+        ProductionConditions.Require();
+
+        // 01:30 on 7 October in Riyadh is 22:30 UTC on the 6th.
+        var booked = new AppointmentBooked(AppointmentId: 501, ClinicId: 13, new DateTimeOffset(2026, 10, 6, 22, 30, 0, TimeSpan.Zero));
+        await using (var db = pg.NewContext())
+        {
+            Assert.True(await new AppointmentBookedConsumer(db, TimeProvider.System).HandleAsync("outbox-501", booked, default));
+        }
+
+        await using var check = pg.NewContext();
+        var count = await check.DailyCounts.SingleAsync(c => c.ClinicId == 13);
+        Assert.Equal((new DateOnly(2026, 10, 7), 1), (count.Day, count.Booked));
+    }
+}
 
 public sealed class SqlServerOutboxTests(SqlServerClinic db) : EfOutboxTests<SqlServerClinic>(db), IClassFixture<SqlServerClinic>;
