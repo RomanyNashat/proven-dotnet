@@ -1,347 +1,233 @@
 ---
 name: healthcare-compliance
-description: Healthcare data rules for .NET: PII/PHI handling, audit logging, encryption at rest/in transit, consent, safe errors.
-version: 1.0.0
+description: Patient-data rules in .NET code — an audit of every change to PHI that commits with the change and can't be edited, consent checked for the patient (not the user), break-the-glass access, data residency checked at start-up, safe errors. Saudi PDPL and HIPAA references kept to what's verified. Tested in CI against PostgreSQL.
+version: 2.0.0
 ---
 
 # Healthcare Compliance Patterns
 
-> **OPT-IN**: This skill is only needed for healthcare applications or features handling Protected Health Information (PHI) or personal data subject to Saudi PDPL.
+> **Opt-in.** For services that handle protected health information (PHI) or personal data under the
+> Saudi PDPL. **Not legal advice:** the legal references here are the ones checked against published
+> sources; your DPO or legal team confirms what applies to a service.
 
-## HIPAA Technical Safeguards (§164.312)
+## What the law asks of the code (verified references only)
 
-### Access Control (§164.312(a)) — Implementation
+| Requirement | Where it comes from | In the code |
+|---|---|---|
+| Data subjects' rights (to be informed, access, correction, destruction) | PDPL Article 4 | Endpoints and processes per right; see below |
+| Transfer of personal data outside the Kingdom only under conditions | PDPL Article 29, and the Data Transfer Regulations | Data residency checked at start-up |
+| Notify the authority (SDAIA) within **72 hours** of becoming aware of a breach that may cause harm; data subjects without undue delay | PDPL Implementing Regulations | An incident runbook, not code (below) |
+| Keep the record of processing activities for the processing and **five years** after | PDPL Implementing Regulations | Retention of the audit and processing records |
+| Access control, audit controls, integrity, person or entity authentication, transmission security | HIPAA §164.312 (a)–(e) | Policies, the PHI audit, TLS |
+| Keep required documentation for **six years** | HIPAA §164.316(b)(2) | Many teams keep audit logs as long |
+
+Article numbers for other duties (consent, health data, security) aren't listed here because they
+weren't verified; look them up in the current text rather than trusting a table.
+
+## The PHI audit: in the same save, and append-only
+
+Every change to an entity that holds patient data gets an audit row: who, when, which record, which
+columns. The interceptor adds the rows to the same `SaveChanges`, so the change and its audit commit or
+roll back together.
+
+<!-- sample: tests/SkillSamples.Tests/Compliance/PhiAuditInterceptor.cs -->
 ```csharp
-// Role-based access with minimum necessary access principle
-builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("ViewPatientRecords", policy =>
-        policy.RequireClaim("permission", "phi:read")
-            .AddRequirements(new SameTenantRequirement()))
-    .AddPolicy("ModifyPatientRecords", policy =>
-        policy.RequireClaim("permission", "phi:write")
-            .AddRequirements(new SameTenantRequirement())
-            .AddRequirements(new ActiveSessionRequirement()))
-    .AddPolicy("ExportPatientData", policy =>
-        policy.RequireClaim("permission", "phi:export")
-            .RequireRole("DataOfficer", "Admin"));
-
-// Automatic session timeout
-builder.Services.ConfigureApplicationCookie(options =>
+// Adds the audit rows to the same SaveChanges, so a change and its audit commit or roll back together:
+// no audit row for a change that failed, and no change without one. The record's id has to be known
+// before the save, so PHI entities take their keys from a HiLo sequence (`efcore-patterns`).
+public sealed class PhiAuditInterceptor(ICurrentUser user, TimeProvider time) : SaveChangesInterceptor
 {
-    options.ExpireTimeSpan = TimeSpan.FromMinutes(15);  // HIPAA recommended
-    options.SlidingExpiration = true;
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-});
-
-// Emergency access (break-the-glass)
-public sealed class EmergencyAccessService(
-    IAuditLogger auditLogger,
-    IAuthorizationService authService)
-{
-    public async Task<EmergencyAccessToken> RequestEmergencyAccessAsync(
-        int requesterId, string reason, CancellationToken ct)
+    public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
-        var token = new EmergencyAccessToken
-        {
-            RequesterId = requesterId,          // Id: int identity, assigned on save
-            Reason = reason,
-            GrantedAt = DateTimeOffset.UtcNow,
-            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(30),
-            IsRevoked = false
-        };
+        AddAuditRows(eventData.Context!);
+        return result;
+    }
 
-        // ALWAYS log emergency access
-        await auditLogger.LogAsync(new AuditEntry
-        {
-            Action = "EMERGENCY_ACCESS_GRANTED",
-            UserId = requesterId,
-            Details = $"Emergency access requested. Reason: {reason}",
-            Severity = AuditSeverity.Critical
-        }, ct);
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData, InterceptionResult<int> result, CancellationToken ct = default)
+    {
+        AddAuditRows(eventData.Context!);
+        return ValueTask.FromResult(result);
+    }
 
-        return token;
+    private void AddAuditRows(DbContext context)
+    {
+        var at = time.GetUtcNow();
+        var rows = context.ChangeTracker.Entries<IPhiRecord>()   // runs DetectChanges first
+            .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .Select(e => new PhiAuditRow
+            {
+                RecordType = e.Metadata.ClrType.Name,
+                RecordId = e.Entity.Id,
+                Action = e.State.ToString(),
+                // Column names only: the values are patient data, and more people read the audit than the record.
+                ChangedColumns = e.State == EntityState.Modified
+                    ? string.Join(',', e.Properties.Where(p => p.IsModified).Select(p => p.Metadata.Name))
+                    : "",
+                UserId = user.Id,
+                At = at
+            })
+            .ToList();   // before AddRange changes what the tracker holds
+
+        context.AddRange(rows);
     }
 }
 ```
 
-### Audit Controls (§164.312(b)) — Implementation
-```csharp
-// Comprehensive PHI access audit trail
-public interface IAuditLogger
-{
-    Task LogAsync(AuditEntry entry, CancellationToken ct);
-    Task LogPhiAccessAsync(PhiAccessEntry entry, CancellationToken ct);
-}
+Tested as stories, on PostgreSQL:
+- **A doctor records a diagnosis, another revises it an hour later** by setting the property: two rows,
+  with the record's real id, each doctor, each time, and `Code` as the changed column. The diagnosis
+  code itself is in no audit row.
+- **The save fails** (a value too long for its column): the record got its id, and no audit row claims
+  the change happened.
 
-public sealed record PhiAccessEntry
-{
-    public required Guid UserId { get; init; }
-    public required string Action { get; init; }        // READ, WRITE, DELETE, EXPORT
-    public required string ResourceType { get; init; }  // Patient, MedicalRecord, Prescription
-    public required string ResourceId { get; init; }
-    public required string IpAddress { get; init; }
-    public required string UserAgent { get; init; }
-    public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.UtcNow;
-    public string? Justification { get; init; }
-}
+Why it's built this way:
+- **Same save, not a separate logger call.** An audit written beside the save says a change happened
+  when the save then failed, or misses one when the audit call fails after it.
+- **HiLo keys for PHI entities.** With identity keys a new record's id is 0 until the insert, and its
+  audit row would point at nothing. HiLo gives the id when the record is added (use `AddAsync`, which
+  can fetch the next block).
+- **Names, not values.** The audit table is read by more people than the record; it mustn't become a
+  second copy of the patient data.
+- **Reads aren't changes.** HIPAA's audit controls cover access too. Record reads of PHI where the
+  service decides to show a record (a query handler), not in the interceptor.
 
-public sealed class PhiAuditInterceptor(
-    ICurrentUserService currentUser,
-    IAuditLogger auditLogger,
-    IHttpContextAccessor httpContext) : SaveChangesInterceptor
-{
-    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
-        DbContextEventData eventData, InterceptionResult<int> result, CancellationToken ct)
-    {
-        var context = eventData.Context!;
-        foreach (var entry in context.ChangeTracker.Entries<IPhiEntity>())
-        {
-            var action = entry.State switch
-            {
-                EntityState.Added => "CREATE",
-                EntityState.Modified => "UPDATE",
-                EntityState.Deleted => "DELETE",
-                _ => null
-            };
+### The service can add audit rows, never change them
 
-            if (action is null) continue;
-
-            await auditLogger.LogPhiAccessAsync(new PhiAccessEntry
-            {
-                UserId = currentUser.UserId,
-                Action = action,
-                ResourceType = entry.Entity.GetType().Name,
-                ResourceId = entry.Property("Id").CurrentValue?.ToString() ?? "unknown",
-                IpAddress = httpContext.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                UserAgent = httpContext.HttpContext?.Request.Headers.UserAgent.ToString() ?? "unknown"
-            }, ct);
-        }
-
-        return await base.SavingChangesAsync(eventData, result, ct);
-    }
-}
-
-// Audit log storage — immutable, append-only
-// PostgreSQL: the app's role gets INSERT and SELECT only (REVOKE UPDATE, DELETE ON audit_log FROM app_role)
-// SQL Server: DENY UPDATE, DELETE ON audit_log TO app_role, or (2022+) an append-only ledger table:
-//   CREATE TABLE audit_log (...) WITH (LEDGER = ON (APPEND_ONLY = ON))
-// Or: Azure Table Storage / Cosmos DB with immutable policy
-// Retention: minimum 6 years (HIPAA requirement)
+<!-- sample: tests/SkillSamples.Tests/Compliance/audit_grants.sql -->
+```sql
+-- The service's role can add audit rows and read them, never change or remove them.
+GRANT SELECT, INSERT, UPDATE, DELETE ON diagnoses, consents TO clinic_app;
+GRANT SELECT, INSERT ON phi_audit TO clinic_app;
+GRANT USAGE ON SEQUENCE diagnoses_hilo TO clinic_app;
 ```
 
-### Transmission Security (§164.312(e))
+Tested as a story: connected as that role, the service saves a diagnosis and its audit row, and then
+`UPDATE` and `DELETE` on `phi_audit` fail with `42501 insufficient_privilege`. The grants are part of the
+reviewed migration script, and the service never connects as the table owner. On SQL Server:
+`DENY UPDATE, DELETE ON phi_audit TO clinic_app`, or an append-only ledger table (2022+).
+
+Column types follow the house rules: bounded strings, `timestamptz`, a `bigint` key for the audit
+(`rules/efcore-rules.md`).
+
+## Consent: the patient's, checked before processing
+
+<!-- sample: tests/SkillSamples.Tests/Compliance/ConsentDecorator.cs -->
 ```csharp
-// Enforce TLS 1.3 for all PHI transmission
-builder.WebHost.ConfigureKestrel(kestrel =>
+// A command that processes a patient's data for a purpose that needs their consent.
+public interface IRequiresConsent
 {
-    kestrel.ConfigureHttpsDefaults(https =>
-    {
-        https.SslProtocols = SslProtocols.Tls13;  // TLS 1.3 only for PHI
-    });
-});
-
-// Never include PHI in URLs
-// ❌ GET /api/patients?nationalId=1234567890
-// ✅ POST /api/patients/search { "nationalId": "1234567890" }  (over HTTPS)
-```
-
-## Saudi PDPL/SDAIA Implementation
-
-### Data Residency Middleware
-```csharp
-// Ensure Saudi personal data stays in Saudi infrastructure
-public sealed class DataResidencyMiddleware(
-    RequestDelegate next,
-    IDataResidencyValidator validator,
-    ILogger<DataResidencyMiddleware> logger)
-{
-    public async Task InvokeAsync(HttpContext context)
-    {
-        // Check if request involves cross-border data transfer
-        if (context.Request.Headers.TryGetValue("X-Target-Region", out var targetRegion))
-        {
-            if (!validator.IsAllowedRegion(targetRegion!))
-            {
-                logger.LogWarning(
-                    "Blocked cross-border data transfer to {Region} for {Path}",
-                    targetRegion, context.Request.Path);
-
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsJsonAsync(new ProblemDetails
-                {
-                    Status = 403,
-                    Title = "Data residency violation",
-                    Detail = "Personal data cannot be transferred to this region under PDPL"
-                });
-                return;
-            }
-        }
-
-        await next(context);
-    }
+    int SubjectId { get; }
+    string Purpose { get; }
 }
 
-public sealed class DataResidencyValidator : IDataResidencyValidator
+public sealed class ConsentRequiredException(int subjectId, string purpose)
+    : Exception($"Subject {subjectId} has no active consent for '{purpose}'.")
 {
-    // Saudi PDPL allows transfer only to countries with adequate protection
-    // or with explicit SDAIA approval
-    private static readonly HashSet<string> AllowedRegions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "sa-riyadh-1",     // Saudi Arabia
-        "sa-jeddah-1",     // Saudi Arabia
-        "me-south-1",      // Bahrain (AWS) — with adequacy agreement
-        "uae-north",       // UAE (Azure) — with adequacy agreement
-    };
-
-    public bool IsAllowedRegion(string region) => AllowedRegions.Contains(region);
-}
-```
-
-### Consent Tracking
-```csharp
-public sealed class Consent
-{
-    public int Id { get; private init; }                 // int identity
-    public required int SubjectId { get; init; }       // data subject (patient/user)
-    public required string Purpose { get; init; }        // "treatment", "research", "marketing"
-    public required ConsentStatus Status { get; set; }
-    public required DateTimeOffset GrantedAt { get; init; }
-    public DateTimeOffset? WithdrawnAt { get; set; }
-    public required string ConsentMethod { get; init; }  // "web_form", "paper", "verbal"
-    public required string IpAddress { get; init; }
-    public string? LegalBasis { get; init; }             // PDPL article reference
+    public string Purpose => purpose;
 }
 
-public enum ConsentStatus { Granted, Withdrawn, Expired }
+public sealed class ConsentStore(ComplianceDbContext db)
+{
+    public Task<bool> HasActiveConsentAsync(int subjectId, string purpose, CancellationToken ct) =>
+        db.Consents.AnyAsync(c => c.SubjectId == subjectId && c.Purpose == purpose && c.WithdrawnAt == null, ct);
+}
 
-// Consent verification before processing: a command decorator (see cqrs-eventsourcing). Add
-// typeof(ConsentDecorator<,>) to the command chain in AddCqrsHandlers, after validation.
-public sealed class ConsentDecorator<TCommand, TResult>(
-    ICommandHandler<TCommand, TResult> inner,
-    IConsentRepository consentRepository,
-    ICurrentUserService currentUser)
-    : ICommandHandler<TCommand, TResult>
-    where TCommand : ICommand<TResult>
+// Checks the consent of the person the data is about. The signed-in user is the doctor or the
+// researcher: their own consent says nothing about the patient's data.
+public sealed class ConsentDecorator<TCommand, TResult>(ICommandHandler<TCommand, TResult> inner, ConsentStore consents)
+    : ICommandHandler<TCommand, TResult> where TCommand : ICommand<TResult>
 {
     public async Task<TResult> HandleAsync(TCommand command, CancellationToken ct)
     {
-        if (command is IRequiresConsent requires &&
-            !await consentRepository.HasActiveConsentAsync(currentUser.UserId, requires.RequiredPurpose, ct))
-        {
-            throw new ConsentRequiredException(requires.RequiredPurpose);
-        }
+        if (command is IRequiresConsent needs && !await consents.HasActiveConsentAsync(needs.SubjectId, needs.Purpose, ct))
+            throw new ConsentRequiredException(needs.SubjectId, needs.Purpose);   // → 403 ProblemDetails
 
         return await inner.HandleAsync(command, ct);
     }
 }
 ```
 
-### Data Subject Rights API
+Register it in the command chain after validation (`cqrs-eventsourcing`). Tested as a story: patient 77
+agrees to research use and one export runs; they withdraw, and the next export for them is refused, as
+is one for a patient who never agreed. The old version of this skill checked the **signed-in user's**
+consent, which is the doctor's: the fix is that the command names the patient.
+
+Consent rows are kept, not deleted, when withdrawn (`WithdrawnAt`): when consent was given and taken
+back is part of what has to be shown later.
+
+## Break-the-glass access
+
+<!-- sample: tests/SkillSamples.Tests/Compliance/EmergencyAccessGrant.cs -->
 ```csharp
-// Right to access, correction, deletion, portability
-app.MapGroup("/api/data-rights")
-    .MapDataRightsEndpoints()
-    .RequireAuthorization();
-
-public static class DataRightsEndpoints
+// Break-the-glass: a clinician without the usual permission opens one patient's record in an emergency.
+// It needs a reason someone can review, covers one patient, and ends on its own.
+public sealed record EmergencyAccessGrant(string UserId, int PatientId, string Reason, DateTimeOffset ExpiresAt)
 {
-    public static RouteGroupBuilder MapDataRightsEndpoints(this RouteGroupBuilder group)
+    public static readonly TimeSpan Lasts = TimeSpan.FromMinutes(30);
+
+    public static EmergencyAccessGrant Open(string userId, int patientId, string reason, TimeProvider time) =>
+        string.IsNullOrWhiteSpace(reason) || reason.Trim().Length < 10
+            ? throw new ArgumentException("Emergency access needs a reason someone can review later.", nameof(reason))
+            : new(userId, patientId, reason.Trim(), time.GetUtcNow() + Lasts);
+
+    public bool Allows(int patientId, TimeProvider time) => patientId == PatientId && time.GetUtcNow() < ExpiresAt;
+}
+```
+
+Tested as a story: "urgent" isn't a reason; a real one opens patient 5, not patient 6, and nothing after
+30 minutes. Store every grant and audit the reads made under it; someone reviews them the next day.
+
+## Data residency: checked where configuration is read
+
+<!-- sample: tests/SkillSamples.Tests/Compliance/DataResidencyOptions.cs -->
+```csharp
+// Where personal data is stored is decided by configuration, so check it where configuration is read:
+// a storage region outside the allowed list stops the service at start-up.
+public sealed class DataResidencyOptions
+{
+    public const string Section = "DataResidency";
+
+    public string StorageRegion { get; init; } = "";
+    public string[] AllowedRegions { get; init; } = [];
+}
+
+public static class DataResidencySetup
+{
+    public static IServiceCollection AddDataResidencyCheck(this IServiceCollection services)
     {
-        // Right to access — export personal data
-        group.MapGet("/export", async (
-            ICurrentUserService user, IDataExportService export, CancellationToken ct) =>
-        {
-            var data = await export.ExportUserDataAsync(user.UserId, ct);
-            return TypedResults.File(
-                data, "application/json", $"personal-data-{user.UserId}.json");
-        });
-
-        // Right to correction
-        group.MapPut("/correct", async (
-            DataCorrectionRequest request,
-            IDataCorrectionService correction,
-            ICurrentUserService user,
-            CancellationToken ct) =>
-        {
-            await correction.RequestCorrectionAsync(user.UserId, request, ct);
-            return TypedResults.Accepted();
-        });
-
-        // Right to deletion (soft-delete with retention period, then hard-delete)
-        group.MapDelete("/delete", async (
-            IDataDeletionService deletion,
-            ICurrentUserService user,
-            CancellationToken ct) =>
-        {
-            await deletion.RequestDeletionAsync(user.UserId, ct);
-            return TypedResults.Accepted();
-            // Soft-delete immediately, hard-delete after retention period (30 days)
-        });
-
-        return group;
+        services.AddOptions<DataResidencyOptions>()
+            .BindConfiguration(DataResidencyOptions.Section)
+            .Validate(o => o.AllowedRegions.Contains(o.StorageRegion, StringComparer.OrdinalIgnoreCase),
+                "DataResidency:StorageRegion must be one of DataResidency:AllowedRegions.")
+            .ValidateOnStart();
+        return services;
     }
 }
 ```
 
-### Breach Notification Readiness
-```csharp
-public sealed class BreachNotificationService(
-    ISdaiaNotificationClient sdaiaClient,
-    INotificationService userNotification,
-    IAuditLogger auditLogger,
-    ILogger<BreachNotificationService> logger)
-{
-    // Saudi PDPL: 72-hour notification to SDAIA after breach discovery
-    public async Task ReportBreachAsync(BreachReport report, CancellationToken ct)
-    {
-        // 1. Log the breach internally
-        await auditLogger.LogAsync(new AuditEntry
-        {
-            Action = "DATA_BREACH_DETECTED",
-            Details = JsonSerializer.Serialize(report),
-            Severity = AuditSeverity.Critical
-        }, ct);
+Tested as a story: storage pointed at `eu-west-1` stops the service at start-up. The old version of this
+skill blocked transfers in a middleware that read the target region from a **request header**: a client
+that leaves the header out passes. Residency is where the data is stored and where it's sent, so it's
+checked in configuration and in the clients that send data out, not in a header.
 
-        // 2. Notify SDAIA within 72 hours
-        await sdaiaClient.SubmitBreachNotificationAsync(new SdaiaBreachNotification
-        {
-            OrganizationName = "Healthcare Platform",
-            BreachDate = report.DiscoveredAt,
-            DataTypesAffected = report.AffectedDataTypes,
-            NumberOfSubjectsAffected = report.EstimatedAffectedCount,
-            MitigationActions = report.ImmediateActions,
-            ContactPerson = report.DpoContact
-        }, ct);
+## Other safeguards
 
-        // 3. Notify affected individuals
-        foreach (var subjectId in report.AffectedSubjectIds)
-        {
-            await userNotification.SendAsync(
-                subjectId,
-                "Important: Data Security Notification",
-                report.UserNotificationTemplate,
-                ct);
-        }
+- **Access:** policies on permissions, not roles (`auth-patterns`); every lookup by id checks the caller
+  may see that record (`rules/security.md`).
+- **No PHI in URLs or logs.** A national id in a query string ends up in proxy and ingress logs: send it
+  in the body over HTTPS. Logs mask personal data (`pii-masking`).
+- **Errors:** `ProblemDetails` without internal detail (`api-design`).
+- **Encryption at rest** for the most sensitive fields: `encryption-patterns`.
+- **TLS:** where TLS ends at the ingress, the service-to-service hop needs its own (`rules/security.md`).
+- **Breach readiness is a runbook, not code:** who decides it's a notifiable breach, who notifies SDAIA
+  (72 hours from becoming aware), how affected people are told, and where the audit rows are that show
+  what was accessed. Practise it once.
 
-        logger.LogCritical(
-            "Data breach reported to SDAIA. Affected subjects: {Count}",
-            report.EstimatedAffectedCount);
-    }
-}
-```
-
-## Compliance Checklist Summary
-
-| Requirement | HIPAA § | PDPL Article | Implementation |
-|-------------|---------|--------------|----------------|
-| Access control | 164.312(a) | Art. 10 | Policy-based auth, RBAC |
-| Audit logging | 164.312(b) | Art. 22 | PhiAuditInterceptor, immutable logs |
-| Data integrity | 164.312(c) | Art. 14 | Checksums, encrypted storage |
-| Transmission security | 164.312(e) | Art. 15 | TLS 1.3, no PHI in URLs |
-| Data residency | N/A | Art. 29 | DataResidencyMiddleware |
-| Consent | N/A | Art. 6-7 | ConsentVerificationBehavior |
-| Right to access | N/A | Art. 23 | DataRightsEndpoints |
-| Right to deletion | N/A | Art. 25 | Soft-delete + hard-delete pipeline |
-| Breach notification | Breach Rule | Art. 20 | 72-hour SDAIA notification |
-| Encryption at rest | 164.312(a)(2)(iv) | Art. 15 | AES-GCM, envelope encryption |
+## Rules
+- PHI changes audited in the same save, with column names and never values; HiLo keys on PHI entities.
+- The service's role can't update or delete the audit.
+- Consent checked for the data subject named in the command; withdrawals kept.
+- Break-the-glass: a reason, one patient, a time limit, reviewed.
+- Data residency validated at start-up from configuration.
+- Legal references only when verified; the DPO confirms.
