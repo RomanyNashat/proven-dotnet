@@ -195,6 +195,14 @@ public static class JobAdminEndpoints
 
 Tested: an unknown job is 404; pause and resume change the trigger's state.
 
+## Testing
+
+Test a job by calling `Execute` with a mocked `IJobExecutionContext`, or run the real scheduler against
+real storage as the samples here do. Quartz keeps the first logger factory it sees in a static, so tests
+that build several hosts in one process must give them a factory that outlives them
+(`services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance)`); otherwise the second host fails
+with `ObjectDisposedException: LoggerFactory`.
+
 ## Rules
 - Persistent store and clustering when more than one pod runs the service; same scheduler name, `AUTO` id.
 - Quartz's schema from its script with `DropDb = 0`, applied by the pipeline; a recorded exception to the

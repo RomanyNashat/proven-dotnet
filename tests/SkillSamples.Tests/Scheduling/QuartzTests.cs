@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using Quartz;
@@ -70,6 +71,9 @@ public sealed class QuartzTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsy
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Logging.ClearProviders();
+        // Quartz keeps the first logger factory it sees in a static; a disposed host's factory then
+        // breaks the next host. One factory that is never disposed avoids it.
+        builder.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         builder.Services.AddScheduling(db.ConnectionString);
         builder.Services.AddSingleton<IDailyReportBuilder>(_reports);
         builder.Services.AddHealthChecks().AddCheck<QuartzHealthCheck>("quartz");
@@ -176,6 +180,9 @@ public sealed class QuartzTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsy
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
+        // Quartz keeps the first logger factory it sees in a static; a disposed host's factory then
+        // breaks the next host. One factory that is never disposed avoids it.
+        builder.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         builder.Services.AddScheduling(db.ConnectionString);
         builder.Services.AddSingleton<IDailyReportBuilder>(_reports);
         builder.Services.AddAuthentication("Any").AddScheme<AuthenticationSchemeOptions, AnyAuth>("Any", null);
