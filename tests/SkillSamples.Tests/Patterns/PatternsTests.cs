@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.Extensions.DependencyInjection;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Patterns;
@@ -117,6 +118,41 @@ public sealed class PatternsTests
         Assert.False(appointment.TryApply(AppointmentTrigger.CheckIn));
         Assert.False(appointment.TryApply(AppointmentTrigger.Complete));
         Assert.Equal(AppointmentStatus.Cancelled, appointment.Status);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public void Story_TheNoShowJobRunsLateAfterTheVisitIsDone_ItCantMarkThePatientAsMissing()
+    {
+        // Given: the patient checks in and the doctor completes the visit
+        var appointment = new Appointment();
+        Assert.True(appointment.TryApply(AppointmentTrigger.CheckIn));
+        Assert.True(appointment.TryApply(AppointmentTrigger.Complete));
+
+        // When: the no-show job, running late, marks missed appointments; then someone tries to cancel it
+        var markedMissing = appointment.TryApply(AppointmentTrigger.MissWindow);
+        var cancelled = appointment.TryApply(AppointmentTrigger.Cancel);
+
+        // Then: both are refused because the table doesn't list them, and the visit stays completed
+        Assert.False(markedMissing);
+        Assert.False(cancelled);
+        Assert.Equal(AppointmentStatus.Completed, appointment.Status);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_TheRouterSendsArabicTextUnchanged()
+    {
+        ProductionConditions.Require();
+        var services = new ServiceCollection().AddSingleton<SentLog>()
+            .AddSingleton<INotificationSender, SmsSender>()
+            .AddSingleton<INotificationSender, EmailSender>()
+            .AddSingleton<NotificationRouter>();
+        using var sp = services.BuildServiceProvider();
+
+        await sp.GetRequiredService<NotificationRouter>().SendAsync(NotificationChannel.Sms, "0500000000", "موعدك غداً الساعة ٩", default);
+
+        Assert.Equal(new[] { "sms:0500000000:موعدك غداً الساعة ٩" }, sp.GetRequiredService<SentLog>().Lines);
     }
 
     [Fact]

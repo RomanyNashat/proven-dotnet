@@ -3,6 +3,12 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.23 — story and production tests for the design and testing skills
+- `design-patterns`, `ddd-patterns` and `testing-integration` each have a story test and a production
+  test. Stories: a late no-show job can't overwrite a completed visit; a late add to a cancelled order is
+  refused and the total holds; a patient guessing the next order numbers gets 404 for each. On a slim
+  image: Arabic SMS text, Arabic product names and the orders API on PostgreSQL.
+
 ## 0.1.22 — story and production tests for the messaging skills
 - `polly-resilience`, `worker-patterns`, `kafka-patterns` and `grpc-patterns` each have a story test and a
   production test (no ICU, no tzdata, UTC). Stories: a payment provider's bad minute (the status check is

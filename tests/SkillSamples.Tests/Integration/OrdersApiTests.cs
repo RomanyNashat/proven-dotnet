@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using SkillSamples.OrdersApi;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Integration;
@@ -72,6 +73,43 @@ public abstract class OrdersApiTests<TFactory>(TFactory factory) : IAsyncLifetim
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_APatientGuessesTheNextOrderNumber_GetsNotFound_AndEachListShowsOnlyItsOwner()
+    {
+        // Given: patient 7 places two orders and patient 8 places one
+        using var seven = ClientFor(7);
+        using var eight = ClientFor(8);
+        var sevens = new List<OrderDto>();
+        for (var i = 0; i < 2; i++)
+        {
+            using var created = await seven.PostAsJsonAsync("/orders", new CreateOrder(3, i + 1));
+            sevens.Add((await created.Content.ReadFromJsonAsync<OrderDto>())!);
+        }
+
+        using (var placed = await eight.PostAsJsonAsync("/orders", new CreateOrder(4, 1)))
+        {
+            Assert.Equal(HttpStatusCode.Created, placed.StatusCode);
+        }
+
+        // When: patient 8 tries the order numbers next to theirs, and both patients open their lists
+        var guesses = new List<HttpStatusCode>();
+        foreach (var order in sevens)
+        {
+            using var response = await eight.GetAsync($"/orders/{order.Id}");
+            guesses.Add(response.StatusCode);
+        }
+
+        var sevenSees = await seven.GetFromJsonAsync<List<OrderDto>>("/orders");
+        var eightSees = await eight.GetFromJsonAsync<List<OrderDto>>("/orders");
+
+        // Then: every guess is "not found" (not "forbidden", which would confirm the order exists),
+        // and each list holds only its owner's orders
+        Assert.All(guesses, status => Assert.Equal(HttpStatusCode.NotFound, status));
+        Assert.Equal(sevens.Select(o => o.Id).Order(), sevenSees!.Select(o => o.Id).Order());
+        Assert.Equal(4, Assert.Single(eightSees!).ProductId);
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
@@ -95,3 +133,27 @@ public sealed class PostgresOrdersApiTests(PostgresOrdersApi api)
 
 public sealed class SqlServerOrdersApiTests(SqlServerOrdersApi api)
     : OrdersApiTests<SqlServerOrdersApi>(api), IClassFixture<SqlServerOrdersApi>;
+
+/// <summary>The slim image's conditions. PostgreSQL only: SqlClient can't connect without ICU.</summary>
+public sealed class PostgresOrdersApiProductionTests(PostgresOrdersApi api) : IClassFixture<PostgresOrdersApi>
+{
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_TheApiCreatesReadsAndValidates()
+    {
+        ProductionConditions.Require();
+        await api.ResetDatabaseAsync();
+        using var client = api.CreateClient();
+        client.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, "7");
+
+        using var created = await client.PostAsJsonAsync("/orders", new CreateOrder(3, 2));
+        var order = await created.Content.ReadFromJsonAsync<OrderDto>();
+        using var invalid = await client.PostAsJsonAsync("/orders", new CreateOrder(3, 0));
+        var problem = await invalid.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(order, await client.GetFromJsonAsync<OrderDto>($"/orders/{order!.Id}"));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Contains(nameof(CreateOrder.Quantity), problem!.Errors.Keys);
+    }
+}

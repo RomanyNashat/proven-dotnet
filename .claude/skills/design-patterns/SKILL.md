@@ -1,7 +1,7 @@
 ---
 name: design-patterns
 description: Design patterns in modern C#/.NET — GoF and enterprise — when each fits, when it's over-engineering, what .NET already gives you, and the misuses to flag. Used by /patterns (explain and suggest), pattern-analyst, architect, code-reviewer, refactor-cleaner.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Design Patterns for .NET
@@ -220,6 +220,10 @@ public sealed class Appointment
     }
 }
 ```
+
+Tested as a story: the visit is completed, then the no-show job, running late, tries to mark the patient
+as missing, and someone tries to cancel. Both are refused because the table doesn't list them, and the
+visit stays completed. A rule spread over `if`s in several services is where that job would have won.
 
 ### 3.4 Specification: named, composable query rules
 
