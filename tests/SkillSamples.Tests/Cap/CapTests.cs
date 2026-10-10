@@ -86,8 +86,34 @@ public sealed class CapTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncL
     {
         using var host = Build();
         await host.StartAsync();
-        try { return await work(host); }
+        try
+        {
+            await SubscriberQueueExistsAsync();
+            return await work(host);
+        }
         finally { await host.StopAsync(); }
+    }
+
+    // CAP creates and binds the subscriber's queue ("<group>.v1") in the background after start-up. Until it
+    // exists, RabbitMQ has nowhere to route the event and drops it.
+    private async Task SubscriberQueueExistsAsync()
+    {
+        await using var connection = await new RabbitMQ.Client.ConnectionFactory { Uri = RabbitMq }.CreateConnectionAsync();
+        for (var i = 0; i < 150; i++)
+        {
+            await using var channel = await connection.CreateChannelAsync();
+            try
+            {
+                await channel.QueueDeclarePassiveAsync($"{_group}.v1");
+                await Task.Delay(500);   // and its bindings, made right after
+                return;
+            }
+            catch (RabbitMQ.Client.Exceptions.OperationInterruptedException)
+            {
+                await Task.Delay(200);
+            }
+        }
+        throw new TimeoutException($"CAP didn't create its queue. Errors: {_errors}");
     }
 
     private static async Task Until(Func<bool> done, TimeSpan within)

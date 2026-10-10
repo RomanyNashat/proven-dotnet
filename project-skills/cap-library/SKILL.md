@@ -161,6 +161,13 @@ Tested as stories:
 Store the handled message ids in the same transaction as the work (a unique index on them), so the check
 and the write can't race.
 
+**A new subscriber misses what was published before its queue existed.** With RabbitMQ, CAP creates and
+binds a group's queue (`<group>.v1`) when that service first starts, in the background. Until then the
+exchange has nowhere to route the event and drops it, and the publisher still records it as sent. The
+tests hit this: an order placed right after start-up never arrived until they waited for the queue. When
+a new service subscribes to existing events, deploy it (or create its queue) before relying on it, and
+backfill anything it needed from before.
+
 Tested with no ICU: Arabic names arrive intact.
 
 ## CAP or the hand-rolled outbox
