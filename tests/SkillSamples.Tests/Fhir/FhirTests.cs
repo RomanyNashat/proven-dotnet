@@ -57,7 +57,7 @@ public sealed class FhirTests
 
         Assert.True(FhirMessages.IsResponseTo(response, request));
         Assert.False(FhirMessages.IsResponseTo(response, other));
-        Assert.NotEqual(request.Identifier.Value, FhirMessages.Header(request).Id);   // not the bundle's identifier
+        Assert.NotEqual(request.Identifier!.Value, FhirMessages.Header(request).Id);   // not the bundle's identifier
     }
 
     [Fact]
