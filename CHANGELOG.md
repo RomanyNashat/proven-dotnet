@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.13 — testing-tdd tested
+- `testing-tdd` 2.0.0. Its examples are now real tests of a small booking aggregate, run in CI with story
+  and production tests. What they found:
+  - **AutoMoq gives `TimeProvider` the real clock:** it mocks the abstract class and calls the base, so
+    a handler built by AutoMoq runs on today's date and a test pinned to a date breaks once it passes.
+    The `AutoMoqData` attribute now injects one fixed `FakeTimeProvider`.
+  - **AutoFixture's own `FakeTimeProvider` moves on every read:** it fills `AutoAdvanceAmount`.
+  - **A unit test that sets a culture crashes without ICU** (`new CultureInfo("en-US")`): unit tests
+    don't set one.
+  - FluentAssertions resolves 7.x under `[7.0.0,8.0.0)` (tested), and a `Verify(Times.Once)` on the
+    save catches a handler that saves twice.
+- The skill no longer states a CI-specific coverage setup as a general rule.
+
 ## 0.1.12 — dotnet-core tested
 - `dotnet-core` 2.0.0, its code tested in CI, with story and production tests. It now covers what its
   description promised (the host, DI lifetimes, options) and wasn't there. What the tests found:
