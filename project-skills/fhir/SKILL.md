@@ -1,68 +1,104 @@
 ---
 name: fhir
-description: FHIR (healthcare interoperability) for .NET with the Firely SDK (Hl7.Fhir.*). Resources, references, profiles, RESTful search, FHIRPath, and FHIR Messaging for national exchange platforms. Use R4. Per-project skill: drop into a repo that integrates FHIR.
+description: FHIR (healthcare interoperability) for .NET with the Firely SDK 6 (Hl7.Fhir.R4) — R4 resources, JSON with the current deserializer, FHIRPath, and FHIR Messaging for national exchange platforms (header first, matching responses to requests). Per-project skill. Messaging, parsing and FHIRPath tested in CI.
+version: 2.0.0
 ---
 
-# FHIR — healthcare interoperability for .NET
+# FHIR: healthcare interoperability for .NET
 
-FHIR (Fast Healthcare Interoperability Resources) is the HL7 standard for exchanging healthcare data.
-Relevant to a healthcare platform, but only in the services that actually speak FHIR — so it's a
-per-project skill.
+FHIR is the HL7 standard for exchanging healthcare data. Only the services that speak FHIR need it, so
+this is a per-project skill: copy it into those repos only.
 
-> Per-project skill. Copy into a repo's `.claude/skills/` only for a service that integrates FHIR.
-> Kept out of the global set to preserve skill-selection budget.
+## The SDK and the version
+- **Firely .NET SDK** (`Hl7.Fhir.R4`, BSD-3), from the team behind the standard: typed resources, JSON
+  and XML, FHIRPath, a REST client. Don't hand-roll FHIR JSON.
+- **R4** is what production systems run; R5 is early-adopter, STU3 legacy. The package fixes the version:
+  `Hl7.Fhir.R4`. Never reference two versions' packages in one service: their models differ.
+- **SDK 6:** `FhirJsonParser` is obsolete (and fails a warnings-as-errors build). Read JSON with
+  `FhirJsonDeserializer`; write it with `resource.ToJson()`.
 
-## Use the Firely SDK
-Use the **Firely .NET SDK** (`Hl7.Fhir.*`) — the official, mature library maintained by the standard's
-own team. It gives you strongly-typed resource classes, JSON/XML serialization, validation, profiling,
-FHIRPath evaluation, and a RESTful client. Don't hand-roll FHIR JSON.
+## FHIR Messaging: what exchange platforms use
 
-## Version: R4 for production
-- **FHIR R4** is normative and the production target — ~95%+ of certified healthcare systems are on it.
-- R5 exists but is trial-use / early-adopter; STU3 is legacy.
-- **Critical:** the SDK package version must match your target FHIR version — STU3/R4/R4B/R5 have
-  breaking model differences, and mixing them silently produces wrong resources. Pin the R4 package
-  (`Hl7.Fhir.R4`).
+National exchange platforms (eligibility, claims, referrals) mostly use **messaging**, not the REST
+API: one `Bundle` of type `message`, its `MessageHeader` first, posted to one endpoint with
+organisation-level certificates, and checked against the platform's own profiles.
 
-## Core concepts
-- **Everything is a Resource** — `Patient`, `Observation`, `Encounter`, `Condition`, `MedicationRequest`,
-  etc. Each is a strongly-typed class in the SDK.
-- **Resources link by reference** — e.g. an `Observation.Subject` references a `Patient` by
-  `Patient/{id}`, not by embedding. Resolve references via the client when you need the linked resource.
-- **Profiles constrain FHIR** — base FHIR is deliberately flexible; national/organizational **profiles**
-  (US Core, or a national profile) tighten which fields are required, allowed value sets, cardinality.
-  Validate against the profile you must conform to, not just base FHIR.
-
-## RESTful interaction (the FHIR API)
-FHIR is a REST API with a defined interaction set:
+<!-- sample: tests/SkillSamples.Tests/Fhir/FhirMessages.cs -->
 ```csharp
-var client = new FhirClient("https://fhir-server/fhir");   // R4 client
-var patient = await client.ReadAsync<Patient>("Patient/123");
-var created = await client.CreateAsync(newPatient);
-var bundle  = await client.SearchAsync<Observation>(new[] { "subject=Patient/123", "category=vital-signs" });
+// FHIR Messaging, as national exchange platforms use it: one Bundle of type "message", its MessageHeader
+// first, posted to one endpoint. Everything the header points at travels in the same bundle.
+public static class FhirMessages
+{
+    public static Bundle Request(string eventCode, Uri source, Uri destination, Resource focus, DateTimeOffset now)
+    {
+        var focusUrl = $"urn:uuid:{Guid.NewGuid()}";
+        var header = new MessageHeader
+        {
+            Id = Guid.NewGuid().ToString(),
+            Event = new Coding("http://example.org/fhir/message-events", eventCode),
+            Source = new MessageHeader.MessageSourceComponent { Endpoint = source.ToString() },
+            Destination = [new MessageHeader.MessageDestinationComponent { Endpoint = destination.ToString() }],
+            Focus = [new ResourceReference(focusUrl)]
+        };
+
+        return new Bundle
+        {
+            Type = Bundle.BundleType.Message,
+            Identifier = new Identifier("urn:ietf:rfc:3986", $"urn:uuid:{Guid.NewGuid()}"),
+            Timestamp = now,
+            Entry =
+            [
+                new Bundle.EntryComponent { FullUrl = $"urn:uuid:{header.Id}", Resource = header },   // the header is first
+                new Bundle.EntryComponent { FullUrl = focusUrl, Resource = focus }
+            ]
+        };
+    }
+
+    // R4: a response's MessageHeader.response.identifier is the id of the request's MessageHeader.
+    public static bool IsResponseTo(Bundle response, Bundle request) =>
+        Header(response).Response?.Identifier is { } answered && answered == Header(request).Id;
+
+    public static MessageHeader Header(Bundle message) =>
+        message.Entry.FirstOrDefault()?.Resource as MessageHeader
+        ?? throw new InvalidOperationException("A FHIR message starts with its MessageHeader.");
+}
 ```
-- **CRUD**: read / create / update / delete by resource type + id.
-- **Search**: query parameters per resource; supports **chained search** (`subject.name=...`) and
-  `_include` / `_revinclude` to pull linked resources in one round-trip. Results come back as a
-  `Bundle`.
+
+Tested as stories (each message is written to JSON and read back first):
+- **An eligibility request is built:** the bundle is a message, the header comes first, and its focus
+  points at the patient's entry.
+- **The response arrives:** it's matched to its request by the request header's id, not by the bundle's
+  identifier. The old version of this skill said to match on `Bundle.identifier`. Check your platform's
+  implementation guide: some add their own rules on top of R4's.
+
+Validate against the platform's profiles (its implementation guide), not only base FHIR: base FHIR is
+deliberately loose.
+
+## Reading what arrives
+
+`FhirJsonDeserializer.DEFAULT.Deserialize<T>(json)` refuses content the model doesn't know. Tested as a
+story: a patient with an extra field fails with `DeserializationFailedException`, and its
+`PartialResult` holds what could be read. Decide per integration: refuse (and log the issues), or use a
+more lenient mode (`FhirJsonDeserializer.RECOVERABLE`) and record what was dropped. Don't use the most
+lenient (`OSTRICH`) for clinical data.
 
 ## FHIRPath
-A path expression language for navigating/extracting from resources
-(`Patient.name.where(use='official').family`). The SDK evaluates it — useful for validation rules and
-pulling values without manual null-walking.
 
-## National exchange platforms use Messaging, not REST
+A path language for reading resources without null-walking: `Select`, `Scalar`, `IsTrue` (namespace
+`Hl7.Fhir.FhirPath`). Tested: `Patient.name.where(use = 'official').family` picks the official name from a
+patient who has two.
 
-Many national health-exchange platforms (insurance claims, eligibility, referrals) use FHIR **Messaging**:
-a `Bundle` of type `message` with a `MessageHeader` first, posted to one endpoint with organisation-level
-PKI auth, and validated against the platform's own profiles. The REST `FhirClient` CRUD/search flow
-above doesn't apply to them. Model request/response correlation on `Bundle.identifier` and
-`MessageHeader.response.identifier`, and validate against the platform's implementation guide, not
-base FHIR. A team that integrates one keeps those details in its own layer.
+Tested with no ICU and no tzdata: Arabic names and the bundle's `+03:00` timestamp survive the round trip.
+
+## The REST API (`FhirClient`)
+
+For servers that expose FHIR over REST: `new FhirClient(baseUrl)`, `ReadAsync<Patient>("Patient/123")`,
+`SearchAsync<Observation>(["subject=Patient/123"])`, with `_include` and chained search to avoid round
+trips. Not tested here (it needs a FHIR server); give it an `HttpClient` from `IHttpClientFactory`.
 
 ## Rules
-- Firely SDK, R4, package version pinned to the FHIR version — never mix versions.
-- Validate against the specific **profile** you must conform to, not just base FHIR.
-- Resources reference each other by `Type/id`; use `_include`/chained search to avoid N round-trips.
-- Treat PHI in FHIR resources under the same healthcare-compliance rules as the rest of the platform
-  (audit, encryption, no PHI in logs).
+- Firely SDK, `Hl7.Fhir.R4`, one FHIR version per service.
+- `FhirJsonDeserializer`, with a deliberate choice of how strict.
+- Messages: header first, everything it references in the bundle, responses matched by header id.
+- Validate against the profile you must conform to.
+- PHI rules apply to FHIR payloads as to everything else (`healthcare-compliance`): no payloads in logs.

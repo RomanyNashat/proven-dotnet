@@ -4,10 +4,10 @@ name: skill-samples
 
 on:
   pull_request:
-    paths: ['.claude/skills/**', 'tests/SkillSamples.Tests/**', 'tests/SkillSamples.OrdersApi/**', 'tools/ci/service.sh', '.github/workflows/skill-samples.yml']
+    paths: ['.claude/skills/**', 'project-skills/**', 'tests/SkillSamples.Tests/**', 'tests/SkillSamples.OrdersApi/**', 'tools/ci/service.sh', '.github/workflows/skill-samples.yml']
   push:
     branches: [main]
-    paths: ['.claude/skills/**', 'tests/SkillSamples.Tests/**', 'tests/SkillSamples.OrdersApi/**', 'tools/ci/service.sh', '.github/workflows/skill-samples.yml']
+    paths: ['.claude/skills/**', 'project-skills/**', 'tests/SkillSamples.Tests/**', 'tests/SkillSamples.OrdersApi/**', 'tools/ci/service.sh', '.github/workflows/skill-samples.yml']
 
 jobs:
   samples:
@@ -22,14 +22,14 @@ jobs:
       matrix:
         include:
           - group: sql
-            title: PostgreSQL, SQL Server
-            services: pg mssql
+            title: PostgreSQL, SQL Server, RabbitMQ
+            services: pg mssql rabbitmq
           - group: other
-            title: MongoDB, Redis, Kafka, nginx, in-process
-            services: mongo redis kafka nginx
+            title: MongoDB, Redis, Kafka, nginx, NATS, RabbitMQ, in-process
+            services: mongo redis kafka nginx nats rabbitmq
     env:
       SERVICES: ${{ matrix.services }}
-      SQL_NAMESPACES: Auth AuthServer Compliance DapperReads Ddd EfCore EfOutbox Integration Jobs Localization MsSql Postgres Scheduling Secrets Workers
+      SQL_NAMESPACES: Auth AuthServer Cap Compliance DapperReads Ddd EfCore EfOutbox Integration Jobs Localization MsSql Postgres Scheduling Secrets Workers
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v4
@@ -72,6 +72,14 @@ jobs:
         if: contains(matrix.services, 'nginx')
         timeout-minutes: 8
         run: bash tools/ci/service.sh wait nginx
+      - name: NATS 2.10
+        if: contains(matrix.services, 'nats')
+        timeout-minutes: 8
+        run: bash tools/ci/service.sh wait nats
+      - name: RabbitMQ 4.1
+        if: contains(matrix.services, 'rabbitmq')
+        timeout-minutes: 8
+        run: bash tools/ci/service.sh wait rabbitmq
       - name: Run this job's samples
         run: |
           if [ "${{ matrix.group }}" = sql ]; then op='~'; join='|'; else op='!~'; join='&'; fi
@@ -83,6 +91,8 @@ jobs:
           MONGO_URL: mongodb://localhost:27017/?replicaSet=rs0&directConnection=true
           REDIS_URL: localhost:6379
           KAFKA_BOOTSTRAP: localhost:9092
+          NATS_URL: nats://localhost:4222
+          RABBITMQ_URL: amqp://samples:samples@localhost:5672/
           PG_URL: Host=localhost;Username=postgres;Password=postgres;Database=postgres
           MSSQL_URL: Server=localhost,1433;User Id=sa;Password=Samples-2026!;Encrypt=True;TrustServerCertificate=True
       # Production tests run again under a slim image's conditions: no ICU, no time-zone database, UTC.
@@ -101,5 +111,7 @@ jobs:
           MONGO_URL: mongodb://localhost:27017/?replicaSet=rs0&directConnection=true
           REDIS_URL: localhost:6379
           KAFKA_BOOTSTRAP: localhost:9092
+          NATS_URL: nats://localhost:4222
+          RABBITMQ_URL: amqp://samples:samples@localhost:5672/
           PG_URL: Host=localhost;Username=postgres;Password=postgres;Database=postgres
           MSSQL_URL: Server=localhost,1433;User Id=sa;Password=Samples-2026!;Encrypt=True;TrustServerCertificate=True

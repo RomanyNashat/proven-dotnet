@@ -1,13 +1,18 @@
 ---
 name: cicd-github-actions
-description: GitHub Actions for .NET: build/test/publish pipelines, caching, matrix builds, secrets, container publishing.
-version: 1.0.0
+description: GitHub Actions for .NET: build/test/publish pipelines, caching, matrix builds, secrets, container publishing. The workflows shown pass actionlint (with shellcheck) in CI.
+version: 1.1.0
 ---
 
 # GitHub Actions CI/CD Patterns
 
+Every workflow below is a file in `tests/Workflows/` that CI checks with actionlint, including shellcheck
+on the `run:` scripts. That proves they're valid workflows with sound shell; it doesn't run them against
+your registry or cluster.
+
 ## PR Validation Pipeline
 
+<!-- sample: tests/Workflows/pr-validation.yml -->
 ```yaml
 name: PR Validation
 
@@ -90,9 +95,10 @@ jobs:
 
       - name: NuGet Vulnerability Check
         run: |
-          dotnet list package --vulnerable --include-transitive 2>&1 | \
-            tee /dev/stderr | \
-            grep -q "has the following vulnerable" && exit 1 || true
+          if dotnet list package --vulnerable --include-transitive 2>&1 | tee /dev/stderr | grep -q "has the following vulnerable"; then
+            echo "::error::A package has a known vulnerability."
+            exit 1
+          fi
 
       - name: Upload Coverage
         if: always()
@@ -111,6 +117,7 @@ jobs:
 
 ## Deploy Pipeline
 
+<!-- sample: tests/Workflows/deploy.yml -->
 ```yaml
 name: Deploy
 
@@ -247,6 +254,7 @@ jobs:
 
 ## Reusable Workflow (shared across services)
 
+<!-- sample: tests/Workflows/reusable-build.yml -->
 ```yaml
 # .github/workflows/dotnet-service.yml (reusable)
 name: .NET Service CI
@@ -275,8 +283,13 @@ jobs:
           dotnet-version: ${{ inputs.dotnet-version }}
       - run: dotnet build -warnaserror
       - run: dotnet test --filter "Category!=Integration"
+```
 
-# Caller workflow
+The calling workflow in each service:
+
+<!-- sample: tests/Workflows/reusable-build-caller.yml -->
+```yaml
+# .github/workflows/ci.yml (in the service)
 name: Order Service CI
 on: [push, pull_request]
 jobs:

@@ -9,3 +9,8 @@ testing-tdd
 healthcare-compliance
 openiddict-server
 testing-architecture
+signalr
+nats
+rabbitmq-patterns
+cap-library
+fhir
