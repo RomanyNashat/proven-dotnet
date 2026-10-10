@@ -1,7 +1,7 @@
 ---
 name: hangfire-patterns
 description: Hangfire for .NET on PostgreSQL or SQL Server — setup with the schema applied by the pipeline, filters on the interface (where Hangfire reads them), queues, retries, continuations, recurring jobs in a real time zone, a dashboard behind a policy. Tested in CI against PostgreSQL.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Hangfire Patterns
