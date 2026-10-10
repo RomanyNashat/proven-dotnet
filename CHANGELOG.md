@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.19 — the review evals, first runs
+- `/full-review` with proven and a plain review with only the house rules both found all twelve planted
+  findings, without flagging a distractor; `/health-check` graded the service F with the unmeasured parts
+  marked N/A. Results in `tests/evals/full-review/results.md`: the fixture is too easy to tell the two
+  apart, so harder findings come next.
+- `code-health` 1.1.0: when the package scan can't run (no feed), the direct references are checked
+  against published advisories and a confirmed vulnerable package counts in Security. The first run left
+  `System.Text.Json` 8.0.4 out of the grade because no tool confirmed it.
+- `skill-evals`: a command that launches agents can't be run inside a subagent (it has no tool to start
+  them); launch them from the main session. A baseline started inside the repo still has the house rules.
+- The fixture's two unplanted real defects (column names that differ between Dapper and EF, a missing
+  JwtBearer package) are listed in the cases so they count as found.
+
 ## 0.1.18 — evals for /full-review and /health-check
 - `tests/evals/full-review/PharmacyRefills`: a small service with twelve planted findings (SQL injection, two
   IDORs, PHI in logs, a swallowed `.Result`, a dual write, an unbounded column, an N+1, `System.Text.Json`

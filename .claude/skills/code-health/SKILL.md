@@ -1,7 +1,7 @@
 ---
 name: code-health
 description: Codebase health for .NET: weighted A–F report card from quality metrics (coverage, complexity, duplication, dead code, warnings). Used by health-analyst + /health-check.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Code Health Skill
@@ -53,6 +53,13 @@ dotnet list package --deprecated 2>&1
 Where a metric can't be gathered (tool not present), mark that dimension **N/A** and exclude it
 from the weighting (renormalize the remaining weights) rather than guessing. Note the exclusion
 in the report.
+
+**Security is the exception: it isn't dropped when the package scan can't run** (no feed, no network).
+Read the direct `PackageReference`s and check each against a published advisory (GitHub Advisory
+Database, the NuGet vulnerability feed). A confirmed match counts in the Security score like a tool hit,
+with the advisory named as the source. Say the transitive tree and deprecations weren't checked. A
+vulnerable package left out of the grade because "the tool didn't confirm it" is a miss: the grade then
+says the service is safer than it is.
 
 > **With `proven-roslyn` connected,** dead code (`find_dead_code`) and build diagnostics
 > (`get_diagnostics`) come straight from it, far more cheaply than parsing build output. The grading

@@ -24,6 +24,12 @@ haven't been changed to pass it.
 | F11 | `RequestRefill` | no validator on the request | Warning |
 | F12 | `DispenseAsync` | `KeyNotFoundException` for a missing refill becomes a 500, not a 404 | Suggestion or Warning |
 
+**Not planted, but real** (found by the first runs, 2026-10-10; count them as found, never as noise):
+- R1: the Dapper SQL uses `patient_id`/`medication_name`, but the EF model has no snake_case convention,
+  so its columns are `PatientId`/`MedicationName`. The search fails at runtime either way.
+- R2: `AddJwtBearer()` needs the `Microsoft.AspNetCore.Authentication.JwtBearer` package, which the
+  project doesn't reference, so it doesn't compile.
+
 **Distractors (must not be reported as problems):**
 - D1: `RefillQueries.ForPatientAsync` uses `FromSql($"... {patientId}")`. That's a `FormattableString`:
   EF Core sends it as a parameter. Not injection.
@@ -70,3 +76,5 @@ Per run: F1–F12 found (with the right file and member), severities within one 
 not reported, nothing changed. Report found/12, distractors wrongly flagged/3, and any change to the
 fixture as an automatic fail. Compare with-proven against without-proven; if they're the same, the
 review agents aren't earning their context.
+
+Results per run are in `results.md`.
