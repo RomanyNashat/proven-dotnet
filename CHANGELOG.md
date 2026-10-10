@@ -3,6 +3,27 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.17 — the per-project skills tested
+- Most per-project skills now show code that runs in CI, with story and production tests. NATS 2.10 and
+  RabbitMQ 4.1 join the CI services; the workflows in `cicd-github-actions` are checked by actionlint and
+  shellcheck. `bigquery` and `firebase` stay untested (they need Google's services), and the README says so.
+- What the tests found:
+  - **signalr:** the hub let any client `JoinGroup("patient-42")` and receive another patient's updates.
+    Messages now go to the user. Tested: the Redis backplane across two pods, nothing without it, and a
+    connection that fails when the load balancer isn't sticky.
+  - **nats:** the old setup (a bare `NatsConnection`) can't publish a record: `NatsException`. Queue
+    groups, fan-out, wildcards, request/reply with no responder, and at-most-once delivery tested.
+  - **rabbitmq-patterns:** it said to default to `RabbitMQ.Client` and showed only MassTransit. Now
+    RabbitMQ.Client 7: quorum queues with a delivery limit and dead-lettering (RabbitMQ 4 drops a message
+    after 20 tries without one, tested), confirmed mandatory publishes, manual acks, competing consumers.
+  - **cap-library:** CAP creates its schema at every start and starts anyway when that fails; publisher
+    confirms are off by default; the default retry count is 50. The schema now comes from a reviewed
+    script and the service checks it at start-up.
+  - **fhir:** responses are matched to requests by the request header's id (R4), not the bundle
+    identifier the skill named; `FhirJsonParser` is obsolete in SDK 6.
+  - **firebase:** pruning tokens on `InvalidArgument` would delete every token a malformed message was
+    sent to.
+
 ## 0.1.16 — testing-architecture tested
 - `testing-architecture` 2.0.0. The rules run in CI against two copies of a small service, one laid out
   properly and one with the usual mistakes, with story and production tests. What they found:
