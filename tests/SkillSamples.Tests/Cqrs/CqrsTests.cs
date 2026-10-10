@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Cqrs;
@@ -120,5 +121,44 @@ public sealed class CqrsTests
             .DispatchAsync([new SlotBooked(4)], CancellationToken.None);
 
         Assert.Equal(new[] { "notify 4", "audit 4" }, scope.ServiceProvider.GetRequiredService<Trail>().Steps);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_AReceptionistTypes500Minutes_IsToldWhichField_FixesIt_AndTheClinicHearsOnlyAfterTheCommit()
+    {
+        using var sp = Build();
+        using var scope = sp.CreateScope();
+        var book = scope.ServiceProvider.GetRequiredService<ICommandHandler<BookSlot, int>>();
+        var trail = scope.ServiceProvider.GetRequiredService<Trail>().Steps;
+
+        // Given: a 500-minute slot typed by mistake
+        var refused = await Assert.ThrowsAsync<ValidationException>(() => book.HandleAsync(new BookSlot(9, 500), CancellationToken.None));
+
+        // When: she corrects it to 30 and the slot is booked; its event goes out once the save is done
+        var slot = await book.HandleAsync(new BookSlot(9, 30), CancellationToken.None);
+        await scope.ServiceProvider.GetRequiredService<DomainEventDispatcher>().DispatchAsync([new SlotBooked(9)], CancellationToken.None);
+
+        // Then: the refusal named the field and touched nothing; the booking committed before anyone was told
+        Assert.Equal(nameof(BookSlot.Minutes), Assert.Single(refused.Errors).PropertyName);
+        Assert.Equal(90, slot);
+        Assert.Equal(new[] { "begin", "handler", "commit", "notify 9", "audit 9" }, trail);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_ThePipelineRuns_AndValidationMessagesNeedNoCulture()
+    {
+        ProductionConditions.Require();
+        using var sp = Build();
+        using var scope = sp.CreateScope();
+        var book = scope.ServiceProvider.GetRequiredService<ICommandHandler<BookSlot, int>>();
+
+        var refused = await Assert.ThrowsAsync<ValidationException>(() => book.HandleAsync(new BookSlot(9, 500), CancellationToken.None));
+        var slot = await book.HandleAsync(new BookSlot(9, 30), CancellationToken.None);
+
+        // FluentValidation falls back to its English messages under the invariant culture; nothing throws.
+        Assert.Contains("between 5 and 120", Assert.Single(refused.Errors).ErrorMessage, StringComparison.Ordinal);
+        Assert.Equal(90, slot);
     }
 }
