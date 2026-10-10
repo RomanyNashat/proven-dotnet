@@ -3,6 +3,21 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.20 — story and production tests for the data skills
+- `efcore-patterns`, `dapper-patterns`, `postgresql-patterns`, `sqlserver-patterns`, `mongodb-patterns`,
+  `redis-patterns`, `outbox` and `cqrs-eventsourcing` now each have a story test and a production test (no
+  ICU, no tzdata, UTC). Stories: a note edited on two devices; an order cancelled mid-scroll (keyset vs
+  OFFSET); a pod dying mid-job and releasing its lock; two scanners counting a new product; a push pod
+  killed between sending and saving its place; an OTP limit across three pods; a broker down all morning;
+  a mistyped command refused by field.
+- What the tests found:
+  - **outbox:** the inbox consumer counted bookings by the UTC day, so a 01:30 booking in Riyadh landed on
+    the day before. It now counts by the clinic's day.
+  - **postgresql-patterns:** on a pod in UTC, `DateTime.Now` reads like UTC but has `Kind=Local`, and Npgsql
+    refuses it for `timestamptz` all the same.
+  - **sqlserver-patterns:** without ICU the service starts and fails on its first query, not at start-up.
+  - **mongodb-patterns:** change streams deliver at least once; the push handler records what it sent by
+    `_id`, so a restart doesn't push twice.
 ## 0.1.19 — the review evals, first runs
 - `/full-review` with proven and a plain review with only the house rules both found all twelve planted
   findings, without flagging a distractor; `/health-check` graded the service F with the unmeasured parts
