@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.10 — quartz-scheduling tested
+- `quartz-scheduling` 2.0.0, its code tested in CI against PostgreSQL. What the tests and the rewrite found:
+  - Quartz's own schema script **drops every Quartz table** by default (`DropDb := 1`). The skill now
+    says to set it to 0 and apply it through the pipeline; its `text`/`bytea` columns are a recorded
+    exception to the column rules.
+  - `UseMicrosoftDependencyInjectionJobFactory()` is obsolete (and breaks a warnings-as-errors build).
+  - Cron ran in the pod's time zone (UTC) while the comment said "2 AM"; now `InTimeZone(Asia/Riyadh)`,
+    tested as 23:00 UTC, with an explicit misfire rule.
+  - `0 */30 8-17` was described as "business hours 8-17"; its last run is 17:30.
+  - Admin endpoints paused and resumed jobs that didn't exist without a word; now 404.
+  - The health check is unhealthy for a moment at start-up: readiness, not liveness.
+- Also tested: no overlapping runs, a restart keeps one stored job, and Quartz's static logger in tests.
+
 ## 0.1.9 — hangfire-patterns tested
 - `hangfire-patterns` 2.0.0, its code tested in CI against PostgreSQL. What the tests found in the old text:
   - `[AutomaticRetry]` on the job class is ignored when the job is enqueued through its interface:
