@@ -1,7 +1,7 @@
 ---
 name: postgresql-patterns
 description: PostgreSQL for .NET with Npgsql/EF Core: column rules, SQL Server→PG gotchas, pooling, safe migrations (what rewrites a table, CONCURRENTLY), JSONB, full-text, upserts, COPY, partitions, advisory locks. Claims tested in CI against PostgreSQL 17.
-version: 2.1.0
+version: 2.2.0
 ---
 
 # PostgreSQL Patterns
@@ -52,7 +52,7 @@ key as an `ALWAYS` identity; the enum is stored as its name.
 | SQL Server habit | On PostgreSQL | Do this |
 |------------------|---------------|---------|
 | Comparisons are case-insensitive | **Case-sensitive by default.** `WHERE email = @e` misses `Ali@x.com` | Store a normalized (lower-case) column with a unique index, or use an ICU non-deterministic collation. `EF.Functions.ILike` for search (`=` misses, `ILIKE` finds: tested). (`citext` has no length — it breaks the bounded-string rule) |
-| Any `DateTime` goes in | Through EF (or a parameter typed `timestamptz`) Npgsql **throws** for a `DateTime` whose `Kind` isn't `Utc`, and for a `DateTimeOffset` whose offset isn't 0. **Through a plain Dapper parameter it doesn't throw:** the value goes as `timestamp` and the server reads it in the session's time zone, so noon `Unspecified` under `Asia/Riyadh` is stored as 09:00 UTC (all tested) | Take time from `TimeProvider.GetUtcNow()` (already our rule). `DateTime.Parse` gives `Unspecified`: convert before saving |
+| Any `DateTime` goes in | Through EF (or a parameter typed `timestamptz`) Npgsql **throws** for a `DateTime` whose `Kind` isn't `Utc`, and for a `DateTimeOffset` whose offset isn't 0. **Through a plain Dapper parameter it doesn't throw:** the value goes as `timestamp` and the server reads it in the session's time zone, so noon `Unspecified` under `Asia/Riyadh` is stored as 09:00 UTC (all tested) | Take time from `TimeProvider.GetUtcNow()` (already our rule). `DateTime.Parse` gives `Unspecified`: convert before saving. On a pod in UTC, `DateTime.Now` has the right clock reading but `Kind=Local`, and is refused all the same (tested on a slim image) |
 | `PascalCase` names | Unquoted names fold to lower case; mixed case needs quotes everywhere | `snake_case`: `UseSnakeCaseNamingConvention()` (EFCore.NamingConventions) or explicit `ToTable`/`HasColumnName` |
 | `WITH (NOLOCK)` | Not needed — MVCC: readers never block writers | Remove it; don't look for an equivalent |
 | An error inside a transaction, carry on | **One error aborts the whole transaction** ("current transaction is aborted", `25P02`, tested) | Roll back and retry the unit; use `SAVEPOINT` only when you truly need partial recovery |
@@ -312,6 +312,8 @@ public sealed class ExclusiveRunner(NpgsqlDataSource dataSource)
 ```
 
 Tested: while one caller is inside, a second is turned away; after the commit, the next one gets in.
+As a story: the pod running the nightly job dies halfway; its lock and its half-done rows go with the
+transaction, the next pod runs the job once, and a third that starts meanwhile is turned away.
 Session locks don't work behind a transaction-mode PgBouncer either. The EF version of this lock is the
 `outbox` relay's, tested beside SQL Server's `sp_getapplock`.
 

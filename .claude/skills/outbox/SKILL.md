@@ -463,6 +463,12 @@ public sealed class AppointmentBookedConsumer(ClinicDbContext db, TimeProvider t
 ```
 
 Tested on both engines: ten deliveries of the same message at the same moment change the count once.
+As a story: the broker is down all morning; bookings still save, the relay sends nothing, and when the
+broker is back they go out oldest first; a redelivered event counts once.
+
+**The day is the clinic's, not UTC's.** This consumer used to count by `StartsAt.UtcDateTime`, so a
+01:30 booking in Riyadh landed on the day before. A production test (no tzdata, the pod in UTC) caught
+it; the count now uses the clinic's time zone (`RiyadhTime`, `localization`).
 On SQL Server, a plain `IF NOT EXISTS ... INSERT` is not enough: two transactions both see no row, and
 one fails on the key. `UPDLOCK, HOLDLOCK` makes the second wait on the key range, then find the row. The inbox key is
 (consumer, message id), so two consumers in one service can each process the same message. Clean the

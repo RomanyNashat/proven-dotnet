@@ -1,7 +1,7 @@
 ---
 name: efcore-patterns
 description: EF Core 10/8, on PostgreSQL and SQL Server — pooled contexts with per-request state, query filters that don't leak between callers, audit interceptors, retries with transactions, concurrency, bulk updates, reviewed migration scripts, DBA column rules. Core code tested in CI on both engines.
-version: 2.1.0
+version: 2.2.0
 ---
 
 # EF Core Patterns
@@ -334,6 +334,9 @@ Tested: two requests edit the same visit; the second `SaveChangesAsync` throws
 `DbUpdateConcurrencyException`. Return that as a conflict (409, a Result) and let the user reload.
 Don't catch it, reload and save again: that overwrites the first user's change without telling anyone.
 
+Tested as a story: a patient edits the same note on a phone and a tablet. The phone saves; the tablet's
+save is refused; the tablet reloads, sees the phone's text, adds to it, and the audit names the last edit.
+
 ## 9. Reads
 
 - `AsNoTracking()` and a projection (`Select` into a DTO) for every read. Lists never return whole
@@ -344,6 +347,11 @@ Don't catch it, reload and save again: that overwrites the first user's change w
 - Compiled queries (`EF.CompileAsyncQuery`) only for a measured hot path. Reports and complex reads go to
   Dapper.
 - Slow queries show up as database spans in Elastic APM (`observability`); no logging interceptor needed.
+- **A local day is a UTC range.** Timestamps are stored in UTC, so "visits on 10 October" in Riyadh is
+  `>= 2026-10-09T21:00Z` and `< 2026-10-10T21:00Z`: build it from local midnight with the zone's offset,
+  then `ToUniversalTime()` (Npgsql only takes offset 0 for `timestamptz`). Tested on a slim image (no
+  tzdata, the pod in UTC): a 23:30 visit is in the day, a 00:30 one isn't. `RiyadhTime` (`localization`)
+  falls back to a fixed UTC+3 when tzdata is missing.
 
 ## 10. Migrations
 

@@ -1,7 +1,7 @@
 ---
 name: sqlserver-patterns
 description: SQL Server for .NET — column rules, registration (UseSqlServer / UseAzureSql), READ_COMMITTED_SNAPSHOT, safe upserts (UPDLOCK, HOLDLOCK), table-valued parameters, SqlBulkCopy, bounded JSON, temporal tables, row-level security with session context, indexes, Query Store. Claims tested in CI against SQL Server 2022.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # SQL Server Patterns
@@ -47,6 +47,11 @@ Both compile and build a SQL Server context in CI. **`UseAzureSqlDefaults()` is 
 (the compiler says so), and with warnings as errors it breaks the build: use `UseAzureSql`.
 - A transaction your code opens needs the execution strategy when retries are on (`efcore-patterns` §7,
   tested).
+- **The image needs ICU.** `Microsoft.Data.SqlClient` refuses to connect in globalization-invariant
+  mode ("Globalization Invariant Mode is not supported"), which is how slim and Alpine images run. Tested:
+  the service starts, because building a connection opens nothing, and its first query fails. Install ICU
+  in the image and turn invariant mode off; a start-up check that opens one connection makes it fail at
+  deploy instead of on the first request. (Npgsql doesn't need ICU.)
 - Dapper: a new `SqlConnection` per operation from `Microsoft.Data.SqlClient`, pooled by the driver.
   Never register a `SqlConnection` as a scoped or singleton service (`dapper-patterns` §3).
 
@@ -128,7 +133,9 @@ public static class Inventory
 
 Tested: ten saves of the same new key at the same moment leave one row and raise no error, with either
 statement. A plain `IF NOT EXISTS … INSERT`, or `MERGE` without `HOLDLOCK`, lets two callers both see "no
-row" and both insert. The TVP filters by the list in one typed parameter; `dapper-patterns` §2 has the
+row" and both insert. As a story: two scanners count a new product at once. Without hints both update
+nothing, the second insert fails with 2627 and its count is lost; with `SaveAsync` the second waits on the
+first's key-range lock, then updates. The TVP filters by the list in one typed parameter; `dapper-patterns` §2 has the
 `OPENJSON` alternative, which needs no type. Mind the 2,100-parameter limit of `IN @ids`.
 
 ## 5. Bulk inserts

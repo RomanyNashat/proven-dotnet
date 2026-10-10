@@ -1,7 +1,7 @@
 ---
 name: dapper-patterns
 description: Dapper, on PostgreSQL and SQL Server — the token reaches the database, keyset paging, allowlisted sorting, any number of ids in one parameter, many rows in one command, the dialect differences. Core code tested in CI on both engines.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Dapper Patterns
@@ -103,7 +103,11 @@ What the tests show, on each engine:
 - **The token reaches the database.** A 20-second query is stopped within seconds when the token is
   cancelled. The overloads that take an anonymous object have no token parameter, so a method can accept
   a `CancellationToken` and still never pass it: always go through `CommandDefinition`.
-- **Keyset paging** returns every row once, in order, across pages.
+- **Keyset paging** returns every row once, in order, across pages. As a story: an order on the page the
+  customer is reading gets cancelled; the next keyset page starts at the 11th order, while `OFFSET 10`
+  counts from the new start and skips it.
+- **On a slim image** (no ICU, no tzdata), the PostgreSQL reads work and `timestamptz` comes back as a
+  `DateTime` with `Kind=Utc`. SQL Server's driver doesn't connect at all without ICU (`sqlserver-patterns` §2).
 - **Sorting from user input goes through an allowlist.** `"total; DROP TABLE orders; --"` is refused
   before any SQL runs. Parameters can't carry a column name, so this is the one place where SQL text is
   built from input, and only from the allowlist's values.
