@@ -1,186 +1,345 @@
 ---
 name: openiddict-server
-description: Provider-side auth for .NET: build an OAuth2/OIDC Authorization Server with OpenIddict + ASP.NET Core Identity — opaque reference tokens, introspection/revocation/end-session, local accounts, RBAC. The issuing side (cf. auth-patterns).
-version: 1.0.0
+description: Provider-side auth for .NET — your own OAuth2/OIDC server with OpenIddict and ASP.NET Core Identity — code flow with PKCE, opaque reference tokens, introspection, logout that really ends the tokens, roles as rows reloaded on refresh, lockout, a schema the DBA can review. Tested in CI against SQL Server. The issuing side; auth-patterns is the consuming side.
+version: 2.0.0
 ---
 
-# OpenIddict Server — provider-side auth (we are the OpenID Provider)
+# OpenIddict Server: when you are the token issuer
 
-For services that **issue and validate their own tokens** — the OpenID Provider / OAuth2 Authorization
-Server role. This is the **opposite** of `auth-patterns`, which is the resource/consumer side (validating
-tokens issued by an external IdP like Keycloak). Use this skill when you are the token authority
-(your own sign-in server); use `auth-patterns` for services that merely validate.
+For a service that **issues** tokens: the OpenID Provider / authorization server. Services that only
+**check** tokens (from this server or from an IdP such as Keycloak) follow `auth-patterns`.
 
-Built on **OpenIddict** (Apache-2.0, OpenID-certified, no cloud dependency) + **ASP.NET Core Identity**
-(the local user/credential store). OpenIddict owns the RFC plumbing and crypto; we own login, users,
-claims, and RBAC. .NET 10, `sealed` types, primary constructors, records, `TypedResults`.
-**Persistence: SQL Server** (EF Core) — see `sqlserver-patterns` and `efcore-patterns`.
+**OpenIddict** (Apache-2.0, OpenID-certified) handles the protocol and the crypto; **ASP.NET Core
+Identity** stores users, passwords and roles. You write login, the authorize and token handlers, and
+logout. The samples run on SQL Server and are tested end to end: a browser-like client signs in, runs
+the code flow with PKCE, and an API introspects the token.
 
-> **Scope.** This covers **Phase 1**: build the server (issue, introspect, revoke, log out) with a full
-> RBAC data model seeded to one super-admin row. It **seeds** the Phase-2 introspection-client pattern
-> (§9) but does not build the shared NuGet package — that's a later phase.
+## Token model
 
-## Token model (the core decision)
-**Opaque reference access tokens + introspection**, not local JWT validation. Resource services never
-read the token; they call `/introspect` and get identity + roles. Payoff: **immediate revocation**
-(logout = row delete → next introspection fails) and one validation authority (no drift). Cost: a
-per-request hop, bounded by admin-portal traffic and cut by short-TTL result caching on the resource
-side (§9). The ID token is a JWT for the portal frontend only — never sent to resource services.
+**Opaque reference access tokens, checked by introspection.** The token is a random handle; its claims
+stay on the server. Services call `/connect/introspect` (or use OpenIddict.Validation, `auth-patterns`
+§2) to learn who it is and what roles they have. Revoking a token is a row update, so the next
+introspection says `active: false`. The cost is a call per request; `auth-patterns` covers caching it and
+what a cache does to revocation. The ID token is a JWT for the sign-in app only, never sent to APIs.
 
-## 1. Server + Identity setup
+## Setup
+
+<!-- sample: tests/SkillSamples.Tests/AuthServer/AuthServerSetup.cs -->
 ```csharp
-builder.Services
-    .AddDbContext<AuthDbContext>(o =>
-    {
-        o.UseSqlServer(builder.Configuration.GetConnectionString("Auth"));
-        o.UseOpenIddict();               // OpenIddict EF Core stores
-    });
-
-builder.Services
-    .AddIdentity<ApplicationUser, ApplicationRole>(o =>
-    {
-        o.Password.RequiredLength = 12;
-        o.Lockout.MaxFailedAccessAttempts = 5;
-        o.User.RequireUniqueEmail = true;
-        o.SignIn.RequireConfirmedAccount = false;   // local admin accounts, Phase 1
-    })
-    .AddEntityFrameworkStores<AuthDbContext>()
-    .AddDefaultTokenProviders();          // password reset, etc.
-```
-Identity provides hashing, lockout, and reset out of the box. `ApplicationUser`/`ApplicationRole` are
-`sealed` classes extending `IdentityUser`/`IdentityRole` (GUID keys).
-
-> **Migrations — reviewed scripts only.** The OpenIddict + Identity tables are created by EF Core
-> migrations applied as **reviewed SQL scripts**, never by `Database.Migrate()`/`EnsureCreated()` in app
-> startup (see `efcore-rules` — the migration-runner ban is non-negotiable, and it matters doubly for an
-> auth service running multiple replicas).
-
-## 2. Opaque reference tokens
-```csharp
-builder.Services.AddOpenIddict()
-    .AddServer(o =>
-    {
-        o.UseReferenceAccessTokens();     // opaque — payload stays server-side
-        o.UseReferenceRefreshTokens();    // revocation = delete the row
-        o.SetAccessTokenLifetime(TimeSpan.FromMinutes(15));
-        o.SetRefreshTokenLifetime(TimeSpan.FromDays(14));
-    });
-```
-**Why opaque:** the token is a random handle, not a self-describing JWT. Its claims live in the server
-store, so (a) resource services must introspect to learn identity/roles, and (b) **revoking is a row
-delete** — the next introspection returns `active: false` immediately. That's the whole point over
-stateless JWT: instant logout/revocation.
-
-## 3. Endpoints
-```csharp
-.AddServer(o =>
+public static class AuthServerSetup
 {
-    o.SetAuthorizationEndpointUris("connect/authorize")
-     .SetTokenEndpointUris("connect/token")
-     .SetIntrospectionEndpointUris("connect/introspect")   // RFC 7662
-     .SetRevocationEndpointUris("connect/revocation")      // RFC 7009
-     .SetEndSessionEndpointUris("connect/logout")          // OIDC end-session
-     .SetUserInfoEndpointUris("connect/userinfo");
-    // discovery (/.well-known/openid-configuration) is automatic
-    o.UseAspNetCore()
-     .EnableAuthorizationEndpointPassthrough()
-     .EnableTokenEndpointPassthrough()
-     .EnableEndSessionEndpointPassthrough();
-})
-.AddValidation(o => { o.UseLocalServer(); o.UseAspNetCore(); });
+    public const string OrdersApi = "orders-api";
+
+    // keys: real certificates from the secret store in production; ephemeral keys only in tests.
+    public static IServiceCollection AddAuthServer(
+        this IServiceCollection services, string connectionString, Action<OpenIddictServerBuilder> keys)
+    {
+        // bigint keys for OpenIddict's tables: the token table grows fastest.
+        services.AddDbContext<AuthDbContext>(o => o.UseSqlServer(connectionString).UseOpenIddict<long>());
+
+        services.AddIdentity<AppUser, AppRole>(o =>
+            {
+                o.Password.RequiredLength = 12;
+                o.Lockout.MaxFailedAccessAttempts = 5;
+                o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                o.User.RequireUniqueEmail = true;
+                o.Stores.SchemaVersion = IdentitySchemaVersions.Version2;   // no passkey table (binary columns)
+                o.Stores.MaxLengthForKeys = 128;                             // composite keys stay under 900 bytes
+            })
+            .AddEntityFrameworkStores<AuthDbContext>()
+            .AddDefaultTokenProviders();
+
+        services.AddOpenIddict()
+            .AddCore(o => o.UseEntityFrameworkCore().UseDbContext<AuthDbContext>().ReplaceDefaultEntities<long>())
+            .AddServer(o =>
+            {
+                o.SetAuthorizationEndpointUris("connect/authorize")
+                    .SetTokenEndpointUris("connect/token")
+                    .SetIntrospectionEndpointUris("connect/introspect")
+                    .SetRevocationEndpointUris("connect/revoke")
+                    .SetEndSessionEndpointUris("connect/logout");
+
+                o.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();
+                o.AllowRefreshTokenFlow();
+                o.RegisterScopes(Scopes.OpenId, Scopes.Profile, Scopes.Roles, Scopes.OfflineAccess, "orders");
+
+                // Opaque access tokens: services introspect them, and a revoked token is refused at once.
+                o.UseReferenceAccessTokens().UseReferenceRefreshTokens();
+                o.SetAccessTokenLifetime(TimeSpan.FromMinutes(15)).SetRefreshTokenLifetime(TimeSpan.FromDays(14));
+
+                keys(o);
+
+                o.UseAspNetCore()
+                    .EnableAuthorizationEndpointPassthrough()
+                    .EnableTokenEndpointPassthrough()     // so a refresh reloads the user's roles
+                    .EnableEndSessionEndpointPassthrough();
+            });
+
+        return services;
+    }
+}
 ```
 
-## 4. Flows — authorization code + PKCE
-Interactive portal login uses **authorization code + PKCE** (never implicit). Enable it, and host a
-minimal server-rendered login page on the OP that signs the user in via Identity and issues the code.
+- **Keys:** production signs and encrypts with certificates from the secret store (`secret-management`),
+  with a rotation plan: publish the new key before signing with it. `AddEphemeral...Key()` is for tests
+  only; ephemeral keys change on every start.
+- **HTTPS:** OpenIddict refuses plain HTTP. Behind an ingress that ends TLS, forward the scheme
+  (`ForwardedHeaders`) rather than calling `DisableTransportSecurityRequirement()`, which the tests use.
+- **Schema:** applied as a reviewed script, never `Migrate()` at start-up (`rules/efcore-rules.md`).
+
+### The schema the DBA reviews
+
+<!-- sample: tests/SkillSamples.Tests/AuthServer/AuthDbContext.cs -->
 ```csharp
-.AddServer(o =>
+public sealed class AppUser : IdentityUser<int>;
+public sealed class AppRole : IdentityRole<int>
 {
-    o.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();
-    o.AllowRefreshTokenFlow();
-    // signing/encryption keys: dev vs prod — see §10
-});
+    public AppRole() { }
+    public AppRole(string name) : base(name) { }
+}
+
+public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options)
+    : IdentityDbContext<AppUser, AppRole, int>(options)
+{
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+
+        // Identity leaves some strings unbounded (nvarchar(max)): bound every one it left open. OpenIddict's
+        // own JSON columns (payloads, permissions, redirect URIs) stay unbounded: a recorded exception.
+        foreach (var entity in builder.Model.GetEntityTypes().Where(e => e.ClrType.Namespace?.StartsWith("Microsoft.AspNetCore.Identity", StringComparison.Ordinal) == true
+                                                                         || e.ClrType.Assembly == typeof(AppUser).Assembly))
+        {
+            foreach (var property in entity.GetProperties().Where(p => p.ClrType == typeof(string) && p.GetMaxLength() is null))
+            {
+                property.SetMaxLength(property.Name switch
+                {
+                    nameof(IdentityUser.PasswordHash) => 200,
+                    nameof(IdentityUser.PhoneNumber) => 32,
+                    nameof(IdentityUserClaim<int>.ClaimValue) or nameof(IdentityUserToken<int>.Value) => 1000,
+                    _ => 256
+                });
+            }
+        }
+    }
+}
 ```
-The `/connect/authorize` handler challenges to the login page when the user isn't authenticated, then
-issues a `SignIn` with the resolved claims + roles once Identity validates credentials.
 
-## 5. Application registration
-Register clients as OpenIddict applications (seeded at startup via `IOpenIddictApplicationManager`):
-- **Portal SPA** — `public` client (PKCE, no secret), redirect URIs, `authorization_code` + `refresh_token`
-  grants, scopes `openid profile roles`.
-- **Resource services** — `confidential` clients with **client credentials** and the
-  **`ept:introspection`** permission, so only authenticated callers can hit `/introspect`. Each resource
-  service authenticates itself when introspecting a portal user's token.
+Tested as a story (the DBA reviews the schema): the users have `int` keys, the tokens `bigint`; no binary
+column; and the only `nvarchar(max)` columns left are OpenIddict's (`OpenIddictTokens.Payload` among
+them). Those hold JSON and token payloads in a third-party schema: record them as the narrow exception
+the column rules allow, as for Hangfire and Quartz. Identity's own unbounded columns (`PasswordHash`,
+the stamps, claim values) are bounded above.
 
-## 6. RBAC data model + seeding
-Lay the **full** model down now even though only one role exists operationally:
-`Users` / `Roles` / `Privileges` / `UserRoles` / `RolePrivileges`. Reuse Identity's user + role tables;
-add `Privileges` and `RolePrivileges`. Seed **`super-admin` as a ROW** (plus one seeded super-admin
-user) — **never a hardcoded role string** anywhere in code.
-Adding future roles is inserting rows, not reshaping schema or editing code.
+## Login, authorize, token, logout
+
+<!-- sample: tests/SkillSamples.Tests/AuthServer/AuthServerEndpoints.cs -->
 ```csharp
-// seeding (idempotent, run as a reviewed step — not EnsureCreated)
-if (await roleManager.FindByNameAsync("super-admin") is null)
-    await roleManager.CreateAsync(new ApplicationRole("super-admin"));
+public sealed record LoginRequest(string UserName, string Password);
+
+public static class AuthServerEndpoints
+{
+    private const string OpenIddictScheme = OpenIddictServerAspNetCoreDefaults.AuthenticationScheme;
+
+    public static IEndpointRouteBuilder MapAuthServer(this IEndpointRouteBuilder app)
+    {
+        // A real login page is a server-rendered form with antiforgery; the API shape keeps the sample short.
+        app.MapPost("account/login", async (LoginRequest login, SignInManager<AppUser> signIn) =>
+        {
+            // lockoutOnFailure: true, or failed attempts are never counted and lockout never happens.
+            var result = await signIn.PasswordSignInAsync(login.UserName, login.Password, isPersistent: false, lockoutOnFailure: true);
+            // The same answer for a wrong password and a locked account: it tells an attacker nothing.
+            return result.Succeeded ? Results.NoContent() : Results.Unauthorized();
+        });
+
+        app.MapMethods("connect/authorize", [HttpMethods.Get, HttpMethods.Post], Authorize);
+        app.MapPost("connect/token", Token);
+        app.MapMethods("connect/logout", [HttpMethods.Get, HttpMethods.Post], Logout);
+        return app;
+    }
+
+    private static async Task<IResult> Authorize(HttpContext http, UserManager<AppUser> users, SignInManager<AppUser> signIn)
+    {
+        var request = http.GetOpenIddictServerRequest() ?? throw new InvalidOperationException("Not an OpenIddict request.");
+        var cookie = await http.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+        var user = cookie.Succeeded ? await users.GetUserAsync(cookie.Principal!) : null;
+        if (user is null || !await signIn.CanSignInAsync(user))
+        {
+            // Not signed in (or locked since): to the login page, then back here.
+            var returnUrl = http.Request.PathBase + http.Request.Path + http.Request.QueryString;
+            return Results.Challenge(new AuthenticationProperties { RedirectUri = returnUrl }, [IdentityConstants.ApplicationScheme]);
+        }
+
+        var identity = await IdentityFor(user, users);
+        identity.SetScopes(request.GetScopes());
+        identity.SetResources(AuthServerSetup.OrdersApi);   // the services allowed to introspect it
+        identity.SetDestinations(DestinationsOf);
+        return Results.SignIn(new ClaimsPrincipal(identity), authenticationScheme: OpenIddictScheme);
+    }
+
+    private static async Task<IResult> Token(HttpContext http, UserManager<AppUser> users, SignInManager<AppUser> signIn)
+    {
+        var request = http.GetOpenIddictServerRequest() ?? throw new InvalidOperationException("Not an OpenIddict request.");
+        if (!request.IsAuthorizationCodeGrantType() && !request.IsRefreshTokenGrantType())
+            return Refuse(Errors.UnsupportedGrantType, "Only the code and refresh token flows are allowed.");
+
+        // The principal stored with the code or the refresh token. Without this handler OpenIddict issues it
+        // as it was at sign-in, so a role removed since then would stay for the refresh token's lifetime.
+        var stored = (await http.AuthenticateAsync(OpenIddictScheme)).Principal!;
+        var user = await users.FindByIdAsync(stored.GetClaim(Claims.Subject)!);
+        if (user is null || !await signIn.CanSignInAsync(user))
+            return Refuse(Errors.InvalidGrant, "The user can no longer sign in.");
+
+        var identity = await IdentityFor(user, users);
+        identity.SetScopes(stored.GetScopes());
+        identity.SetResources(stored.GetResources());
+        identity.SetDestinations(DestinationsOf);
+        return Results.SignIn(new ClaimsPrincipal(identity), authenticationScheme: OpenIddictScheme);
+    }
+
+    // Signs the user out and revokes every token issued to them, on every device. Ending only the
+    // refresh token leaves the access token working until it expires.
+    private static async Task<IResult> Logout(
+        HttpContext http, UserManager<AppUser> users, SignInManager<AppUser> signIn, IOpenIddictTokenManager tokens)
+    {
+        var cookie = await http.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+        if (cookie.Succeeded && await users.GetUserAsync(cookie.Principal!) is { } user)
+        {
+            await tokens.RevokeBySubjectAsync(await users.GetUserIdAsync(user));
+            await signIn.SignOutAsync();
+        }
+
+        return Results.SignOut(authenticationSchemes: [OpenIddictScheme]);
+    }
+
+    private static async Task<ClaimsIdentity> IdentityFor(AppUser user, UserManager<AppUser> users)
+    {
+        var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType, Claims.Name, Claims.Role);
+        identity.SetClaim(Claims.Subject, await users.GetUserIdAsync(user))
+            .SetClaim(Claims.Name, await users.GetUserNameAsync(user))
+            .SetClaims(Claims.Role, [.. await users.GetRolesAsync(user)]);   // roles are rows, read every time
+        return identity;
+    }
+
+    // Everything goes in the access token; name and roles also in the ID token when those scopes were granted.
+    private static IEnumerable<string> DestinationsOf(Claim claim) => claim.Type switch
+    {
+        Claims.Name when claim.Subject!.HasScope(Scopes.Profile) => [OpenIddictConstants.Destinations.AccessToken, OpenIddictConstants.Destinations.IdentityToken],
+        Claims.Role when claim.Subject!.HasScope(Scopes.Roles) => [OpenIddictConstants.Destinations.AccessToken, OpenIddictConstants.Destinations.IdentityToken],
+        _ => [OpenIddictConstants.Destinations.AccessToken]
+    };
+
+    private static IResult Refuse(string error, string description) =>
+        Results.Forbid(new AuthenticationProperties(new Dictionary<string, string?>
+        {
+            [OpenIddictServerAspNetCoreConstants.Properties.Error] = error,
+            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = description
+        }), [OpenIddictScheme]);
+}
 ```
 
-## 7. Stateless multi-replica
-The auth service runs **multiple stateless replicas** — it's on the path of every portal request.
-Token/session state and any validity cache live in **Redis as the single source of truth**, NOT in
-per-replica memory (that makes validation inconsistent and lets logout silently fail on some replicas).
-See `redis-patterns`. OpenIddict's stores are the DB; Redis
-holds session/cache state. An optional per-replica in-memory cache is allowed **only** with a short TTL
-or pub/sub invalidation.
+Tested as stories, end to end against SQL Server:
+- **An admin signs in through the portal:** login, the code flow with PKCE, a reference access token, and
+  the orders API's introspection shows their name and `super-admin` role.
+- **Not signed in:** the authorize request goes to the login page.
+- **Someone intercepts the code but not the verifier:** the token request is refused (400).
+- **Five wrong passwords:** the right one is refused too, and the account is locked. With
+  `lockoutOnFailure: false`, which is what Identity's scaffolded login page passes, failures are never counted.
+- **An admin loses their role:** the next refresh gives a token without it. That's what the token
+  handler is for: OpenIddict's default reuses the principal stored with the refresh token.
+- **Revoking only the refresh token leaves the access token working** until it expires. The old version
+  of this skill said it didn't.
+- **The admin logs out:** the access token is inactive at once and the refresh token is refused.
+  `RevokeBySubjectAsync` ends every session of that user; to end one device only, revoke by the
+  authorization id instead.
 
-## 8. Logout / revocation
-Real logout = **invalidate the session + revoke the refresh token** (RFC 7009) — no new access tokens
-can be minted, and the opaque access token fails its next introspection immediately (dead server-side).
-Browser-side clearing alone does NOT revoke. Single portal app → RP-initiated logout via
-`end_session_endpoint`; multiple apps under SSO → OIDC back-channel logout to propagate.
-Build a **cache-purge path** (delete the token's cached entry on logout) **behind a feature flag** — the
-resource-side introspection cache TTL is the only residual window; the flag lets you flip immediate
-purge on operationally (feeds Phase 2).
+Tested with no ICU: the whole flow works, and `Admin@Example.COM` signs in as `admin@example.com`.
 
-## 9. Introspection-client pattern (seed of the Phase-2 package)
+## Clients and roles, seeded as rows
 
-> **Tested version of the resource side:** `auth-patterns` §2 (OpenIddict.Validation with introspection
-> against a real OpenIddict server: roles come back, a revoked token is refused on the next request, an
-> unreachable server refuses the request). Use OpenIddict.Validation rather than hand-rolling the steps
-> below. If the server issues JWT access tokens instead, it must call `DisableAccessTokenEncryption()`
-> for services to validate them with JwtBearer (tested there).
+<!-- sample: tests/SkillSamples.Tests/AuthServer/AuthServerSeed.cs -->
+```csharp
+// Run as a deploy step, like the reviewed migration script; safe to run again. Roles are rows: adding
+// one later is an insert, not a code change. The admin's password comes from the secret store.
+public static class AuthServerSeed
+{
+    public const string SuperAdmin = "super-admin";
 
-How a **resource service** validates a portal token (this is the pattern the future shared NuGet package
-will encapsulate — capture it here, don't build the package):
-1. Extract the bearer token, POST it to `/connect/introspect`, authenticating with the resource
-   service's own client id/secret (the `ept:introspection` client from §5).
-2. Read `active` + identity + roles from the response.
-3. **Cache the result in Redis, short TTL (~30–60s)** so validation isn't a network hop every request.
-   TTL is the tuning knob between revocation latency and load.
-4. **Fail closed** — if the auth service is unreachable, reject the request (use `polly-resilience` for
-   timeout/circuit-breaker; a broken auth service must not become an open door).
+    public static async Task SeedAsync(IServiceProvider services, string adminEmail, string adminPassword, Uri portalCallback, string ordersApiSecret)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var roles = scope.ServiceProvider.GetRequiredService<RoleManager<AppRole>>();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+        var apps = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
 
-## 10. Security posture
-- **PKCE + state + nonce** on the code flow; HTTPS everywhere; timing-safe token handling (OpenIddict
-  does this — don't hand-roll).
-- **Signing/encryption keys:** dev may use `AddDevelopmentEncryptionCertificate()`/`SigningCertificate()`;
-  **prod uses real certs from Key Vault** (see `secret-management`) with a **rotation** plan.
-- Cross-cutting: `owasp-aspnetcore` (auth flows, CSRF), `healthcare-compliance` (this guards admin
-  access to health data — audit the auth events, no PII in logs), `secret-management` (client secrets,
-  keys), `zero-vulns` (no vulnerable dependencies).
+        if (!await roles.RoleExistsAsync(SuperAdmin))
+            Check(await roles.CreateAsync(new AppRole(SuperAdmin)));
 
-## 11. Testing
-Testcontainers integration test over the full slice (SQL Server + Redis containers):
-**authorize → token → introspect (active) → revoke → introspect (inactive).** Assert the token is
-`active: true` after issuance and `active: false` after revocation — that single flow proves issuance,
-introspection, and revocation together. For downstream resource-service tests, reuse the `TestAuthHandler`
-approach from `auth-patterns` to stub an authenticated portal user without standing up the OP.
+        if (await users.FindByEmailAsync(adminEmail) is null)
+        {
+            var admin = new AppUser { UserName = adminEmail, Email = adminEmail, LockoutEnabled = true };
+            Check(await users.CreateAsync(admin, adminPassword));
+            Check(await users.AddToRoleAsync(admin, SuperAdmin));
+        }
+
+        // The portal: a public client (a browser app can't keep a secret), so PKCE is required.
+        if (await apps.FindByClientIdAsync("admin-portal") is null)
+        {
+            await apps.CreateAsync(new OpenIddictApplicationDescriptor
+            {
+                ClientId = "admin-portal",
+                ClientType = ClientTypes.Public,
+                RedirectUris = { portalCallback },
+                PostLogoutRedirectUris = { new Uri(portalCallback, "/") },
+                Permissions =
+                {
+                    Permissions.Endpoints.Authorization, Permissions.Endpoints.Token,
+                    Permissions.Endpoints.Revocation, Permissions.Endpoints.EndSession,
+                    Permissions.GrantTypes.AuthorizationCode, Permissions.GrantTypes.RefreshToken,
+                    Permissions.ResponseTypes.Code,
+                    Permissions.Scopes.Profile, Permissions.Scopes.Roles, Permissions.Prefixes.Scope + "orders"
+                },
+                Requirements = { Requirements.Features.ProofKeyForCodeExchange }
+            });
+        }
+
+        // A service that checks tokens: a confidential client allowed only to introspect.
+        if (await apps.FindByClientIdAsync(AuthServerSetup.OrdersApi) is null)
+        {
+            await apps.CreateAsync(new OpenIddictApplicationDescriptor
+            {
+                ClientId = AuthServerSetup.OrdersApi,
+                ClientSecret = ordersApiSecret,
+                ClientType = ClientTypes.Confidential,
+                Permissions = { Permissions.Endpoints.Introspection }
+            });
+        }
+    }
+
+    private static void Check(IdentityResult result)
+    {
+        if (!result.Succeeded)
+            throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+    }
+}
+```
+
+- **Roles and permissions are data.** Code checks policies (`auth-patterns`); which roles grant them
+  lives in tables. A new role is an insert.
+- **An API can introspect only tokens issued for it:** the authorize handler sets the token's resources
+  (`orders-api`), and OpenIddict refuses introspection from anyone else.
+
+## Running several replicas
+
+Every replica reads tokens from the same database, so revocation holds on all of them. The data
+protection keys that protect the login cookie must be shared too (in the database or Redis), or a cookie
+issued by one replica is rejected by the next.
 
 ## Rules
-- This is the **issuing** side; `auth-patterns` is the **consuming** side — they're complements, not
-  duplicates. Provider-side work → this skill; token-validation-only work → `auth-patterns`.
-- Opaque reference tokens + introspection (not local JWT); ID token (JWT) is for the frontend only.
-- Redis is the single source of truth for session/cache state; never per-replica memory.
-- Fail closed on introspection; cache results short-TTL; purge-on-logout behind a flag.
-- RBAC as data (rows), never hardcoded role strings; full model in Phase 1, super-admin seeded as a row.
-- Migrations applied as reviewed scripts — never `Database.Migrate()`/`EnsureCreated()` in app code.
-- Keys from Key Vault in prod, with rotation; PKCE/state/nonce; HTTPS.
+- Code flow with PKCE for browser apps; never implicit, never the password grant.
+- Reference access tokens, introspected; the ID token only for the sign-in app.
+- A token endpoint handler that reloads the user and their roles on every refresh.
+- Logout revokes the tokens (`RevokeBySubjectAsync` or by authorization), not only the refresh token.
+- `lockoutOnFailure: true`; one answer for a wrong password and a locked account.
+- Identity's strings bounded; OpenIddict's JSON columns a recorded exception; `int` users, `bigint` tokens.
+- Keys from the secret store with rotation; schema and seed applied as deploy steps.

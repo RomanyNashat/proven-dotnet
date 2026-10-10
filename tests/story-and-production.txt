@@ -7,3 +7,4 @@ quartz-scheduling
 dotnet-core
 testing-tdd
 healthcare-compliance
+openiddict-server
