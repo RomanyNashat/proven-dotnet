@@ -39,7 +39,10 @@ public static class AuthServerSetup
 
         services.AddIdentity<AppUser, AppRole>(o =>
             {
+                // Length over composition rules (NIST SP 800-63B): a long passphrase, no forced symbols.
                 o.Password.RequiredLength = 12;
+                o.Password.RequireUppercase = o.Password.RequireLowercase = false;
+                o.Password.RequireDigit = o.Password.RequireNonAlphanumeric = false;
                 o.Lockout.MaxFailedAccessAttempts = 5;
                 o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
                 o.User.RequireUniqueEmail = true;
