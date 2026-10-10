@@ -1,7 +1,7 @@
 ---
 name: ddd-patterns
 description: DDD — aggregates loaded whole, int ids from HiLo, value objects as records mapped to bounded columns, domain events in process after SaveChanges and across services through the outbox, repositories per aggregate. Core code tested in CI on PostgreSQL and SQL Server.
-version: 2.1.0
+version: 2.2.0
 ---
 
 # DDD Patterns
@@ -115,6 +115,10 @@ public sealed class OrderRepository(OrdersDbContext db)
 Tested: an order loaded with `FindAsync` (no lines) and given a new line saves a Total that counts only
 the new line, while all the lines are in the table. Nothing fails; the number is just wrong. Loaded
 through the repository, the Total covers every line.
+As a story: the same medicine is added from two screens, the order is cancelled, and an add already on
+its way arrives late. The late add is refused, the order keeps one line with the quantities added and
+the total of three packs. On a slim image (no ICU, no tzdata), Arabic product names and exact totals
+round-trip.
 - A repository method returns a whole aggregate or nothing. Reads that need part of it are queries
   (Dapper or a projection), not aggregates.
 - No `Update(order)`: the context already tracks the loaded aggregate, and `Update` marks every column
