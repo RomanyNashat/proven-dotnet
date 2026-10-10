@@ -13,3 +13,4 @@ signalr
 nats
 rabbitmq-patterns
 cap-library
+fhir
