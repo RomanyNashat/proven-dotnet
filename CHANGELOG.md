@@ -3,6 +3,26 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.11 — story and production tests
+- A new bar for tested skills: besides the code samples, each one gets **story tests** (a real situation,
+  Given / When / Then) and **production tests** (the same code under a slim image: no ICU, no tzdata,
+  UTC). CI runs the production tests in their own step under those conditions, and every one checks
+  them first (`ProductionConditions.Require()`). `tests/story-and-production.txt` lists the skills that
+  must keep both; `check-skill-samples.py` fails if one loses them and lists the 24 still to do.
+- Done for `hangfire-patterns` and `quartz-scheduling`. What they found:
+  - **Both samples crashed on an image without tzdata:** `FindSystemTimeZoneById("Asia/Riyadh")` throws
+    there. They now use `RiyadhTime` (`localization` §7), which falls back to a fixed UTC+3 zone; the
+    production tests get 23:00 UTC with no tzdata.
+  - **Hangfire lost the zone anyway:** it stores the zone's id and looks it up again by id, which throws
+    without tzdata. The setup now registers an `ITimeZoneResolver`, which Hangfire's scheduler, dashboard
+    and `AddOrUpdate` all take from DI.
+  - **Quartz dropped a run missed while the service was down.** Every start replaces the stored trigger
+    and, by default, works the next run out from now. `ScheduleTriggerRelativeToReplacedTrigger = true`
+    keeps it; the story runs the missed report once, for the slot it missed, and a second story shows
+    the default dropping it.
+  - Hangfire: a receipt queued while no worker runs goes out once when a worker starts.
+- `tools/ci/refresh-samples.py` rewrites a skill's sample blocks from the tested files.
+
 ## 0.1.10 — quartz-scheduling tested
 - `quartz-scheduling` 2.0.0, its code tested in CI against PostgreSQL. What the tests and the rewrite found:
   - Quartz's own schema script **drops every Quartz table** by default (`DropDb := 1`). The skill now

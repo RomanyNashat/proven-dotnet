@@ -1,0 +1,6 @@
+# Skills whose tests include at least one story test and one production test
+# ([Trait("Kind", "Story")] and [Trait("Kind", "Production")], see tests/SkillSamples.Tests/Production/).
+# tools/ci/check-skill-samples.py fails if a skill listed here loses either; every other skill with
+# samples gets a notice until it's added here.
+hangfire-patterns
+quartz-scheduling

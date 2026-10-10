@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
+using SkillSamples.Localization;
 
 namespace SkillSamples.Scheduling;
 
@@ -25,7 +26,8 @@ public static class QuartzSetup
             q.UseDefaultThreadPool(pool => pool.MaxConcurrency = 10);
 
             // Cron runs in the scheduler's local time zone unless told otherwise, and pods run in UTC.
-            var riyadh = TimeZoneInfo.FindSystemTimeZoneById("Asia/Riyadh");
+            // RiyadhTime falls back to a fixed UTC+3 zone on images without tzdata (`localization` §7).
+            var riyadh = RiyadhTime.Zone;
             q.AddJob<DailyReportJob>(job => job.WithIdentity(DailyReportJob.Key).StoreDurably());
             q.AddTrigger(trigger => trigger
                 .ForJob(DailyReportJob.Key)
@@ -34,6 +36,11 @@ public static class QuartzSetup
                     .InTimeZone(riyadh)                          // 02:00 Riyadh = 23:00 UTC
                     .WithMisfireHandlingInstructionFireAndProceed()));   // missed while down → run once on start
         });
+
+        // Every start re-registers the trigger above and, by default, replaces the stored one: its next
+        // fire time is worked out from now, so a run missed while the service was down is silently
+        // dropped. Scheduling it from the stored trigger's last run keeps the missed run for the misfire rule.
+        services.Configure<QuartzOptions>(options => options.Scheduling.ScheduleTriggerRelativeToReplacedTrigger = true);
 
         services.AddQuartzHostedService(options =>
         {
