@@ -1,212 +1,204 @@
 ---
 name: quartz-scheduling
-description: Quartz.NET in-process scheduling: jobs, triggers, cron schedules, persistence, clustering.
-version: 1.0.0
+description: Quartz.NET in-process scheduling on PostgreSQL — clustered persistent store with the schema applied by the pipeline, cron in a real time zone, misfires, no overlapping runs, a health check and admin endpoints. Tested in CI against PostgreSQL.
+version: 2.0.0
 ---
 
 # Quartz.NET Scheduling Patterns
 
-## Setup with DI
+Use Quartz for schedules inside a long-running service: cron with calendars and time zones, misfire
+rules, and one run across several pods (clustering). For fire-and-forget work from requests see
+`hangfire-patterns`; for a run-once process on a schedule see `cronjob-patterns`.
 
+## Setup
+
+Packages: `Quartz.Extensions.Hosting` and `Quartz.Serialization.SystemTextJson` (3.x).
+
+<!-- sample: tests/SkillSamples.Tests/Scheduling/QuartzSetup.cs -->
 ```csharp
-builder.Services.AddQuartz(q =>
+public static class QuartzSetup
 {
-    q.UseMicrosoftDependencyInjectionJobFactory();
-
-    // Clustered mode — multiple instances coordinate via database
-    q.UsePersistentStore(store =>
+    public static IServiceCollection AddScheduling(this IServiceCollection services, string connectionString)
     {
-        store.UsePostgres(builder.Configuration.GetConnectionString("QuartzDb")!);
-        store.UseNewtonsoftJsonSerializer();
-        store.UseClustering(cluster =>
+        services.AddQuartz(q =>
         {
-            cluster.CheckinInterval = TimeSpan.FromSeconds(15);
-            cluster.CheckinMisfireThreshold = TimeSpan.FromSeconds(20);
+            q.SchedulerName = "orders-scheduler";   // the same on every instance of the service
+            q.SchedulerId = "AUTO";                  // a different id per instance
+
+            q.UsePersistentStore(store =>
+            {
+                store.UsePostgres(connectionString);  // tables from Quartz's script, applied by the pipeline
+                store.UseSystemTextJsonSerializer();
+                store.UseClustering(cluster =>
+                {
+                    cluster.CheckinInterval = TimeSpan.FromSeconds(15);
+                    cluster.CheckinMisfireThreshold = TimeSpan.FromSeconds(30);
+                });
+            });
+            q.UseDefaultThreadPool(pool => pool.MaxConcurrency = 10);
+
+            // Cron runs in the scheduler's local time zone unless told otherwise, and pods run in UTC.
+            var riyadh = TimeZoneInfo.FindSystemTimeZoneById("Asia/Riyadh");
+            q.AddJob<DailyReportJob>(job => job.WithIdentity(DailyReportJob.Key).StoreDurably());
+            q.AddTrigger(trigger => trigger
+                .ForJob(DailyReportJob.Key)
+                .WithIdentity("daily-report-trigger")
+                .WithCronSchedule("0 0 2 * * ?", cron => cron
+                    .InTimeZone(riyadh)                          // 02:00 Riyadh = 23:00 UTC
+                    .WithMisfireHandlingInstructionFireAndProceed()));   // missed while down → run once on start
         });
-    });
 
-    q.UseDefaultThreadPool(pool => pool.MaxConcurrency = 10);
-
-    // Register jobs
-    q.AddJob<LeaderboardSyncJob>(opts => opts
-        .WithIdentity("leaderboard-sync")
-        .StoreDurably());
-
-    q.AddTrigger(opts => opts
-        .ForJob("leaderboard-sync")
-        .WithIdentity("leaderboard-sync-trigger")
-        .WithCronSchedule("0 */5 * * * ?")  // every 5 minutes
-        .WithDescription("Sync leaderboard scores"));
-
-    q.AddJob<DailyReportJob>(opts => opts
-        .WithIdentity("daily-report")
-        .StoreDurably());
-
-    q.AddTrigger(opts => opts
-        .ForJob("daily-report")
-        .WithIdentity("daily-report-trigger")
-        .WithCronSchedule("0 0 2 * * ?")  // 2 AM daily
-        .StartAt(DateBuilder.TomorrowAt(2, 0, 0))
-        .WithDescription("Generate daily analytics report"));
-
-    q.AddJob<ExpiredChallengeCleanupJob>(opts => opts
-        .WithIdentity("expired-challenge-cleanup")
-        .StoreDurably());
-
-    q.AddTrigger(opts => opts
-        .ForJob("expired-challenge-cleanup")
-        .WithIdentity("expired-challenge-trigger")
-        .WithCronSchedule("0 0 */1 * * ?")  // every hour
-        .WithDescription("Clean up expired challenges"));
-});
-
-builder.Services.AddQuartzHostedService(options =>
-{
-    options.WaitForJobsToComplete = true;
-    options.AwaitApplicationStarted = true;
-});
+        services.AddQuartzHostedService(options =>
+        {
+            options.WaitForJobsToComplete = true;
+            options.AwaitApplicationStarted = true;
+        });
+        return services;
+    }
+}
 ```
 
-## Job Implementation
+- **Jobs get constructor injection by default.** `UseMicrosoftDependencyInjectionJobFactory()` is
+  obsolete since 3.7; remove it (with warnings as errors it breaks the build).
+- **Clustering:** every pod uses the same `SchedulerName` and its own id (`AUTO`). The persistent store
+  is what lets a trigger fire on one pod only; with the in-memory store each pod runs every job.
+- **Registering jobs on every start is safe:** tested, a second start updates the stored job and
+  trigger instead of failing on them.
+- **Time zones:** a cron trigger runs in the scheduler's local time zone, and pods run in UTC. Tested:
+  `0 0 2 * * ?` in `Asia/Riyadh` fires at 23:00 UTC. Use IANA ids (`Asia/Riyadh`); Windows ids need ICU
+  on Linux.
+- **Misfires:** a run missed while every pod was down is handled by the trigger's misfire rule.
+  `FireAndProceed` runs it once at start-up; `DoNothing` skips it. Pick per job; the default for cron is
+  `FireAndProceed` too, but say it so the next reader knows it was a choice.
 
+### The schema: Quartz's script, applied by the pipeline
+
+Quartz never creates its tables. Its script is `database/tables/tables_postgres.sql` in the Quartz.NET
+repository (the tests use the one from v3.22.4).
+- **Set `DropDb` to 0 before running it.** The script starts by **dropping every Quartz table** when
+  `DropDb` is 1, which is its default. Applied to production as shipped, it wipes every job and trigger.
+- Apply it once, through the pipeline, like any reviewed migration script.
+- **Its columns are `text` and `bytea`** (tested: `qrtz_job_details.job_name text`,
+  `qrtz_job_details.job_data bytea`). That breaks the bounded-columns and no-binary rules, and it's a
+  third-party schema you can't change: keep it in its own schema or database, and record it as the
+  narrow exception the column rules allow.
+
+## Jobs
+
+<!-- sample: tests/SkillSamples.Tests/Scheduling/DailyReportJob.cs -->
 ```csharp
-[DisallowConcurrentExecution]  // prevents overlap if previous run is still going
-public sealed class LeaderboardSyncJob(
-    ILeaderboardService leaderboardService,
-    ILogger<LeaderboardSyncJob> logger,
-    TimeProvider timeProvider) : IJob
+public interface IDailyReportBuilder
 {
+    Task BuildAsync(DateTimeOffset scheduledFor, CancellationToken ct);
+}
+
+[DisallowConcurrentExecution]   // a second trigger waits until this run ends (per job key, across the cluster)
+public sealed class DailyReportJob(IDailyReportBuilder reports, ILogger<DailyReportJob> logger) : IJob
+{
+    public static readonly JobKey Key = new("daily-report");
+
     public async Task Execute(IJobExecutionContext context)
     {
-        var jobName = context.JobDetail.Key.Name;
-        var fireTime = context.FireTimeUtc;
-        logger.LogInformation("Job {JobName} started at {FireTime}", jobName, fireTime);
-
+        // The time it was meant for, not the time it ran: a misfired run still reports the right day.
+        var scheduledFor = context.ScheduledFireTimeUtc ?? context.FireTimeUtc;
         try
         {
-            var sw = Stopwatch.StartNew();
-
-            var syncResult = await leaderboardService.SyncAllAsync(
-                context.CancellationToken);
-
-            sw.Stop();
-            logger.LogInformation(
-                "Job {JobName} completed in {ElapsedMs}ms. Synced {Count} entries",
-                jobName, sw.ElapsedMilliseconds, syncResult.EntriesSynced);
-
-            // Store result in JobDataMap for monitoring
-            context.Result = $"Synced {syncResult.EntriesSynced} entries";
+            await reports.BuildAsync(scheduledFor, context.CancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Job {JobName} failed", jobName);
-
-            // Quartz retry: throw JobExecutionException with refireImmediately
+            logger.LogError(ex, "Daily report for {ScheduledFor} failed", scheduledFor);
             throw new JobExecutionException(ex, refireImmediately: false);
         }
     }
 }
 ```
 
-## Job with Polly Retry
+- `[DisallowConcurrentExecution]` applies per job key, across the cluster. Tested: three triggers of the
+  same job ran one after another, never two at once.
+- Use `ScheduledFireTimeUtc` for "which day is this run for"; `FireTimeUtc` is when it actually ran.
+- Pass `context.CancellationToken` to every call: it's cancelled when the service stops.
+- `JobExecutionException(ex, refireImmediately: false)` records the failure without a tight retry loop.
+  For retries with backoff inside one run, wrap the call in a `polly-resilience` pipeline.
+- `context.Result` is only seen by job listeners; it isn't stored anywhere.
 
-```csharp
-public sealed class ResilientApiSyncJob(
-    IExternalApiClient apiClient,
-    ILogger<ResilientApiSyncJob> logger,
-    [FromKeyedServices("api-sync")] ResiliencePipeline pipeline) : IJob
-{
-    public async Task Execute(IJobExecutionContext context)
-    {
-        await pipeline.ExecuteAsync(async ct =>
-        {
-            var data = await apiClient.FetchLatestAsync(ct);
-            logger.LogInformation("Fetched {Count} records from external API", data.Count);
-        }, context.CancellationToken);
-    }
-}
-```
-
-## Common Cron Expressions
+## Cron expressions (Quartz has seconds)
 
 ```
 Expression              Description
 ──────────────────────  ──────────────────────────
 0 0/5 * * * ?           Every 5 minutes
 0 0 * * * ?             Every hour (top of hour)
-0 0 2 * * ?             Daily at 2:00 AM
-0 0 2 ? * MON-FRI       Weekdays at 2:00 AM
+0 0 2 * * ?             Daily at 2:00 (in the trigger's time zone)
+0 0 2 ? * MON-FRI       Weekdays at 2:00
+0 0 2 ? * SUN-THU       Sunday to Thursday at 2:00
 0 0 0 1 * ?             First day of month at midnight
 0 0 0 1,15 * ?          1st and 15th of month
-0 0 0 ? * SUN           Every Sunday at midnight
-0 */30 8-17 * * ?       Every 30 min during business hours (8-17)
+0 0/30 8-16 * * ?       Every 30 minutes from 8:00 to 16:30
 ```
 
-## Monitoring Scheduled Jobs
+Tested: `0 0/30 8-17 * * ?` doesn't stop at 17:00; its last run of the day is 17:30. The hour field is
+the hours that runs *start* in.
 
+## Health check
+
+<!-- sample: tests/SkillSamples.Tests/Scheduling/QuartzHealthCheck.cs -->
 ```csharp
-// Health check for Quartz scheduler
-builder.Services.AddHealthChecks()
-    .AddCheck<QuartzHealthCheck>("quartz-scheduler", tags: ["ready"]);
-
 public sealed class QuartzHealthCheck(ISchedulerFactory schedulerFactory) : IHealthCheck
 {
-    public async Task<HealthCheckResult> CheckHealthAsync(
-        HealthCheckContext context, CancellationToken ct)
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {
         var scheduler = await schedulerFactory.GetScheduler(ct);
-
-        if (!scheduler.IsStarted || scheduler.InStandbyMode)
+        if (!scheduler.IsStarted || scheduler.InStandbyMode || scheduler.IsShutdown)
             return HealthCheckResult.Unhealthy("Scheduler is not running");
 
         var metadata = await scheduler.GetMetaData(ct);
-        return HealthCheckResult.Healthy(
-            $"Running. Jobs executed: {metadata.NumberOfJobsExecuted}");
+        return HealthCheckResult.Healthy($"Running on {metadata.SchedulerInstanceId}, {metadata.NumberOfJobsExecuted} jobs run");
     }
 }
 ```
 
-## Job Management Endpoints (admin)
+Tested: healthy while running, unhealthy in standby.
 
+## Admin endpoints
+
+<!-- sample: tests/SkillSamples.Tests/Scheduling/JobAdminEndpoints.cs -->
 ```csharp
-app.MapGroup("/api/admin/jobs")
-    .RequireAuthorization("AdminOnly")
-    .MapJobManagementEndpoints();
-
-public static class JobManagementEndpoints
+// Behind an admin policy; every action checks the job exists, so a typo is a 404, not a silent no-op.
+public static class JobAdminEndpoints
 {
-    public static RouteGroupBuilder MapJobManagementEndpoints(this RouteGroupBuilder group)
+    public static RouteGroupBuilder MapJobAdmin(this IEndpointRouteBuilder app, string policy)
     {
-        group.MapPost("/{jobName}/trigger", async (
-            string jobName, ISchedulerFactory factory, CancellationToken ct) =>
-        {
-            var scheduler = await factory.GetScheduler(ct);
-            var jobKey = new JobKey(jobName);
-
-            if (!await scheduler.CheckExists(jobKey, ct))
-                return TypedResults.NotFound();
-
-            await scheduler.TriggerJob(jobKey, ct);
-            return TypedResults.Ok($"Job {jobName} triggered");
-        });
-
-        group.MapPost("/{jobName}/pause", async (
-            string jobName, ISchedulerFactory factory, CancellationToken ct) =>
-        {
-            var scheduler = await factory.GetScheduler(ct);
-            await scheduler.PauseJob(new JobKey(jobName), ct);
-            return TypedResults.Ok($"Job {jobName} paused");
-        });
-
-        group.MapPost("/{jobName}/resume", async (
-            string jobName, ISchedulerFactory factory, CancellationToken ct) =>
-        {
-            var scheduler = await factory.GetScheduler(ct);
-            await scheduler.ResumeJob(new JobKey(jobName), ct);
-            return TypedResults.Ok($"Job {jobName} resumed");
-        });
-
+        var group = app.MapGroup("/admin/jobs").RequireAuthorization(policy);
+        group.MapPost("/{name}/trigger", (string name, ISchedulerFactory f, CancellationToken ct) =>
+            Act(f, name, (s, key) => s.TriggerJob(key, ct), ct));
+        group.MapPost("/{name}/pause", (string name, ISchedulerFactory f, CancellationToken ct) =>
+            Act(f, name, (s, key) => s.PauseJob(key, ct), ct));
+        group.MapPost("/{name}/resume", (string name, ISchedulerFactory f, CancellationToken ct) =>
+            Act(f, name, (s, key) => s.ResumeJob(key, ct), ct));
         return group;
     }
+
+    private static async Task<Results<Accepted, NotFound>> Act(
+        ISchedulerFactory factory, string name, Func<IScheduler, JobKey, Task> action, CancellationToken ct)
+    {
+        var scheduler = await factory.GetScheduler(ct);
+        var key = new JobKey(name);
+        if (!await scheduler.CheckExists(key, ct))
+            return TypedResults.NotFound();
+
+        await action(scheduler, key);
+        return TypedResults.Accepted((string?)null);
+    }
 }
 ```
+
+Tested: an unknown job is 404; pause and resume change the trigger's state.
+
+## Rules
+- Persistent store and clustering when more than one pod runs the service; same scheduler name, `AUTO` id.
+- Quartz's schema from its script with `DropDb = 0`, applied by the pipeline; a recorded exception to the
+  column rules.
+- Cron triggers in an explicit time zone (IANA id); an explicit misfire rule.
+- `[DisallowConcurrentExecution]` on jobs that must not overlap; `context.CancellationToken` everywhere.
+- No `UseMicrosoftDependencyInjectionJobFactory()`: DI is the default.
