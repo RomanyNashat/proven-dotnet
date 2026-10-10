@@ -28,3 +28,5 @@ includes F1 (injection) and F9 (the vulnerable package) or adding tests.
 ## Scoring
 Per run: grade given with evidence (yes/no), unmeasured metrics stated not invented (yes/no), F1 and F9 in
 security (yes/no), D1 not flagged (yes/no), next steps ranked by effect (yes/no), fixture unchanged (pass/fail).
+
+Results per run are in `tests/evals/full-review/results.md`.

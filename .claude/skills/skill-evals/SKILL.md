@@ -63,6 +63,14 @@ plausible-but-wrong answer would do. Traps are the valuable half; anyone can wri
    not*, then check what actually fires. This measures the thing that budget-trimming puts at risk:
    a description can be short and still fire correctly, or long and still miss.
 5. **A/B when changing a skill.** Run the old and new versions on the same cases before replacing.
+6. **A command that launches agents can't be run inside a subagent.** A subagent has no tool to start
+   agents, so it does the reviewers' work itself, and the run measures one agent, not the command.
+   Launch the command's agents from the main session, on a copy of the fixture, and give their reports
+   to a fresh subagent to consolidate (the main session has seen the answer key, so it doesn't merge
+   them itself). Say which way a run was made.
+7. **"Without" means without everything.** A subagent started inside the repo loads the repo's
+   `CLAUDE.md` and rules, so a "without" run there still has the house rules. Run the baseline from a
+   folder outside the repo, or report it as "rules only, no commands, agents or skills".
 
 ## Reporting — the honesty rules
 
