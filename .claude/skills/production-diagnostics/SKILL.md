@@ -167,6 +167,57 @@ Teams often skip metrics because "the APM covers it". Check that it does before 
 
 ## 4. Symptom playbook
 
+### Start from the numbers: triage a window of heartbeat lines
+
+Before reading code, export the heartbeat lines for the window the problem was seen in (a few minutes
+before it started to now) and triage them. The result is the shape every diagnosis is reported in:
+**signals** (what is out of range, with the numbers), then **hypotheses** (the likely cause, why, and
+the next thing to check), most likely first.
+
+<!-- sample: tests/SkillSamples.Tests/Diagnostics/HeartbeatTriage.cs -->
+```csharp
+/// <summary>One heartbeat line's fields (§2), as exported from the log store for a time window.</summary>
+public sealed record HeartbeatSample(
+    DateTimeOffset At, int Threads, long Queued, double CpuPercent, long WorkingSetMb, long MemoryLimitMb,
+    long Gen2, long GcPauseMs, long LockContentions, long Exceptions, int IntervalSeconds = 60);
+
+public enum SignalLevel { Warning, Critical }
+
+/// <summary>Something measurable that is out of range, with the numbers that show it.</summary>
+public sealed record Signal(string Name, SignalLevel Level, string Evidence);
+
+/// <summary>A likely cause, why the signals point at it, and the next thing to check.</summary>
+public sealed record Hypothesis(string Name, string Because, string NextStep);
+
+public sealed record Triage(IReadOnlyList<Signal> Signals, IReadOnlyList<Hypothesis> Hypotheses);
+```
+
+`HeartbeatTriage.Assess(window, cores)` applies these rules. The thresholds are starting points for a
+typical API pod; a service with its own baseline uses that instead.
+
+| Signal | Raised when | Points at |
+|---|---|---|
+| `threadpool.queue` | `queued` ≥ 100 in the last two lines (critical from 1,000) | with low CPU: **starvation** (blocked threads); with high CPU: **CPU-bound** |
+| `threadpool.threads` | threads rising through 3+ lines, above 4 × cores | starvation: the pool keeps adding threads that block |
+| `cpu.high` | `cpu` ≥ 85% in the last two lines | CPU-bound work, or allocations if `gc pause` is high too |
+| `memory.near-limit` | working set ≥ 85% of the limit (critical from 95%) | memory pressure; `OOMKilled` next (§5) |
+| `memory.growing` | working set rising through 3+ lines with full (gen2) collections | something holds on to objects (a leak) |
+| `gc.pause` | GC pauses ≥ 10% of the interval | heavy allocation |
+| `locks.contention` | ≥ 100 contentions a second | a hot lock, or a lock held across slow work |
+| `exceptions.burst` | ≥ 100 in the last line and 10 × the usual rate | a failing dependency |
+
+No signal means the runtime is fine and the time goes elsewhere: the slow request's APM spans
+(database, HTTP, cache) are next. One bad line is never a trend: the rules need two lines or a run.
+
+Tested as a story: an API that got slow at nine with low CPU. Five lines where the queue climbs to 2,500
+and threads from 8 to 60: the queue is critical with its numbers, and the first hypothesis is starvation,
+with where to look (`.Result`, `.Wait()`, sync I/O, a lock across an await). Also tested: a busy pod is
+CPU-bound, not starving; memory rising through full collections near the limit is pressure; one bad line
+raises nothing; an exception burst points at a dependency. The same window reads the same way on a slim
+image (no ICU, no tzdata).
+
+### By symptom
+
 | Symptom | Look at first | Confirms it | Usual causes |
 |---|---|---|---|
 | **Slow responses** | APM latency by endpoint; request-log elapsed by route | Slow in one dependency span (DB, HTTP, Redis) vs. everywhere | Missing index or N+1 (`dba-reviewer`), a slow downstream service, pool exhaustion (below), starvation (below) |
