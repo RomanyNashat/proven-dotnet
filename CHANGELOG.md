@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.1 — the heartbeat measures against the container's limits
+- `production-diagnostics`: CPU and memory in the heartbeat line are measured against the container's
+  cgroup limits (`ContainerLimits`: v2 with the smallest of the pod's and the container's, v1, or none).
+  Before, CPU was a share of `Environment.ProcessorCount`, which rounds half a core up to 1: a pod using
+  all of its `500m` read as 50%, and triage blamed thread starvation instead of CPU (tested as a story).
+  And `memory limit` was the GC heap limit, 75% of the container's by default; the line now logs both.
+- Tested with fake cgroup folders (v1, v2, nested limits, no limits) and on the CI runner's real files
+  under production conditions.
+
 ## 0.2.0 — release candidate
 Everything ECC had, rebuilt in the open and tested: 55 skills, 9 per-project skills, 20 agents and 26
 commands. Nothing new in this version; it marks the end of the move.

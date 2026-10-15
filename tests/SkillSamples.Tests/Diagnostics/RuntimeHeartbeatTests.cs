@@ -73,7 +73,7 @@ public sealed class RuntimeHeartbeatTests
 
             Assert.Equal(LogLevel.Information, line.Level);
             foreach (var field in new[] { "ThreadPoolThreads", "ThreadPoolQueue", "WorkItemsPerSecond", "CpuPercent",
-                         "WorkingSetMb", "HeapMb", "FragmentedMb", "MemoryLimitMb", "Gen0", "Gen1", "Gen2",
+                         "CpuLimitCores", "WorkingSetMb", "HeapMb", "FragmentedMb", "MemoryLimitMb", "HeapLimitMb", "Gen0", "Gen1", "Gen2",
                          "GcPauseMs", "LockContentions", "Exceptions" })
                 Assert.True(line.Fields.ContainsKey(field), $"missing field {field}");
             Assert.True(Convert.ToInt64(line.Fields["WorkingSetMb"]) > 0);
