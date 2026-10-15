@@ -36,3 +36,4 @@ nginx
 encryption-patterns
 pii-masking
 owasp-aspnetcore
+secret-management

@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Secrets;
@@ -41,6 +42,50 @@ public sealed class PostgresRotationTests : IAsyncLifetime
         await AdminAsync($"ALTER ROLE {_role} PASSWORD 'second-Pass-2'");
         password.Value = "second-Pass-2";
         await Task.Delay(TimeSpan.FromSeconds(1));   // longer than the refresh interval
+
+        Assert.Equal(_role, await CurrentUserAsync(dataSource));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ThePasswordRotatesMidShift_OpenConnectionsCarryOn_NewOnesUseTheNewPassword_NoRestart()
+    {
+        // Given: the service is busy, holding a pooled connection opened with the current password
+        var password = new SettablePassword("first-Pass-1");
+        var withoutPassword = new NpgsqlConnectionStringBuilder(Server) { Username = _role, Password = null }.ConnectionString;
+        await using var dataSource = RotatingPostgres.Build(withoutPassword, password, refresh: TimeSpan.FromMilliseconds(200));
+        await using var busy = await dataSource.OpenConnectionAsync();
+
+        // When: the vault rotates the password and the service picks it up, with no restart
+        await AdminAsync($"ALTER ROLE {_role} PASSWORD 'second-Pass-2'");
+        password.Value = "second-Pass-2";
+        await Task.Delay(TimeSpan.FromSeconds(1));   // longer than the refresh interval
+
+        // Then: the open connection keeps working (a password change doesn't end a session), and a fresh
+        // connection, which must log in again, gets in with the new password
+        await using (var command = new NpgsqlCommand("SELECT current_user", busy))
+        {
+            Assert.Equal(_role, (string?)await command.ExecuteScalarAsync());
+        }
+
+        var fresh = new NpgsqlConnectionStringBuilder(withoutPassword) { Pooling = false }.ConnectionString;
+        await using var freshSource = RotatingPostgres.Build(fresh, password, refresh: TimeSpan.FromMilliseconds(200));
+        Assert.Equal(_role, await CurrentUserAsync(freshSource));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_RotationWorksOnPostgreSql()
+    {
+        ProductionConditions.Require();
+        var password = new SettablePassword("first-Pass-1");
+        var withoutPassword = new NpgsqlConnectionStringBuilder(Server) { Username = _role, Password = null, Pooling = false }.ConnectionString;
+        await using var dataSource = RotatingPostgres.Build(withoutPassword, password, refresh: TimeSpan.FromMilliseconds(200));
+        Assert.Equal(_role, await CurrentUserAsync(dataSource));
+
+        await AdminAsync($"ALTER ROLE {_role} PASSWORD 'second-Pass-2'");
+        password.Value = "second-Pass-2";
+        await Task.Delay(TimeSpan.FromSeconds(1));
 
         Assert.Equal(_role, await CurrentUserAsync(dataSource));
     }
