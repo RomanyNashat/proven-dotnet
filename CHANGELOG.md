@@ -3,6 +3,17 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.26 — story and production tests for the security skills
+- `encryption-patterns`, `pii-masking`, `owasp-aspnetcore`, `secret-management` and `auth-patterns` each
+  have a story test and a production test. With them, every installed skill with tested code has both.
+- What the tests found:
+  - **pii-masking:** a national ID or mobile typed in Arabic-Indic digits (`١٠٨٩٢٣٤٥٦٧`) went through the
+    log masking whole: the patterns started with `[12]` and `0?5`. They now list the Arabic-Indic digits.
+    And neither masking layer touches an exception: `logger.Error(ex, ...)` sends its message unmasked, so
+    log the type, or the message as a property.
+  - **encryption-patterns:** a legacy CBC value decrypts in any row (it isn't bound to one), which is the
+    reason to re-encrypt legacy rows rather than wait for the next edit.
+
 ## 0.1.25 — story and production tests for the API and platform skills
 - `api-design`, `localization`, `nginx` and `production-diagnostics` each have a story test and a
   production test. Stories: a third code request told to wait while another patient is served, and a

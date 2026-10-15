@@ -68,8 +68,7 @@ into the repos that need them; their README says which are tested.
 - [x] Installer for Linux and Windows, tested on every change
 - [x] The code in the skills compiled and run in CI against real dependencies
 - [x] Story and production tests for the reference and per-project skills
-- [ ] Story and production tests for the remaining installed skills: data, messaging, design, testing and API
-      done; the security group to go
+- [x] Story and production tests for every installed skill with tested code
 - [ ] Evals run for the generative commands (`/full-review`, `/health-check`, `/document`, `/stories`,
       `/patterns`) with and without proven-dotnet, and the results published
 - [ ] A full run-through on real projects
