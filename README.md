@@ -61,6 +61,19 @@ Skills for technologies only some services use (Cassandra, FHIR, BigQuery, Fireb
 RabbitMQ, CAP, GitHub Actions) aren't installed. They're in [`project-skills/`](project-skills/), to copy
 into the repos that need them; their README says which are tested.
 
+## Other MCP servers worth adding
+
+- **Microsoft Learn** (`https://learn.microsoft.com/api/mcp`, read-only): current .NET and Azure docs,
+  so Claude checks an API against the docs instead of its memory. The rules send package questions
+  there before asking you, and never to a decompiler.
+  `claude mcp add --transport http microsoft-learn https://learn.microsoft.com/api/mcp`
+- **Any server with a "read-only" mode** (cloud, Kubernetes, databases): the mode limits that server,
+  not Claude. If the matching CLI is allowed, Claude can run the write command itself. Deny the CLI's
+  write commands in your `settings.json` too, for example:
+  ```json
+  "permissions": { "deny": ["Bash(kubectl apply *)", "Bash(kubectl delete *)", "Bash(az * delete *)"] }
+  ```
+
 ## Status
 
 **Before v1.0.0.** It's in daily use, but commands and skill names can still change. What's left:
