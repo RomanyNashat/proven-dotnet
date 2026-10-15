@@ -9,6 +9,8 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   decompiled. It says so when the package isn't referenced instead of guessing. Tested on the sample
   solution: `System.Text.Json`'s `JsonSerializer` and its generic `Serialize`/`Deserialize`, an
   unreferenced package, and internal types left out.
+- Every `proven-roslyn` answer now writes `<`, `>` and `&` as they are: the default JSON escaping turned
+  each generic signature into `\u003C...\u003E` (found by the new test).
 - `core.md`: "how do I call this package" goes to `get_package_api`, after the codebase's own usage and
   before the docs. The agents that use `proven-roslyn` have the tool.
 

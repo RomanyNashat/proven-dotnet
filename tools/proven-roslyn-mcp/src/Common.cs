@@ -9,6 +9,9 @@ internal static class Common
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
+        // The reader is Claude over stdio, not a browser: keep `List<int>` and `=>` readable instead of the
+        // default HTML-safe \u003C escapes, which also cost tokens on every generic signature.
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         WriteIndented = false,
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
     };
