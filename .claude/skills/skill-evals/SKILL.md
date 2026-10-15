@@ -71,6 +71,10 @@ plausible-but-wrong answer would do. Traps are the valuable half; anyone can wri
 7. **"Without" means without everything.** A subagent started inside the repo loads the repo's
    `CLAUDE.md` and rules, so a "without" run there still has the house rules. Run the baseline from a
    folder outside the repo, or report it as "rules only, no commands, agents or skills".
+8. **A fixture both runs pass measures nothing.** If the baseline finds everything too, the fixture is
+   too easy, not the skills useless. Plant what the skills' own tests found (a bug a careful reviewer
+   without them misses), and two-file findings that need the Dockerfile read with the code.
+   `tests/evals/full-review-hard/` is built that way.
 
 ## Reporting — the honesty rules
 
