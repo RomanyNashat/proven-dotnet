@@ -332,6 +332,7 @@ services.AddSingleton<ReportCache>();                // ...taking a scoped DbCon
 - Records for DTOs and value objects; `required` for request bodies; `IReadOnlyList<T>` in them.
 
 ## See also
+- **`dotnet-upgrade`** — moving a service from .NET 8 or 9 to 10, and turning on nullable in an existing one.
 - **`polly-resilience`** — retries, timeouts and circuit breakers for the typed clients here.
 - **`localization`** — `RiyadhTime`, cultures, and what changes on an image without ICU.
 - **`aspire-patterns`** — when a solution needs orchestrated local composition (AppHost, service

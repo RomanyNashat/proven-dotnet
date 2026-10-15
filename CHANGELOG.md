@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.27 — a skill for moving to .NET 10
+- `dotnet-upgrade`: moving a service from .NET 8 or 9 to 10 before both leave support on 10 November
+  2026, and turning on nullable in an existing codebase. The order of work, what breaks in a backend
+  service, and how to prove nothing changed. Tested on EF Core 10, both engines: a list filter from a
+  request still translates under C# 14 (EF 8 and 9 can't, so EF moves with the framework) and no longer
+  uses `OPENJSON` on SQL Server; `ExecuteUpdate`'s new lambda with a conditional setter. Linked from
+  `dotnet-core`.
+
 ## 0.1.26 — story and production tests for the security skills
 - `encryption-patterns`, `pii-masking`, `owasp-aspnetcore`, `secret-management` and `auth-patterns` each
   have a story test and a production test. With them, every installed skill with tested code has both.
