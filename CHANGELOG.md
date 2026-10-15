@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.14 — one scan for the known traps
+- New `known-traps` skill: `scan_traps.py` scans one service or many for 29 traps the skills' own tests
+  found (a Quartz store that drops missed runs, SqlClient in invariant mode, a singleton holding a
+  `DbContext`, `ar-SA`'s machine-dependent calendar, OpenIddict 6 on EF Core 10, an open CORS policy and
+  more). Read-only, standard library only, a table with file, line, fix and the skill that proves it;
+  `--json` and `--fail-on` for pipelines. Tested on Ubuntu and Windows: every check fires on a service
+  that has its trap and stays quiet on the corrected copy.
+- `/full-review` runs the scan first and hands its table to the three reviewers.
+
 ## 0.2.13 — an eval for production-diagnostics
 - `tests/evals/production-diagnostics/`: three incidents as a developer gets them (heartbeat CSV, request
   logs or APM numbers, what SRE sent, the suspect code): thread-pool starvation from `.Result`, a pod

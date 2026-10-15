@@ -4,7 +4,15 @@ description: Full code review covering quality, security, and database patterns.
 allowed-tools: Read, Grep, Glob, Bash, Agent
 ---
 
-Run three review agents in parallel:
+First run the **known-traps scan** over the service (`skills/known-traps/`, read-only, a few seconds):
+```bash
+python ~/.claude/skills/known-traps/scripts/scan_traps.py <service folder>
+```
+Give its table to all three reviewers. Each confirms or dismisses the findings in its area, reading the
+skill named in the table, and says which. A finding nobody confirms or dismisses stays in the report as
+found by the scan.
+
+Then run three review agents in parallel:
 
 1. **code-reviewer** agent (Read-only, Opus)
    - C# idioms, SOLID, naming, performance, maintainability
