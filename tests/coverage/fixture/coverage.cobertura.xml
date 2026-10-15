@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="0.5" branch-rate="0.4" version="1.9" timestamp="1760000000">
+  <packages>
+    <package name="Clinic" line-rate="0.5" branch-rate="0.4" complexity="20">
+      <classes>
+        <class name="Clinic.Billing.InvoiceCalculator" filename="src/Billing/InvoiceCalculator.cs" line-rate="0.2" branch-rate="0.1" complexity="12">
+          <methods>
+            <method name="Total" signature="()" line-rate="0.2" branch-rate="0.1" complexity="12">
+              <lines>
+                <line number="10" hits="1" branch="False" />
+                <line number="11" hits="0" branch="True" condition-coverage="10% (1/10)" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines><line number="5" hits="1" branch="False" /></lines>
+            </method>
+          </methods>
+        </class>
+        <class name="Clinic.Booking.SlotService/&lt;BookAsync&gt;d__4" filename="src/Booking/SlotService.cs" line-rate="0" branch-rate="0" complexity="6">
+          <methods>
+            <method name="MoveNext" signature="()" line-rate="0" branch-rate="0" complexity="6">
+              <lines><line number="20" hits="0" branch="True" condition-coverage="0% (0/6)" /></lines>
+            </method>
+          </methods>
+        </class>
+        <class name="Clinic.Dtos.PatientDto" filename="src/Dtos/PatientDto.cs" line-rate="0" branch-rate="1" complexity="1">
+          <methods>
+            <method name="get_Name" signature="()" line-rate="0" branch-rate="1" complexity="1">
+              <lines><line number="3" hits="0" branch="False" /></lines>
+            </method>
+          </methods>
+        </class>
+        <class name="Clinic.Booking.SlotRules" filename="src/Booking/SlotRules.cs" line-rate="1" branch-rate="1" complexity="8">
+          <methods>
+            <method name="CanBook" signature="()" line-rate="1" branch-rate="1" complexity="8">
+              <lines><line number="7" hits="4" branch="True" condition-coverage="100% (8/8)" /></lines>
+            </method>
+          </methods>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

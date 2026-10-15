@@ -1,7 +1,7 @@
 ---
 name: testing-tdd
 description: TDD for .NET — red-green-refactor, xUnit + Moq + FluentAssertions 7 + AutoFixture, AAA, naming, theories at the edges, verifying the side effects that matter, a fixed clock. Test behaviour, not implementation. Tested in CI, also under slim-image conditions.
-version: 2.1.0
+version: 2.2.0
 ---
 
 # TDD & Unit Testing Patterns
@@ -318,9 +318,29 @@ ICU): `new CultureInfo("en-US")` throws `CultureNotFoundException`, so such a te
 crashes in CI. Code that formats for machines uses `CultureInfo.InvariantCulture`, and its tests need no
 culture. Arabic formatting belongs to localization tests that check ICU first (`localization`).
 
+## Reviewing a test: what to fix
+
+A test that passes proves something only if it could fail. When writing or reviewing one, fix these:
+
+| Smell | Why it hurts | Instead |
+|---|---|---|
+| No assertion, or one that can't fail (`NotNull` on an object just created) | Passes whatever the code does | Assert the outcome the test is named after |
+| Asserting every call (`Verify` on each mock) | Breaks on any refactor, says nothing about the result | Assert the result; verify only side effects that matter (saved once, message sent) |
+| Logic in the test (`if`, loops, computing the expected value) | The test repeats the code's mistake | Expected values are literals |
+| `Task.Delay`, the real clock, random data without a seed | Flaky, slow, or green by luck | `FakeTimeProvider`; AutoFixture or fixed values |
+| Shared mutable state (static fields, one fixture changed by tests) | Order-dependent results | A fresh arrangement per test; read-only shared fixtures |
+| Setups the code path never reaches | Misleads the reader about what the test covers | Delete them; `VerifyAll()` shows which ones (tested) |
+| `Throws<Exception>` or catching everything | Any failure counts as the expected one | The exact exception type, and its message or parameter when it matters |
+| Several behaviours in one test | The name can't say what broke | One concept per test; a theory for the same concept over inputs |
+| Asserting private details (exact SQL text, internal calls) | Fails on harmless changes | Assert observable behaviour; SQL shape only where it is the point (an index used, a single query) |
+
+Tested: a setup copied from the happy path ("the slot is free") on a path that returns early is never
+reached, and `VerifyAll()` on that mock fails, which is how to find it.
+
 ## Rules
 - Red, green, refactor; AAA; `MethodName_Scenario_ExpectedResult`.
 - FluentAssertions pinned `[7.0.0,8.0.0)`; Moq or NSubstitute, never both in one project.
 - A `FakeTimeProvider` for time, injected into AutoFixture too.
 - Theories at the edges; verify the side effects that matter, not every call.
 - No culture set in unit tests.
+- A test that can't fail is fixed before it's merged ("Reviewing a test").

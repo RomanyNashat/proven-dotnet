@@ -1,7 +1,7 @@
 ---
 name: test-coverage
 description: Test coverage for .NET: Coverlet run, Cobertura parse, raise menu, least-covered detection, characterization tests. Used by coverage-analyst + /coverage.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Test Coverage Skill
@@ -105,6 +105,18 @@ Least-covered classes (highest risk first):
 Risk ranking is not just "lowest %". Weight by: business criticality (domain/application logic
 over DTOs/wiring), blast radius (consumers, shared libraries, auth), and traffic (hot paths).
 A 40%-covered DTO mapper matters less than a 40%-covered payment calculator.
+
+**Start the ranking from the numbers**, then apply that judgment on top:
+
+```bash
+python ~/.claude/skills/test-coverage/scripts/coverage_risk.py ./coverage/<run>/coverage.cobertura.xml --top 15
+```
+
+It ranks methods by the CRAP score, complexity² × (1 − coverage)³ + complexity, using the branch rate
+where the method has branches. A simple getter with no tests scores 2; a method of complexity 12 at 10%
+scores 117. Above 30 is marked "test before changing". Async methods, which Coverlet reports as their
+state machines (`<BookAsync>d__4.MoveNext`), are shown under their own names, and constructors are left
+out. The script and its rules are tested in CI against a fixture report.
 
 ---
 

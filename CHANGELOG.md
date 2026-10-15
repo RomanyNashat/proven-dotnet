@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.31 — test quality: risk ranking and test review
+- `test-coverage`: `scripts/coverage_risk.py` ranks methods from a Cobertura report by CRAP score
+  (complexity² × (1 − coverage)³ + complexity), folds async state machines back into their methods,
+  leaves constructors out, and marks anything above 30 "test before changing". Tested in CI against a
+  fixture report (a new "Skill scripts" step).
+- `testing-tdd`: "Reviewing a test", a table of what makes a test unable to fail and what to do instead.
+  Tested: a setup copied from the happy path onto a path that returns early is found by `VerifyAll()`.
+  `code-reviewer` now reviews the tests in a change against it.
+
 ## 0.1.30 — testing what gets logged
 - `testing-tdd`: a log line's required fields and forbidden content are tested with `FakeLogger<T>`
   (`Microsoft.Extensions.Diagnostics.Testing`), not a Moq setup on `ILogger.Log`. Tested as a story: the
