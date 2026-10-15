@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.IdentityModel.Tokens;
 using SkillSamples.MsSql;
 using SkillSamples.Production;
@@ -29,7 +30,7 @@ public sealed class AuthServerTests(SqlDatabase db) : IClassFixture<SqlDatabase>
     private static readonly Uri Callback = new("https://portal.example.com/callback");
 
     private WebApplication _server = null!;
-    private readonly ErrorLog _errors = new();
+    private readonly FakeLogCollector _errors = new();
 
     private sealed record Tokens(
         [property: JsonPropertyName("access_token")] string AccessToken,
@@ -40,7 +41,7 @@ public sealed class AuthServerTests(SqlDatabase db) : IClassFixture<SqlDatabase>
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
         builder.WebHost.ConfigureKestrel(k => k.Listen(IPAddress.Loopback, 0));
-        builder.Logging.ClearProviders().AddProvider(_errors);
+        builder.Logging.ClearProviders().AddProvider(new FakeLoggerProvider(_errors));
         builder.Services.AddAuthServer(db.ConnectionString, o =>
         {
             o.AddEphemeralEncryptionKey().AddEphemeralSigningKey();
@@ -270,7 +271,7 @@ public sealed class AuthServerTests(SqlDatabase db) : IClassFixture<SqlDatabase>
             ["client_id"] = "admin-portal", ["post_logout_redirect_uri"] = new Uri(Callback, "/").ToString()
         }));
 
-        Assert.True(logout.StatusCode == HttpStatusCode.Redirect, $"{logout.StatusCode}: {_errors}");
+        Assert.True(logout.StatusCode == HttpStatusCode.Redirect, $"{logout.StatusCode}: {_errors.ErrorText()}");
         Assert.False((await IntrospectAsync(tokens.AccessToken)).GetProperty("active").GetBoolean());
         using var refresh = await PostFormAsync(browser, "connect/token", new()
         {

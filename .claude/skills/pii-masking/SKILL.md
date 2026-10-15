@@ -1,7 +1,7 @@
 ---
 name: pii-masking
 description: PII/PHI masking for .NET healthcare: Serilog masking (destructuring policy + pattern operators for national ID, mobile, MRN), classified logging with redaction before any provider, [Sensitive] strategies, keyed tokenization. Code tested in CI.
-version: 1.3.0
+version: 1.4.0
 ---
 
 # PII Masking Patterns
@@ -59,6 +59,11 @@ public static partial class BookingLog
     // through the redactor chosen for PatientIdentifier, before any provider sees it.
     [LoggerMessage(Level = LogLevel.Warning, Message = "Booking {BookingId} refused for {NationalId}: {Reason}")]
     public static partial void BookingRefused(ILogger logger, int bookingId, [PatientIdentifier] string nationalId, string reason);
+
+    // Every property of the request becomes a field. Only the classified ones are redacted, so a property
+    // someone adds later without the attribute (Mobile here) goes out in clear.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Booking requested")]
+    public static partial void BookingRequested(ILogger logger, [LogProperties] BookingRequest request);
 }
 ```
 
@@ -89,6 +94,10 @@ Tested with `FakeLogger` and with Serilog:
   redacting factory, and Elastic gets `****`. `UseSerilog()` (or registering `SerilogLoggerFactory`)
   replaces it: the redactor never runs, and the classified field silently vanishes from the line. It
   doesn't leak, but nobody can search by it either.
+- **`[LogProperties]` logs every property, today's and tomorrow's.** Only the classified ones are redacted
+  (a record's constructor parameter counts). Tested: a `Mobile` added without `[PatientIdentifier]` goes
+  out as it is. Use it only on types where every patient field is classified, and review additions to
+  those types like a log line.
 - The redactor is chosen per class at startup. `StarRedactor` here; the library's `ErasingRedactor` is
   the fallback for a class with none. To correlate lines about one patient without the ID, use a keyed
   hash (the library's HMAC redactor, still experimental, or the tokenizer below).

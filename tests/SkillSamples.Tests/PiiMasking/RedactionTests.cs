@@ -64,6 +64,22 @@ public sealed class RedactionTests
     }
 
     [Fact]
+    public void LogProperties_ClassifiedPropertyIsRedacted_AnUnclassifiedOneIsNot()
+    {
+        var (services, logs) = WithFakeLogger();
+        using var _ = services;
+
+        BookingLog.BookingRequested(services.GetRequiredService<ILogger<RedactionTests>>(),
+            new BookingRequest(42, NationalId, "Olaya", "0551234567"));
+
+        var fields = logs.LatestRecord.StructuredState!;
+        string? Tag(string property) => fields.FirstOrDefault(p => p.Key.EndsWith("." + property, StringComparison.OrdinalIgnoreCase)).Value;
+        Assert.Equal("****", Tag("NationalId"));
+        Assert.Equal("Olaya", Tag("Clinic"));
+        Assert.Equal("0551234567", Tag("Mobile"));   // added without [PatientIdentifier]: logged as it is
+    }
+
+    [Fact]
     [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
     public void Story_SerilogTakesOverTheLoggerFactory_TheRedactorStopsRunning()
     {
