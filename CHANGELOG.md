@@ -3,6 +3,12 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.30 — testing what gets logged
+- `testing-tdd`: a log line's required fields and forbidden content are tested with `FakeLogger<T>`
+  (`Microsoft.Extensions.Diagnostics.Testing`), not a Moq setup on `ILogger.Log`. Tested as a story: the
+  careful handler's line carries the booking id and nothing about the patient; the test catches the one
+  that logs `{@Command}`.
+
 ## 0.1.29 — triage from heartbeat lines
 - `production-diagnostics`: a window of heartbeat lines becomes **signals** (what is out of range, with
   the numbers) and **hypotheses** (likely cause, why, next check), most likely first. Rules for the
