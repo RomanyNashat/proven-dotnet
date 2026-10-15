@@ -1,0 +1,47 @@
+diff --git a/src/Billing/InvoiceCalculator.cs b/src/Billing/InvoiceCalculator.cs
+--- a/src/Billing/InvoiceCalculator.cs
++++ b/src/Billing/InvoiceCalculator.cs
+@@ -9,0 +10,2 @@ public sealed class InvoiceCalculator
++        var subtotal = Lines.Sum(l => l.Amount);
++        if (Discount > 0) return subtotal - Discount;
+@@ -30 +32 @@ public sealed class InvoiceCalculator
+-    // old comment
++    // a comment the report can't measure
+diff --git a/src/Booking/SlotRules.cs b/src/Booking/SlotRules.cs
+--- a/src/Booking/SlotRules.cs
++++ b/src/Booking/SlotRules.cs
+@@ -7 +7 @@ public static class SlotRules
+-    public static bool CanBook(Slot s) => s.Free;
++    public static bool CanBook(Slot s) => s.Free && !s.Blocked;
+diff --git a/src/Booking/SlotService.cs b/src/Booking/SlotService.cs
+--- a/src/Booking/SlotService.cs
++++ b/src/Booking/SlotService.cs
+@@ -20 +20 @@ public sealed class SlotService
+-        await repo.SaveAsync(slot, ct);
++        await repo.SaveAsync(slot with { BookedBy = patient }, ct);
+diff --git a/src/Booking/Waitlist.cs b/src/Booking/Waitlist.cs
+new file mode 100644
+--- /dev/null
++++ b/src/Booking/Waitlist.cs
+@@ -0,0 +1,3 @@
++namespace Clinic.Booking;
++
++public sealed class Waitlist { }
+diff --git a/src/Old/Legacy.cs b/src/Old/Legacy.cs
+deleted file mode 100644
+--- a/src/Old/Legacy.cs
++++ /dev/null
+@@ -1,2 +0,0 @@
+-namespace Clinic.Old;
+-public sealed class Legacy { }
+diff --git a/tests/Clinic.Tests/SlotRulesTests.cs b/tests/Clinic.Tests/SlotRulesTests.cs
+--- a/tests/Clinic.Tests/SlotRulesTests.cs
++++ b/tests/Clinic.Tests/SlotRulesTests.cs
+@@ -12,0 +13 @@ public sealed class SlotRulesTests
++    [Fact] public void CanBook_Blocked_False() => Assert.False(SlotRules.CanBook(Blocked));
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-# Clinic
++# Clinic service

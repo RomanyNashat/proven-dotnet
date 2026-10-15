@@ -3,6 +3,12 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.12 — the test gap in a change
+- `test-coverage` 1.2.0: `scripts/changed_uncovered.py` takes a diff and a Cobertura report and lists the
+  changed lines no test runs, by method, plus changed files no test loads; `--min` makes it a gate.
+  Reads a diff saved by Windows PowerShell (UTF-16). Tested in CI, including the story of a merge request
+  that adds a test and still leaves half its changed lines untested.
+
 ## 0.2.11 — [LogProperties], and FakeLogger in our own tests
 - `pii-masking` 1.4.0: `[LogProperties]` logs every property of an object; only the classified ones are
   redacted. Tested: a property added later without the attribute goes out in clear.
