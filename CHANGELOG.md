@@ -3,6 +3,20 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.0 — release candidate
+Everything ECC had, rebuilt in the open and tested: 55 skills, 9 per-project skills, 20 agents and 26
+commands. Nothing new in this version; it marks the end of the move.
+- **Every skill with code is tested in CI against real dependencies** (PostgreSQL, SQL Server, MongoDB,
+  Redis, Kafka, RabbitMQ, NATS, nginx, the dotnet CLI against nuget.org). A skill's code block and the
+  tested file can't drift apart.
+- **All 39 of them also have story tests** (a real situation as Given / When / Then) **and production
+  tests** (the same code without ICU or tzdata, in UTC, as on a slim image). Bugs they found along the
+  way are in the 0.1.x notes below: SqlClient refuses to connect without ICU, OpenIddict 6 logout throws
+  on EF Core 10, Quartz drops runs missed during downtime, paging on a shared timestamp loses rows, a
+  manual "staging" deploy reached production.
+- New since ECC: `dotnet-upgrade`, `msbuild`, heartbeat triage in `production-diagnostics`, risk
+  ranking in `test-coverage`, and evals for `/full-review` and `/health-check`.
+
 ## 0.1.36 — what the deploy workflow decides
 - `cicd-github-actions` 1.2.0, the last skill with code to get story and production tests:
   - **Story:** a manual deploy that chose staging, run from `main`, went to production too; the
