@@ -277,9 +277,12 @@ image (no ICU, no tzdata).
 |---|---|---|---|
 | **Slow responses** | APM latency by endpoint; request-log elapsed by route | Slow in one dependency span (DB, HTTP, Redis) vs. everywhere | Missing index or N+1 (`dba-reviewer`), a slow downstream service, pool exhaustion (below), starvation (below) |
 | **Everything slow, CPU low** | Heartbeat `threads` climbing far above the core count, CPU low | `queued` > 0 for several minutes; Redis `TimeoutException` text shows `WORKER: (Busy=…,Min=…)` with Busy > Min | **Thread-pool starvation:** `.Result`/`.Wait()`/sync I/O on request threads, sync-over-async in a library, `lock` around awaited work |
+| **CPU at the limit** | Heartbeat `cpu` near 100% of `cpu limit` cores; APM latency up on every endpoint | The container's `cpu.stat`: `nr_throttled` rising between two reads (ask for it, §6.1) | A limit too small for the load (fractional limits throttle in bursts), or a hot path; Server GC on a pod with one core or less |
 | **High CPU** | Heartbeat `cpu`, APM by endpoint | High `gen0/1/2` and `gc pause` → allocations; otherwise hot code | Big allocations per request, regex without timeout or cache, JSON (de)serializing huge payloads, a tight retry loop |
 | **Memory grows, never returns** | Heartbeat `heap` after each GC, trending up over hours | `gen2` running often while `heap` still rises | Static or singleton collections, events never unsubscribed, `IMemoryCache` without size limit or expiry, captured `HttpContext`, timers never disposed |
 | **Pod restarts, no error log** | Pod status: `OOMKilled`? exit code 137? | Heartbeat `working set` approaching `memory limit` before each restart | Memory growth above, or a limit too small for the workload. **No dump is possible:** the kernel kills it outright |
+| **Slower since a deploy** | APM by endpoint, before and after the deploy time | The same endpoints, the same traffic, only the version changed; heartbeat `cpu` or `gen0` stepped up at the deploy | A new N+1 or a dropped `Include` projection, a sync call added on a request path, a cache removed, a package bump that changed a query's shape (compare the SQL in APM) |
+| **Slow first minute after a start** | APM latency by minute after each deploy or restart | Slow only right after start, normal once warm | JIT before tiering, EF Core building its model on the first query (compiled models), empty connection pools and caches, readiness passing before warm-up (`kubernetes-dotnet`: a startup probe, warm-up in a hosted service) |
 | **Crash with a log** | The `Critical` last-words line | Exception type and stack | An exception on a background thread or in `async void`, a startup config error |
 | **Errors in bursts** | Request log by status code; heartbeat `exceptions` | Same exception type and route in the burst | Downstream outage without circuit breaker (`polly-resilience`), expired secrets, connection drops |
 | **413, 502, 504 or 499 from a proxy** | Which layer answered: a proxy HTML page vs the app's ProblemDetails | The `nginx` skill's playbook | Limits or timeouts that disagree between ingress, proxy and Kestrel; keep-alive mismatch; pods taking traffic while stopping |
@@ -303,6 +306,8 @@ When logs and APM aren't enough, write the request. Ask only for **safe** artifa
 
 1. **Pod facts:** `kubectl describe pod` (events, last state, `OOMKilled`, restart count, exit code,
    limits) and the container's logs around the restart (`kubectl logs --previous`).
+   For CPU throttling: `kubectl exec <pod> -- cat /sys/fs/cgroup/cpu.stat`, twice a minute apart
+   (`nr_throttled` and `throttled_usec` rising means the limit is biting).
 2. **Live counters** (no data, no pause, no special permission). Runtime images usually have no tools:
    download the single-file tool on a machine (`https://aka.ms/dotnet-counters/linux-x64`, or
    `linux-musl-x64` for Alpine), then:

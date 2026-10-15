@@ -3,6 +3,11 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.4 — three more symptoms
+- `production-diagnostics`: playbook rows for CPU at the limit (throttling, confirmed from the
+  container's `cpu.stat`), slower since a deploy, and a slow first minute after a start; the safe
+  request for `cpu.stat` in §6.
+
 ## 0.2.3 — statics a test can't control
 - `testing-tdd` 2.3.0: "Code a test can't control": finding the clock, disk, network, random and
   environment statics with `proven-roslyn`'s `find_references`, and the seam for each (`TimeProvider`,
