@@ -45,10 +45,12 @@ public sealed class RuntimeHeartbeatOptions
 {
     public TimeSpan Interval { get; set; } = TimeSpan.FromMinutes(1);
     public long ThreadPoolQueueWarning { get; set; } = 100;   // queued work above this → Warning
+    public string FileSystemRoot { get; set; } = "/";          // where the cgroup files are; tests use a fake
 }
 
 // One structured log line per interval with the runtime's own counters: trends without a metrics
-// backend and without access to the pod. No packages; it only reads what the runtime already keeps.
+// backend and without access to the pod. No packages: it reads what the runtime keeps, and the container's
+// limits from its cgroup files, so CPU and memory are measured against what the pod may really use.
 public sealed class RuntimeHeartbeat(ILogger<RuntimeHeartbeat> logger, IOptions<RuntimeHeartbeatOptions> options, TimeProvider time)
     : BackgroundService
 {
@@ -63,6 +65,8 @@ public sealed class RuntimeHeartbeat(ILogger<RuntimeHeartbeat> logger, IOptions<
         try
         {
             using var process = Process.GetCurrentProcess();
+            var limits = ContainerLimits.Read(settings.FileSystemRoot);
+            var cores = limits.CpuCores ?? Environment.ProcessorCount;
             var last = Snapshot.Take(process, time, Interlocked.Read(ref _exceptions));
             using var timer = new PeriodicTimer(settings.Interval, time);
 
@@ -76,16 +80,19 @@ public sealed class RuntimeHeartbeat(ILogger<RuntimeHeartbeat> logger, IOptions<
                 var level = ThreadPool.PendingWorkItemCount > settings.ThreadPoolQueueWarning ? LogLevel.Warning : LogLevel.Information;
                 logger.Log(level,
                     "Runtime heartbeat: threads {ThreadPoolThreads}, queued {ThreadPoolQueue}, completed/s {WorkItemsPerSecond:F0}, " +
-                    "cpu {CpuPercent:F0}%, working set {WorkingSetMb} MB, heap {HeapMb} MB, fragmented {FragmentedMb} MB, " +
-                    "memory limit {MemoryLimitMb} MB, gen0/1/2 {Gen0}/{Gen1}/{Gen2}, gc pause {GcPauseMs} ms, " +
+                    "cpu {CpuPercent:F0}% of {CpuLimitCores:0.##} cores, working set {WorkingSetMb} MB, heap {HeapMb} MB, " +
+                    "fragmented {FragmentedMb} MB, memory limit {MemoryLimitMb} MB, heap limit {HeapLimitMb} MB, " +
+                    "gen0/1/2 {Gen0}/{Gen1}/{Gen2}, gc pause {GcPauseMs} ms, " +
                     "lock contentions {LockContentions}, exceptions {Exceptions}",
                     ThreadPool.ThreadCount,
                     ThreadPool.PendingWorkItemCount,
                     (now.CompletedWorkItems - last.CompletedWorkItems) / seconds,
-                    (now.Cpu - last.Cpu).TotalSeconds / (seconds * Environment.ProcessorCount) * 100,
+                    CpuPercent(now.Cpu - last.Cpu, TimeSpan.FromSeconds(seconds), cores),
+                    cores,
                     now.WorkingSet / 1024 / 1024,
                     gc.HeapSizeBytes / 1024 / 1024,
                     gc.FragmentedBytes / 1024 / 1024,
+                    (limits.MemoryBytes ?? gc.TotalAvailableMemoryBytes) / 1024 / 1024,
                     gc.TotalAvailableMemoryBytes / 1024 / 1024,
                     now.Gen0 - last.Gen0, now.Gen1 - last.Gen1, now.Gen2 - last.Gen2,
                     (long)(now.GcPause - last.GcPause).TotalMilliseconds,
@@ -100,6 +107,10 @@ public sealed class RuntimeHeartbeat(ILogger<RuntimeHeartbeat> logger, IOptions<
             AppDomain.CurrentDomain.FirstChanceException -= count;
         }
     }
+
+    /// <summary>CPU used as a share of what the container may use: 30 s of CPU in a minute at half a core is 100%.</summary>
+    public static double CpuPercent(TimeSpan cpuUsed, TimeSpan elapsed, double cores) =>
+        cpuUsed.TotalSeconds / (elapsed.TotalSeconds * cores) * 100;
 
     private readonly record struct Snapshot(
         DateTimeOffset At, long CompletedWorkItems, TimeSpan Cpu, long WorkingSet,
@@ -124,6 +135,50 @@ Tested: a line per interval with every field, a warning when the queue passes th
 exceptions counted. As a story: a bug starts throwing and catching 300 exceptions; that minute's line
 carries the jump (each field is per interval, not a running total), and the line after the fix falls back.
 On a slim image (no ICU, no tzdata) the line is written the same, with the container's memory limit.
+
+**CPU and memory are measured against the container's limits, not the runtime's numbers.** The
+runtime's own figures mislead in a pod:
+- `Environment.ProcessorCount` rounds a fractional CPU limit up. With `limits.cpu: 500m` it says 1, so a
+  pod using all of its half core read as **50%**, and triage called it thread starvation with the CPU
+  idle. Against the limit it reads 100%, and triage says CPU-bound (tested as a story).
+- `GCMemoryInfo.TotalAvailableMemoryBytes` is the GC heap limit, which in a container defaults to 75%
+  of the memory limit. The line logs both: `memory limit` (the container's, what the OOM killer uses)
+  and `heap limit` (the GC's).
+
+The limits come from the cgroup files, smallest one between the container and the pod (cgroup v2), or
+the container's own (v1). Without a cgroup (Windows, a machine with no limit) the line falls back to the
+runtime's numbers. Tested with fake cgroup folders for v1, v2 and nested limits, and against the real
+files on the CI runner:
+
+<!-- sample: tests/SkillSamples.Tests/Diagnostics/ContainerLimits.cs -->
+```csharp
+    // cgroup v2: the effective limit is the smallest one on the way from the process's own group to the root.
+    // Kubernetes sets one on the pod and one on the container.
+    private static ContainerLimits ReadV2(string root, string cgroup)
+    {
+        // "0::/kubepods.slice/..." on a host; "0::/" inside a container, which sees its own group as the root.
+        var own = (ReadText(Path.Combine(root, "proc", "self", "cgroup")) ?? "").Split('\n')
+            .FirstOrDefault(l => l.StartsWith("0::", StringComparison.Ordinal))?[3..].Trim('/') ?? "";
+        double? cpu = null;
+        long? memory = null;
+        for (var dir = Path.Combine(cgroup, own); ; dir = Path.GetDirectoryName(dir)!)
+        {
+            if (ReadText(Path.Combine(dir, "cpu.max")) is { } cpuMax && ParseCpuMax(cpuMax) is { } cores)
+                cpu = Math.Min(cpu ?? double.MaxValue, cores);
+            if (ReadText(Path.Combine(dir, "memory.max")) is { } memoryMax && memoryMax != "max")
+                memory = Math.Min(memory ?? long.MaxValue, long.Parse(memoryMax, CultureInfo.InvariantCulture));
+            if (Path.GetFullPath(dir).TrimEnd(Path.DirectorySeparatorChar) == Path.GetFullPath(cgroup).TrimEnd(Path.DirectorySeparatorChar))
+                break;
+        }
+
+        return new ContainerLimits(cpu, memory);
+    }
+```
+
+The whole reader, with v1 and the parsing, is `ContainerLimits.cs` beside the heartbeat. Where an
+OpenTelemetry pipeline exists, `Microsoft.Extensions.Diagnostics.ResourceMonitoring` publishes the same
+as metrics (`container.cpu.limit.utilization`, `container.memory.limit.utilization`); the heartbeat
+reads the files itself so it needs no package.
 - `heap` is as of the last GC, so it reads 0 until the first one.
 - `exceptions` counts every thrown exception, handled ones included. A steady high number means
   exceptions are used for control flow; a jump means something started failing.
@@ -233,7 +288,7 @@ image (no ICU, no tzdata).
 ## 5. Containers and GC — the facts behind restarts
 
 - In a container with a memory limit, .NET caps the GC heap at **75% of the limit** by default
-  (`memory limit` in the heartbeat shows what it sees). The rest is for native memory, thread stacks
+  (the heartbeat's `heap limit`; its `memory limit` is the container's). The rest is for native memory, thread stacks
   and the runtime.
 - ASP.NET Core uses **Server GC**. On .NET 9+ it adapts its heap count to the load (DATAS, on by
   default), so a small pod doesn't reserve one heap per core.
