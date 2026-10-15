@@ -43,3 +43,4 @@ msbuild
 cicd-github-actions
 cronjob-patterns
 kubernetes-dotnet
+caching

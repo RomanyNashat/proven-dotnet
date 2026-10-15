@@ -44,6 +44,9 @@
     <PackageReference Include="StackExchange.Redis" />
     <!-- kubernetes-dotnet: the readiness check for Redis. -->
     <PackageReference Include="AspNetCore.HealthChecks.Redis" />
+    <!-- caching: HybridCache with Redis as L2. -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
     <PackageReference Include="Confluent.Kafka" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
