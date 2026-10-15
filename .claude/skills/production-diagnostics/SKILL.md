@@ -121,7 +121,9 @@ builder.Services.AddHostedService<RuntimeHeartbeat>();
 ```
 
 Tested: a line per interval with every field, a warning when the queue passes the threshold, and handled
-exceptions counted.
+exceptions counted. As a story: a bug starts throwing and catching 300 exceptions; that minute's line
+carries the jump (each field is per interval, not a running total), and the line after the fix falls back.
+On a slim image (no ICU, no tzdata) the line is written the same, with the container's memory limit.
 - `heap` is as of the last GC, so it reads 0 until the first one.
 - `exceptions` counts every thrown exception, handled ones included. A steady high number means
   exceptions are used for control flow; a jump means something started failing.

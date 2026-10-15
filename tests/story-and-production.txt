@@ -31,3 +31,4 @@ ddd-patterns
 testing-integration
 api-design
 localization
+production-diagnostics

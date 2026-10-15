@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Diagnostics;
@@ -117,6 +118,59 @@ public sealed class RuntimeHeartbeatTests
             var line = await Heartbeat(time, logs, number: 2);
             var counted = Convert.ToInt64(line.Fields["Exceptions"]);
             Assert.True(counted >= 5, $"counted {counted}");
+        }
+        finally
+        {
+            await host.StopAsync();
+        }
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ABugStartsThrowingAndCatching_TheNextLineShowsTheJump_AndItFallsBackAfterTheFix()
+    {
+        var (host, time, logs) = Build();
+        await host.StartAsync();
+        try
+        {
+            // Given: a minute in which the service runs normally
+            await Heartbeat(time, logs);
+
+            // When: a bug starts using exceptions for control flow, then a fix ships
+            for (var i = 0; i < 300; i++)
+            {
+                try { throw new FormatException("bad input"); }
+                catch (FormatException) { }
+            }
+
+            var buggy = await Heartbeat(time, logs, number: 2);
+            var fixedMinute = await Heartbeat(time, logs, number: 3);
+
+            // Then: the line for that minute carries the jump (a count per interval, not a running
+            // total), so a KQL filter on Exceptions finds the minute, and the next line falls back
+            Assert.True(Convert.ToInt64(buggy.Fields["Exceptions"]) >= 300, $"buggy minute: {buggy.Fields["Exceptions"]}");
+            Assert.True(Convert.ToInt64(fixedMinute.Fields["Exceptions"]) < 300, $"after the fix: {fixedMinute.Fields["Exceptions"]}");
+        }
+        finally
+        {
+            await host.StopAsync();
+        }
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_TheHeartbeatLogs_WithTheContainersMemoryLimit()
+    {
+        ProductionConditions.Require();
+        var (host, time, logs) = Build();
+        await host.StartAsync();
+        try
+        {
+            var line = await Heartbeat(time, logs);
+
+            Assert.True(Convert.ToInt64(line.Fields["MemoryLimitMb"]) > 0);
+            Assert.True(Convert.ToInt64(line.Fields["WorkingSetMb"]) > 0);
+            Assert.Contains("cpu ", line.Message, StringComparison.Ordinal);
         }
         finally
         {
