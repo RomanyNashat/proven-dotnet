@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Nginx;
@@ -134,6 +135,55 @@ public sealed class NginxTests(BehindNginxApp app) : IClassFixture<BehindNginxAp
         using var response = await Http.PostAsync($"{BehindNginxApp.StaticUrl}/home.json", new StringContent("{}"));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private static async Task<(HttpStatusCode Status, string Body)> UploadAsync(int megabytes, string clientIp)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{BehindNginxApp.ProxyUrl}/upload")
+        {
+            Content = new ByteArrayContent(new byte[megabytes * 1024 * 1024]),
+        };
+        request.Headers.Add("X-Forwarded-For", clientIp);
+        request.Headers.Add("X-Forwarded-Proto", "https");
+        using var response = await Http.SendAsync(request);
+        return (response.StatusCode, await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_APatientUploadsA6MbScan_NginxRefusesIt_SoOnlyNginxsLogKnows_TheRetakenScanGoesThrough()
+    {
+        // Given: a patient's phone uploads a 6 MB scan through the ingress
+        var tooBig = await UploadAsync(megabytes: 6, clientIp: "203.0.113.20");
+
+        // When: support looks for it, then the patient retakes it smaller
+        var retaken = await UploadAsync(megabytes: 1, clientIp: "203.0.113.20");
+        using var whoami = new HttpRequestMessage(HttpMethod.Get, $"{BehindNginxApp.ProxyUrl}/whoami");
+        whoami.Headers.Add("X-Forwarded-For", "203.0.113.20");
+        whoami.Headers.Add("X-Forwarded-Proto", "https");
+        var seen = await (await Http.SendAsync(whoami)).Content.ReadAsStringAsync();
+
+        // Then: the 413 is nginx's own page (the app never saw the request, so its logs are empty and the
+        // answer is in nginx's), the smaller one reaches the app whole, and the app sees the patient
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, tooBig.Status);
+        Assert.Contains("nginx", tooBig.Body, StringComparison.Ordinal);
+        Assert.Equal((HttpStatusCode.OK, (1024 * 1024).ToString(System.Globalization.CultureInfo.InvariantCulture)), retaken);
+        Assert.Equal("203.0.113.20 https", seen);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_TheAppBehindNginxSeesTheClient_AndTakesTheUpload()
+    {
+        ProductionConditions.Require();
+
+        var upload = await UploadAsync(megabytes: 1, clientIp: "203.0.113.21");
+        using var whoami = new HttpRequestMessage(HttpMethod.Get, $"{BehindNginxApp.ProxyUrl}/whoami");
+        whoami.Headers.Add("X-Forwarded-For", "203.0.113.21");
+        whoami.Headers.Add("X-Forwarded-Proto", "https");
+
+        Assert.Equal(HttpStatusCode.OK, upload.Status);
+        Assert.Equal("203.0.113.21 https", await (await Http.SendAsync(whoami)).Content.ReadAsStringAsync());
     }
 
     [Fact]
