@@ -9,6 +9,9 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   throttled at a half-core limit with Server GC, and a leak from an unbounded static cache ending in
   OOM kills. `evals.md` holds the answers, what each run must find and what it must not do (blame a
   victim, ask for a full dump of patient data, raise the limit as the fix).
+- First runs in `results.md`: with proven 9/9 Musts, rules-only baseline 8.5/9; all three diagnoses
+  right and no Must-not broken either way, graded blind. The baseline's slips were in the memory case
+  (a counter misread, a gcdump asked for without its cost).
 
 ## 0.2.12 — the test gap in a change
 - `test-coverage` 1.2.0: `scripts/changed_uncovered.py` takes a diff and a Cobertura report and lists the
