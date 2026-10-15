@@ -3,6 +3,12 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.33 — MCP servers: what read-only means
+- Rules: a repo's `.mcp.json` is reviewed like its hooks, and a read-only MCP server isn't a boundary
+  while its CLI is allowed: deny the CLI's write commands too. A read-only docs server, when connected,
+  is where package questions go before asking the developer.
+- README: Microsoft Learn's MCP server as a recommended docs source, and a deny example for CLIs.
+
 ## 0.1.32 — MSBuild and central package versions
 - `msbuild` (new): `Directory.Build.props` for shared settings, Central Package Management for one
   version per package, moving a solution onto it, and finding out why the build or restore did what it

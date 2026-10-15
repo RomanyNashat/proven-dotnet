@@ -77,6 +77,11 @@ folder is opened (a 2026 PyPI worm spread exactly this way). Treat a repo's Clau
 - **Audit `settings.local.json`**: it grows from "don't ask again" clicks. Flag any approval that allows
   arbitrary execution (`python -`, `bash -c`, `sh -c`, `curl … | sh`, `eval`, `node -e`).
 - **Never add a hook to a shared repo without saying so.** It runs on everyone's machine.
+- **A repo's `.mcp.json` is the same risk:** an MCP server is a program running with your rights. Read
+  what it starts before approving it.
+- **A read-only MCP server is not a boundary while its CLI is allowed.** If read-only mode is what keeps
+  the agent from changing a cluster or a cloud account, deny the CLI's write commands in permissions too
+  (`kubectl apply`, `az … delete`), or the agent runs the command itself when the server says no.
 
 ## Attempt budget — stop, don't spiral
 
@@ -91,7 +96,7 @@ pick one, say which and why, and follow it.
 
 Not your organisation's internal packages, not third-party ones. In this order instead: the skills,
 then how this codebase already calls it (existing usage is the source of truth), then the package's own
-docs, then ask the developer. If none of those answer it, say so and ask.
+docs (a read-only docs MCP server, if one is connected), then ask the developer. If none of those answer it, say so and ask.
 
 ## Shell portability — assume Windows too
 
