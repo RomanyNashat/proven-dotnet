@@ -60,8 +60,9 @@ public sealed class LocalizationTests
         var arSa = CultureInfo.GetCultureInfo("ar-SA");
 
         Assert.True(arSa.Calendar is UmAlQuraCalendar or GregorianCalendar, arSa.Calendar.GetType().Name);
-        Assert.IsType<GregorianCalendar>(Cultures.ArabicGregorian.Calendar);
-        Assert.IsType<UmAlQuraCalendar>(Cultures.ArabicHijri.Calendar);
+        // CultureInfo.Calendar is the culture's default; the calendar a culture formats with is DateTimeFormat's.
+        Assert.IsType<GregorianCalendar>(Cultures.ArabicGregorian.DateTimeFormat.Calendar);
+        Assert.IsType<UmAlQuraCalendar>(Cultures.ArabicHijri.DateTimeFormat.Calendar);
         Assert.Throws<FormatException>(() => DateTime.Parse("2026-10-04", Cultures.ArabicHijri));
     }
 
