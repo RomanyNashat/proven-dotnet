@@ -68,6 +68,8 @@
   <ItemGroup>
     <None Include="Scheduling/*.sql" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Compliance/*.sql" CopyToOutputDirectory="PreserveNewest" />
+    <!-- msbuild: a sample solution the tests copy to a temp folder and restore with the real CLI. -->
+    <None Include="MsBuild/**/*.props;MsBuild/**/*.csproj;MsBuild/nuget.config" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Protobuf Include="Grpc/orders.proto" GrpcServices="Both" />

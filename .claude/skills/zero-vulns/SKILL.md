@@ -50,6 +50,9 @@ This skill is the *enforcement* layer: the gate, the rule, and the remediation.
   ```
   Adding a direct reference to the fixed version overrides the vulnerable transitive one. Document why
   (a comment linking the advisory) so it isn't "cleaned up" later.
+  **Under Central Package Management** the pin is one `PackageVersion` in `Directory.Packages.props`
+  with `CentralPackageTransitivePinningEnabled`, and it applies to every project at once; no direct
+  references. `dotnet nuget why <project> <package>` shows which package brought it in. See `msbuild`.
 - If no fixed version exists yet → this is a real risk decision, not a silent pass: record it
   explicitly (a tracked suppression with an advisory link and an owner), never just ignore the warning.
 
