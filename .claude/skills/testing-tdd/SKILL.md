@@ -1,7 +1,7 @@
 ---
 name: testing-tdd
 description: TDD for .NET — red-green-refactor, xUnit + Moq + FluentAssertions 7 + AutoFixture, AAA, naming, theories at the edges, verifying the side effects that matter, a fixed clock. Test behaviour, not implementation. Tested in CI, also under slim-image conditions.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # TDD & Unit Testing Patterns
@@ -259,6 +259,40 @@ public sealed class BookSlotValidatorTests
     }
 }
 ```
+
+## Testing what gets logged
+
+A log line is output like any other: what it must carry (the id support searches by) and what it must
+never carry (anything that identifies a patient) are both testable. Use `FakeLogger<T>` from
+`Microsoft.Extensions.Diagnostics.Testing` rather than mocking `ILogger`: `Log` is generic and its state
+is internal, so a Moq setup on it is brittle and reads nothing useful.
+
+<!-- sample: tests/SkillSamples.Tests/Tdd/CancelBooking.cs -->
+```csharp
+public sealed class CancelBookingHandler(ILogger<CancelBookingHandler> logger)
+{
+    public void Handle(CancelBooking command)
+    {
+        // What support needs to find the booking: its id as a field. Never who the patient is: the
+        // national ID and the free-text reason stay out of the log.
+        logger.LogInformation("Booking {BookingId} cancelled", command.BookingId);
+    }
+}
+```
+
+```csharp
+var logger = new FakeLogger<CancelBookingHandler>();
+
+new CancelBookingHandler(logger).Handle(command);
+
+var record = Assert.Single(logger.Collector.GetSnapshot());
+Assert.Equal("4821", record.GetStructuredStateValue("BookingId"));
+```
+
+Tested as a story: the same cancellation logged by this handler and by one that logs `{@Command}` "for
+context". Support finds the booking by its id in the first; the test catches the national ID in the
+second, before a log store does. Check both the message and every structured field: masking at the sink
+(`pii-masking`) is the second line of defence, not the first. The line is the same on a slim image.
 
 ## FluentAssertions you'll use most
 
