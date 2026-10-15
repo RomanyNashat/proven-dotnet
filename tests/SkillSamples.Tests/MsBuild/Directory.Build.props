@@ -4,6 +4,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Every project's bin and obj under artifacts/<project>/, so no two projects can share a folder.
+         The path is set here because the default follows the nearest Directory.Build.props, and the
+         nested one under tests/ would move the test projects to tests/artifacts. -->
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
     <!-- zero-vulns: direct and transitive packages are audited, and a known vulnerability fails the restore. -->
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>

@@ -3,6 +3,13 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.34 — build outputs that can't clash
+- `msbuild` 1.1.0: outputs through `UseArtifactsOutput` with an explicit `ArtifactsPath`. Tested: each
+  project gets its own `artifacts/bin` and `artifacts/obj` folder; one `obj` set in
+  `Directory.Build.props` puts every project in the same folder (one `project.assets.json` for all);
+  and the default artifacts path follows the nearest `Directory.Build.props`, so a nested one moves the
+  test projects to `tests/artifacts`.
+
 ## 0.1.33 — MCP servers: what read-only means
 - Rules: a repo's `.mcp.json` is reviewed like its hooks, and a read-only MCP server isn't a boundary
   while its CLI is allowed: deny the CLI's write commands too. A read-only docs server, when connected,
