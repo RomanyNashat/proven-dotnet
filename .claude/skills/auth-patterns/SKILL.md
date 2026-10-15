@@ -1,7 +1,7 @@
 ---
 name: auth-patterns
 description: Resource/consumer-side auth for ASP.NET Core, for three token sources — Keycloak JWTs (roles mapped out of realm_access), JWTs from your own OpenIddict server, and its reference tokens through introspection — plus deny-by-default policies, 404 resource checks and client-credentials tokens. Tested in CI with real tokens and a real OpenIddict server. For the issuing side see openiddict-server.
-version: 2.1.0
+version: 2.1.1
 ---
 
 # Authentication & Authorization Patterns
@@ -194,9 +194,12 @@ Tested against a real OpenIddict server:
   request is 401 (tested).
 - **Server down, request refused:** with the introspection endpoint unreachable, the request doesn't get
   through (tested). Never catch that and let the request in.
-- OpenIddict.Validation calls the server on every request; it doesn't cache. Caching the result (the
-  `openiddict-server` §9 idea) makes revocation as slow as the cache time. Measure first: the
-  traffic may not need it.
+- OpenIddict.Validation calls the server on every request; it doesn't cache (tested: ten requests with
+  one token are ten introspections, and each runs two queries on the auth server's database). Caching
+  the result (the `openiddict-server` §9 idea) makes revocation as slow as the cache time. Measure first:
+  in your APM, the API's outgoing span to `/connect/introspect` (its p95, and its share of the request's
+  time) and the auth server's request rate. A few milliseconds on a request that takes hundreds don't
+  need a cache.
 - OpenIddict's own client and HTTP packages bring Polly 7 with them. Reference only the packages you use
   (`OpenIddict.Validation.AspNetCore`, `OpenIddict.Validation.SystemNetHttp`), not the `OpenIddict.AspNetCore`
   metapackage, or Polly 7 and Polly 8 types collide in a service that uses `Microsoft.Extensions.Http.Resilience`

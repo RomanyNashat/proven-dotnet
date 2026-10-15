@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SkillSamples.MsSql;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Auth;
@@ -150,5 +151,28 @@ public sealed class PortalAuthTests(SqlDatabase db) : IClassFixture<SqlDatabase>
         // Refused either way: a 401, or the introspection failure surfacing as an error. Never the user.
         Assert.True(error is not null || answer!.Value.Status != HttpStatusCode.OK, $"{answer?.Status}: {answer?.Body}");
         Assert.NotEqual("admin-tool", answer?.Body);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ReferenceTokens_EveryRequestIsAnIntrospection_NothingIsCached()
+    {
+        // Given a service on reference tokens, and an auth server that counts what reaches it
+        var counters = new PortalCounters();
+        await using var server = await PortalServer.StartAsync(db.ConnectionString, encryptAccessTokens: true, referenceTokens: true, counters);
+        await using var api = await StartApiAsync(server, introspection: true);
+        var token = await TokenFor(server, "admin-tool");
+        counters.Reset();
+
+        // When one user makes ten requests with the same token
+        for (var i = 0; i < 10; i++)
+        {
+            Assert.Equal(HttpStatusCode.OK, (await GetAsync(api, "/me", token)).Status);
+        }
+
+        // Then all ten reach the auth server, and each runs two queries on its database: the cost to set
+        // against the APM numbers before adding a cache, which would delay a revocation by its lifetime
+        Assert.Equal(10, counters.Introspections);
+        Assert.Equal(2 * 10, counters.Commands);
     }
 }
