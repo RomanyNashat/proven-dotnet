@@ -3,6 +3,10 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.5 — CI on Ubuntu 26.04
+- Every Linux job runs on `ubuntu-26.04`, pinned rather than `ubuntu-latest`, which moves between
+  19 October and 19 November. The Windows jobs are unchanged.
+
 ## 0.2.4 — three more symptoms
 - `production-diagnostics`: playbook rows for CPU at the limit (throttling, confirmed from the
   container's `cpu.stat`), slower since a deploy, and a slow first minute after a start; the safe

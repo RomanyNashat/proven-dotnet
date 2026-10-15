@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-latest]
+        os: [ubuntu-26.04, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
@@ -35,7 +35,7 @@ jobs:
 
   content:
     name: Content
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
@@ -75,7 +75,7 @@ jobs:
 
   hooks:
     name: Hooks
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
