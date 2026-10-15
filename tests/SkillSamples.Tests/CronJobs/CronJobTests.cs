@@ -47,10 +47,11 @@ public sealed class CronJobTests(PgDatabase db) : IClassFixture<PgDatabase>, IAs
         builder.Services.AddSingleton(time);
         builder.Services.AddHostedService<TJob>();
         using var host = builder.Build();
+        var outcome = host.Services.GetRequiredService<JobOutcome>();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         await host.RunAsync(timeout.Token);
         Assert.False(timeout.IsCancellationRequested, "the job didn't stop the host");
-        return host.Services.GetRequiredService<JobOutcome>().ExitCode;
+        return outcome.ExitCode;
     }
 
     [Fact]

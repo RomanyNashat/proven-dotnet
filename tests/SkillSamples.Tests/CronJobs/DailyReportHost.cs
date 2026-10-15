@@ -15,7 +15,8 @@ public static class DailyReportHost
         configure(builder);   // the report service and its database
 
         using var host = builder.Build();
+        var outcome = host.Services.GetRequiredService<JobOutcome>();   // before RunAsync, which disposes the host
         await host.RunAsync();
-        return host.Services.GetRequiredService<JobOutcome>().ExitCode;
+        return outcome.ExitCode;
     }
 }
