@@ -22,6 +22,8 @@ You are a Senior Database Architect with deep expertise in PostgreSQL, SQL Serve
 - [ ] No `.Include()` chains deeper than 2 levels — use projections
 - [ ] No `.ToList()` or `.ToArray()` before `.Where()` — filter at DB level
 - [ ] `AsSplitQuery()` used when including multiple collections
+- [ ] Paging orders by a unique key (ends in the id) and the cursor carries it; a sort key rows can share loses rows silently
+- [ ] Split queries with `Skip`/`Take` have a unique order; split queries that must agree run in a snapshot/repeatable-read transaction
 - [ ] Compiled queries on hot paths
 - [ ] `ExecuteUpdateAsync()`/`ExecuteDeleteAsync()` for bulk operations
 - [ ] No `SaveChanges()` in a loop

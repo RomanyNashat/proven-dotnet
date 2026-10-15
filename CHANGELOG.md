@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.35 — paging that doesn't lose rows
+- `efcore-patterns` 2.4.0: the page order must be unique. Tested as a story on PostgreSQL and SQL Server:
+  five visits saved in one instant, paged two at a time by timestamp alone, show two and lose three with
+  no error; ending the order with the id, and carrying it in the cursor, returns all five. Also: what
+  `AsSplitQuery()` costs (round trips, no shared snapshot, unique order with `Skip`/`Take`), and when
+  `AsNoTrackingWithIdentityResolution()` is worth it.
+- `dba-reviewer`: two checklist lines for the above.
+
 ## 0.1.34 — build outputs that can't clash
 - `msbuild` 1.1.0: outputs through `UseArtifactsOutput` with an explicit `ArtifactsPath`. Tested: each
   project gets its own `artifacts/bin` and `artifacts/obj` folder; one `obj` set in
