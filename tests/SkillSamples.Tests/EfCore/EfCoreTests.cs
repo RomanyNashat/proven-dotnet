@@ -224,6 +224,23 @@ public abstract class EfCoreTests<TFixture>(TFixture pg) where TFixture : Visits
     }
 
     [Fact]
+    public async Task Reads_AScalarProjectionTracksNothing_AnEntityInsideAProjectionIsTracked()
+    {
+        await SeedAsync(831, "read me");
+        await using var db = pg.NewContext(831);
+
+        var rows = await db.Visits.Select(v => new { v.Id, v.Notes }).ToListAsync();
+        var trackedAfterScalars = db.ChangeTracker.Entries().Count();
+        var wrapped = await db.Visits.Select(v => new { Visit = v, v.Notes }).ToListAsync();
+        var trackedAfterWrapped = db.ChangeTracker.Entries().Count();
+
+        Assert.Single(rows);
+        Assert.Single(wrapped);
+        Assert.Equal(0, trackedAfterScalars);   // AsNoTracking would change nothing here
+        Assert.Equal(1, trackedAfterWrapped);   // the entity inside the projection is tracked
+    }
+
+    [Fact]
     public async Task ColumnTypes_FollowTheDbaRulesOnThisEngine()
     {
         await using var db = pg.NewContext(callerId: 0);

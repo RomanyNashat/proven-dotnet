@@ -1,7 +1,7 @@
 ---
 name: efcore-patterns
 description: EF Core 10/8, on PostgreSQL and SQL Server — pooled contexts with per-request state, query filters that don't leak between callers, audit interceptors, retries with transactions, concurrency, bulk updates, reviewed migration scripts, DBA column rules. Core code tested in CI on both engines.
-version: 2.2.0
+version: 2.3.0
 ---
 
 # EF Core Patterns
@@ -339,8 +339,10 @@ save is refused; the tablet reloads, sees the phone's text, adds to it, and the 
 
 ## 9. Reads
 
-- `AsNoTracking()` and a projection (`Select` into a DTO) for every read. Lists never return whole
-  patient entities.
+- A projection (`Select` into a DTO) for every read; lists never return whole patient entities.
+  `AsNoTracking()` on a read that returns entities. A projection to plain values tracks nothing already,
+  so `AsNoTracking()` there changes nothing and isn't a review finding; an entity inside a projection
+  (`new { Visit = v }`) is tracked (both tested).
 - Keyset paging (`WHERE id > @after ORDER BY id`), not `Skip`/`Take`, on anything that grows
   (`rules/performance.md`).
 - `AsSplitQuery()` when including two or more collections; `Include` chains no deeper than two levels.

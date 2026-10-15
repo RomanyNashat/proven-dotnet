@@ -3,6 +3,12 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.28 — the tracking rule, stated precisely
+- "`AsNoTracking()` on every read" becomes "on a read that returns entities". Tested on both engines: a
+  projection to plain values tracks nothing already, so `AsNoTracking()` there changes nothing and
+  `dba-reviewer` no longer reports it; an entity inside a projection (`new { Visit = v }`) is tracked.
+  `efcore-patterns`, `dba-reviewer` and `rules/performance.md` say the same.
+
 ## 0.1.27 — a skill for moving to .NET 10
 - `dotnet-upgrade`: moving a service from .NET 8 or 9 to 10 before both leave support on 10 November
   2026, and turning on nullable in an existing codebase. The order of work, what breaks in a backend

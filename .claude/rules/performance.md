@@ -20,7 +20,7 @@
 - Profile before optimizing. Use BenchmarkDotNet with `[MemoryDiagnoser]` to measure.
 
 ## Database Performance
-- EF Core `AsNoTracking()` for ALL read-only queries — reduces memory and CPU.
+- EF Core `AsNoTracking()` for read-only queries that return entities — reduces memory and CPU. A projection to plain values isn't tracked anyway.
 - EF Core compiled queries for hot paths — 10-40% improvement on repeated queries.
 - EF Core `AsSplitQuery()` for multi-collection includes — avoids cartesian explosion.
 - EF Core `ExecuteUpdateAsync()`/`ExecuteDeleteAsync()` for bulk operations — 300-500x faster than SaveChanges loop.
