@@ -1,7 +1,7 @@
 ---
 name: test-coverage
 description: Test coverage for .NET: Coverlet run, Cobertura parse, raise menu, least-covered detection, characterization tests. Used by coverage-analyst + /coverage.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Test Coverage Skill
@@ -117,6 +117,21 @@ where the method has branches. A simple getter with no tests scores 2; a method 
 scores 117. Above 30 is marked "test before changing". Async methods, which Coverlet reports as their
 state machines (`<BookAsync>d__4.MoveNext`), are shown under their own names, and constructors are left
 out. The script and its rules are tested in CI against a fixture report.
+
+**The gap in a change.** A service at 82% can merge a change whose new lines no test runs. Before a
+merge request, check the change itself:
+
+```bash
+git diff -U0 origin/main...HEAD --output=change.diff
+python ~/.claude/skills/test-coverage/scripts/changed_uncovered.py change.diff ./coverage/<run>/coverage.cobertura.xml --min 80
+```
+
+It lists, per changed file, how many of the changed lines the report measures are covered, and the
+uncovered ones by method. Comments and braces don't count, test files and non-C# files are left out,
+and a changed file the report doesn't list at all is reported on its own ("no test loads this file").
+`--min` makes it a gate (exit code 1). Tested in CI with a fixture diff, including the story of a merge
+request that adds a test file and still leaves half its changed lines untested. (`--output` lets git
+write the file: Windows PowerShell's `>` writes UTF-16, which the script reads anyway.)
 
 ---
 
@@ -273,6 +288,7 @@ Output for the review context:
 - Line coverage: 62.4% (target 80%) ⚠️ below threshold
 - Branch coverage: 48.1% (target 70%) ⚠️ below threshold
 - Least-covered: NotificationConsumer.cs (34%), ChallengeProgressCalculator.cs (41%)
+- Changed lines covered: 14/20 (70%); uncovered in `ReminderService.SendAsync` (when a diff base is given)
 - To raise coverage, run `/coverage`
 ```
 
