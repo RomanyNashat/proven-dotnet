@@ -1,5 +1,29 @@
 # Eval results: the harder fixture
 
+## 2026-10-15 — a baseline with no rules, and the known-traps scan (proven-dotnet 0.2.15)
+
+**No rules at all.** One reviewer, started with `claude -p` from a folder outside the repo with an empty
+home folder: no `CLAUDE.md`, no rules, no skills (checked first: asked what rules it had, it answered
+none). Same task as the other runs. Graded blind by a separate agent together with the two earlier runs,
+under shuffled letters; the two earlier runs scored exactly what they scored before.
+
+| | With proven (3 reviewers) | Rules only | No rules |
+|---|---|---|---|
+| Planted findings (found = 1, partial = 0.5) | **11.5 / 14** | **10.5 / 14** | **10 / 14** |
+| Case 1 (H1, H2, H3, H5, H6, H7) | 5 / 6 | 5 / 6 | 4.5 / 6 |
+| Distractors wrongly flagged | 0 / 5 | 0 / 5 | 0 / 5 |
+| False claims about the code | 0 | 1 | 2 |
+
+The rules add half a finding here: the no-rules review flagged the invariant-mode setting only as
+breaking `ar-SA`, never as SqlClient refusing to connect (H2 partial). The rest of the gap is the skills.
+All three missed H6 and H12; the no-rules and rules-only runs also missed H11.
+
+**The known-traps scan** (`known-traps`, 0.2.14) on the same fixture, no model involved: 9 of the 14
+(H1, H2, H3, H4, H5, H6, H7, H10, H11), 0 distractors, in under a second. It catches H6 and H11, the two
+the reviews miss most. It can't see the rest (H8 log redaction, H9 paging order, H12 exception text, H13
+send-before-save, H14 ownership): those need a reader. That's why `/full-review` now runs the scan first
+and gives its table to the reviewers.
+
 ## 2026-10-15 — first runs (proven-dotnet 0.2.9)
 
 Held out: nothing in the commands, agents or skills was changed before these runs. One run each, so these
