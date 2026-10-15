@@ -4,10 +4,10 @@ name: roslyn
 
 on:
   pull_request:
-    paths: ['tools/proven-roslyn-mcp/**', 'tests/ProvenRoslynMcp.Tests/**', '.github/workflows/roslyn.yml']
+    paths: ['tools/proven-roslyn-mcp/**', 'tests/ProvenRoslynMcp.Tests/**', 'tests/Directory.Packages.props', '.github/workflows/roslyn.yml']
   push:
     branches: [main]
-    paths: ['tools/proven-roslyn-mcp/**', 'tests/ProvenRoslynMcp.Tests/**', '.github/workflows/roslyn.yml']
+    paths: ['tools/proven-roslyn-mcp/**', 'tests/ProvenRoslynMcp.Tests/**', 'tests/Directory.Packages.props', '.github/workflows/roslyn.yml']
   workflow_dispatch:
 
 permissions:

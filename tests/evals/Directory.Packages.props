@@ -1,0 +1,6 @@
+<Project>
+  <!-- The eval fixtures stand for someone else's service: they keep their own versions, not the test suite's. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>
