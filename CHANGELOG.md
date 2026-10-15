@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.10 — the harder fixture, run
+- `tests/evals/full-review-hard/results.md`: with proven's three reviewers 11.5/14, rules-only baseline
+  10.5/14, 0 distractors flagged by either, graded blind by a separate agent. The one difference was the
+  transitive Pkcs vulnerability. Both missed the Quartz misfire setting and the unmasked exception text.
+- `dba-reviewer`: a scheduler checklist (misfire setting, `InTimeZone`, clustering and its tables).
+- `security-reviewer`: exception text in log calls isn't masked; Serilog must be a provider under
+  `EnableRedaction`.
+
 ## 0.2.9 — a harder /full-review fixture
 - `tests/evals/full-review-hard/ClinicReminders`: 14 planted findings a careful review without the
   skills tends to miss, each one proven by a skill's test (a singleton holding a DbContext, SqlClient on

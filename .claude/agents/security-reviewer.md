@@ -73,6 +73,8 @@ with the tested fix, and its §8 is the detailed checklist.
 ### A09: Security Logging and Alerting Failures
 - [ ] Security events logged: login attempts, auth failures, privilege changes
 - [ ] PII NEVER appears in logs — Serilog masking configured
+- [ ] An exception passed to a log call (`LogError(ex, ...)`) is not masked: a downstream error (SMS, payment, a validation message) can echo the number or ID it was given. Log the type and status, or the message as a property the masking sees (`skills/pii-masking/`)
+- [ ] Classified logging (`EnableRedaction`) with Serilog: Serilog must be a provider (`AddSerilog`), not the factory (`UseSerilog`), or the redactor never runs and classified fields vanish
 - [ ] Correlation IDs for distributed request tracing
 - [ ] Audit trail for data access and modifications
 
