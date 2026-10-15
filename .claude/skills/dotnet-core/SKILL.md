@@ -333,6 +333,8 @@ services.AddSingleton<ReportCache>();                // ...taking a scoped DbCon
 
 ## See also
 - **`dotnet-upgrade`** — moving a service from .NET 8 or 9 to 10, and turning on nullable in an existing one.
+- **`msbuild`** — shared build settings, one version per package (Central Package Management), and why a
+  build did what it did.
 - **`polly-resilience`** — retries, timeouts and circuit breakers for the typed clients here.
 - **`localization`** — `RiyadhTime`, cultures, and what changes on an image without ICU.
 - **`aspire-patterns`** — when a solution needs orchestrated local composition (AppHost, service

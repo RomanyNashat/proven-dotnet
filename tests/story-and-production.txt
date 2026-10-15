@@ -39,3 +39,4 @@ owasp-aspnetcore
 secret-management
 auth-patterns
 dotnet-upgrade
+msbuild

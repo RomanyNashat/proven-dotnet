@@ -3,6 +3,20 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.32 — MSBuild and central package versions
+- `msbuild` (new): `Directory.Build.props` for shared settings, Central Package Management for one
+  version per package, moving a solution onto it, and finding out why the build or restore did what it
+  did (`-getProperty`, `-pp`, `dotnet nuget why`, binary logs replayed to text, and why a binary log is
+  kept private). Tested by restoring a sample solution with the real CLI: a transitive package with known
+  vulnerabilities fails the audit until one central line pins it, a project can't take its own version
+  (NU1008) or override the central one (NU1013), a range restores its lowest version, and a nested
+  `Directory.Build.props` without the import silently drops the shared settings.
+- `zero-vulns`: under Central Package Management a transitive pin is a `PackageVersion` with transitive
+  pinning, not a direct reference in each project.
+- `rules/testing.md`: the FluentAssertions range restores 7.0.0; raising the lower bound is how a 7.x fix
+  comes in.
+- `build-error-resolver`: package version questions and build-logic questions go through `msbuild`.
+
 ## 0.1.31 — test quality: risk ranking and test review
 - `test-coverage`: `scripts/coverage_risk.py` ranks methods from a Cobertura report by CRAP score
   (complexity² × (1 − coverage)³ + complexity), folds async state machines back into their methods,

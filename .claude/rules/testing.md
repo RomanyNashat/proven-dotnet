@@ -18,8 +18,9 @@ No implementation code without a failing test first. No exceptions.
   ```xml
   <PackageReference Include="FluentAssertions" Version="[7.0.0,8.0.0)" />
   ```
-  The bracketed range allows 7.x patch/minor fixes but blocks 8.0+. (An exact pin `[7.0.0]` also works
-  but forfeits 7.x fixes.) Prefer this over an unpinned `Version="7.0.0"`, which NuGet may float upward.
+  The bracketed range blocks 8.0+. NuGet restores the lowest version a range allows, so it gives 7.0.0
+  until you raise the lower bound to the 7.x fix you want. (With Central Package Management the range
+  goes on the `PackageVersion`; see `skills/msbuild/`.) Prefer this over an unpinned `Version="7.0.0"`, which NuGet may float upward.
   If a project must move off FluentAssertions entirely, the license-safe options are the community fork
   **AwesomeAssertions** (original Apache license) or **Shouldly**. Never upgrade to 8+ in a
   commercial project without a purchased license.

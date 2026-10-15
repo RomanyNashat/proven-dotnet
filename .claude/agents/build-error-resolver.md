@@ -33,9 +33,19 @@ You are a Senior .NET Developer who specializes in diagnosing and resolving buil
 - **CS0029**: Cannot implicitly convert → check generic type arguments, missing cast, wrong overload
 
 ### NuGet Issues
-- Version conflicts: `dotnet list package --include-transitive` to find the conflict
-- Central Package Management: check `Directory.Packages.props` for version pinning
-- Restore failures: check NuGet.config sources, authentication, network access
+- Version conflicts: `dotnet nuget why <project> <package>` shows which package brought a version in;
+  `dotnet list package --include-transitive` lists them all
+- Central Package Management: NU1008 (a version on a `PackageReference`), NU1010 (no `PackageVersion`),
+  NU1011 (a floating version), NU1013 (`VersionOverride` not allowed). The fix goes in
+  `Directory.Packages.props`, not the project. See the `msbuild` skill.
+- Restore failures: check NuGet.config sources, source mapping (NU1507), authentication, network access
+
+### Build Logic
+- A setting that "should" apply but doesn't: `dotnet msbuild <project> -getProperty:<Name>` for the
+  value, `-pp:full.xml` for the imports. A nested `Directory.Build.props` that doesn't import its parent
+  drops the root settings silently.
+- Anything deeper: a binary log (`-bl`), replayed to text and searched (`msbuild` §4). It can hold
+  secrets, so it stays private.
 
 ### Runtime Exceptions
 - `InvalidOperationException` in DI: missing registration, lifetime mismatch (scoped in singleton)
