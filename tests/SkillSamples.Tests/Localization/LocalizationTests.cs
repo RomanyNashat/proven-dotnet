@@ -63,6 +63,7 @@ public sealed class LocalizationTests
         // CultureInfo.Calendar is the culture's default; the calendar a culture formats with is DateTimeFormat's.
         Assert.IsType<GregorianCalendar>(Cultures.ArabicGregorian.DateTimeFormat.Calendar);
         Assert.IsType<UmAlQuraCalendar>(Cultures.ArabicHijri.DateTimeFormat.Calendar);
+        Assert.Same(arSa.Calendar.GetType(), Cultures.ArabicHijri.Calendar.GetType());   // the default, not what it writes with
         Assert.Throws<FormatException>(() => DateTime.Parse("2026-10-04", Cultures.ArabicHijri));
     }
 
