@@ -3,6 +3,12 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.11 — [LogProperties], and FakeLogger in our own tests
+- `pii-masking` 1.4.0: `[LogProperties]` logs every property of an object; only the classified ones are
+  redacted. Tested: a property added later without the attribute goes out in clear.
+- The OpenIddict and CAP tests collect the server's errors with `FakeLogCollector` instead of a
+  hand-written logger provider.
+
 ## 0.2.10 — the harder fixture, run
 - `tests/evals/full-review-hard/results.md`: with proven's three reviewers 11.5/14, rules-only baseline
   10.5/14, 0 distractors flagged by either, graded blind by a separate agent. The one difference was the

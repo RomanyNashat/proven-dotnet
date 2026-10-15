@@ -6,6 +6,7 @@ using DotNetCore.CAP.PostgreSql;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -44,7 +45,7 @@ public sealed class CapTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncL
     private readonly string _role = $"cap_app_{Guid.NewGuid():N}";
     private readonly string _group = $"shipping-{Guid.NewGuid():N}";
     private readonly RecordingShipments _shipments = new();
-    private readonly ErrorLog _errors = new();
+    private readonly FakeLogCollector _errors = new();
     private string ServiceConnection => new NpgsqlConnectionStringBuilder(db.ConnectionString) { Username = _role, Password = "samples" }.ConnectionString;
 
     // Stands in for the deploy: CAP's own schema script, run once by a role that may create tables, then
@@ -72,7 +73,7 @@ public sealed class CapTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncL
     private IHost Build(Action<IServiceCollection>? change = null)
     {
         var builder = Host.CreateApplicationBuilder();
-        builder.Logging.ClearProviders().AddProvider(_errors);
+        builder.Logging.ClearProviders().AddProvider(new FakeLoggerProvider(_errors));
         builder.Services.AddEventBus(ServiceConnection, RabbitMq, _group);
         builder.Services.AddSingleton(NpgsqlDataSource.Create(ServiceConnection));
         builder.Services.AddTransient<PlaceOrder>();
@@ -113,7 +114,7 @@ public sealed class CapTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncL
                 await Task.Delay(200);
             }
         }
-        throw new TimeoutException($"CAP didn't create its queue. Errors: {_errors}");
+        throw new TimeoutException($"CAP didn't create its queue. Errors: {_errors.ErrorText()}");
     }
 
     private static async Task Until(Func<bool> done, TimeSpan within)
@@ -134,7 +135,7 @@ public sealed class CapTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncL
             return orderId;
         });
 
-        Assert.True(_shipments.Created.Count(o => o.OrderId == id) == 1, $"shipments: {_shipments.Created.Count}; errors: {_errors}");
+        Assert.True(_shipments.Created.Count(o => o.OrderId == id) == 1, $"shipments: {_shipments.Created.Count}; errors: {_errors.ErrorText()}");
     }
 
     [Fact]
@@ -195,14 +196,14 @@ public sealed class CapTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncL
         // CAP's own initializer can't create it with the service role: it logs the error and keeps running
         using (var plain = Build(s => { Missing(s); s.AddSingleton<IStorageInitializer, PostgreSqlStorageInitializer>(); }))
         {
-            Assert.False(await StopsWithin(plain, TimeSpan.FromSeconds(5)), $"errors: {_errors}");
+            Assert.False(await StopsWithin(plain, TimeSpan.FromSeconds(5)), $"errors: {_errors.ErrorText()}");
             await plain.StopAsync();
         }
 
         // With the check, CAP's start-up fails and the host stops (the pod restarts and the deploy fails)
         using var checkedHost = Build(Missing);
         Assert.True(await StopsWithin(checkedHost, TimeSpan.FromSeconds(15)), "the service kept running without CAP's tables");
-        Assert.Contains(_errors.Errors, e => e.Contains("reviewed CAP schema script"));
+        Assert.Contains(_errors.Errors(), e => e.Contains("reviewed CAP schema script"));
     }
 
     // CAP starts in a background service, so a failure there stops the host instead of failing StartAsync.
