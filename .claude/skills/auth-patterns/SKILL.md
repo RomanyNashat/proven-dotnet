@@ -1,7 +1,7 @@
 ---
 name: auth-patterns
 description: Resource/consumer-side auth for ASP.NET Core, for three token sources — Keycloak JWTs (roles mapped out of realm_access), JWTs from your own OpenIddict server, and its reference tokens through introspection — plus deny-by-default policies, 404 resource checks and client-credentials tokens. Tested in CI with real tokens and a real OpenIddict server. For the issuing side see openiddict-server.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Authentication & Authorization Patterns
@@ -267,6 +267,11 @@ app.MapGet("/visits/{id:int}", VisitEndpoints.GetVisit);
 Tested: the patient sees their visit, a doctor sees it, another patient gets 404, the same as a visit that
 doesn't exist. Every endpoint that takes an id needs this, or the query filtered by owner
 (`rules/security.md`); a list query filters by owner in SQL instead of loading and checking each row.
+
+Tested as a story: a valid token issued to the pharmacy app leaks and is replayed against the visits API.
+It's refused for its audience, while the doctor and the visit's owner get in, and another patient with a
+proper token is told the visit doesn't exist. On a slim image (no ICU, no tzdata) tokens are validated and
+expiry still counts.
 
 ## 5. The current user
 

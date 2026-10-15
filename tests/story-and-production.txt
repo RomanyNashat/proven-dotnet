@@ -33,3 +33,8 @@ api-design
 localization
 production-diagnostics
 nginx
+encryption-patterns
+pii-masking
+owasp-aspnetcore
+secret-management
+auth-patterns

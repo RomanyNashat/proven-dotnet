@@ -1,7 +1,7 @@
 ---
 name: owasp-aspnetcore
 description: OWASP Top 10:2025 mapped to ASP.NET Core services — which skill holds the tested fix for each category, plus the ones this skill owns — security headers that survive the error path, HSTS, CORS, an SSRF guard that checks the resolved address, and JSON polymorphism by allowlist. Tested in CI.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # OWASP Top 10:2025 for ASP.NET Core
@@ -203,6 +203,9 @@ public static class OutboundGuard
 
 - Tested against a real service on `127.0.0.1`: a plain client reaches it, the guarded client is refused,
   by IP and by the name `localhost`. The address list is tested case by case, the IPv4-mapped form included.
+- Tested as a story: a partner registers callback URLs that point inside (`localhost`, `[::ffff:127.0.0.1]`,
+  the metadata address `169.254.169.254`); each one is refused at connect time, before a byte is sent. The
+  guard works the same on a slim image (no ICU, no tzdata).
 - `IPAddress` has no `IsPrivate()` (tested); `IPNetwork.Contains` is the check.
 - Use this only for URLs from outside. Calls to your own services and to fixed partners use a named client
   with a configured base address, and never take a full URL from a request.

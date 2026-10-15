@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Encryption;
@@ -142,5 +143,47 @@ public sealed class EncryptionTests
 
         Assert.Throws<CryptographicException>(() => versioned.Decrypt([0x09, 1, 2, 3]));
         Assert.Throws<CryptographicException>(() => versioned.Decrypt([]));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public void Story_ALegacyNationalIdIsReadAndSavedAgain_NowItsBoundToItsRow_AndACopyIntoAnotherRowFails()
+    {
+        var versioned = new VersionedEncryptor(Key);
+        byte[] Row(int id) => Encoding.UTF8.GetBytes($"patients:{id}:national_id");
+        var nationalId = Encoding.UTF8.GetBytes("1089234567");
+
+        // Given: patient 7's national id, written last year in the old CBC format
+        using var aes = Aes.Create();
+        aes.Key = Key;
+        var iv = RandomNumberGenerator.GetBytes(16);
+        byte[] legacy = [0x01, .. iv, .. aes.EncryptCbc(nationalId, iv, PaddingMode.PKCS7)];
+
+        // When: the service reads it and saves the record again, and later someone copies the stored
+        // value into patient 8's row
+        var read = versioned.Decrypt(legacy, Row(7));
+        var resaved = versioned.Encrypt(read, Row(7));
+
+        // Then: the old value was readable from any row (it isn't bound to one), the new one is GCM and
+        // bound to row 7, and in row 8 it fails instead of showing patient 7's id as patient 8's
+        Assert.Equal(nationalId, versioned.Decrypt(legacy, Row(8)));
+        Assert.Equal(0x02, resaved[0]);
+        Assert.Equal(nationalId, versioned.Decrypt(resaved, Row(7)));
+        Assert.ThrowsAny<CryptographicException>(() => versioned.Decrypt(resaved, Row(8)));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public void Production_NoIcuNoTzdata_ArabicValuesRoundTrip_AndFitTheirColumn()
+    {
+        ProductionConditions.Require();
+        var strings = new StringEncryptor(new VersionedEncryptor(Key));
+        const string name = "عبدالرحمن بن محمد";
+
+        var stored = strings.Encrypt(name, "patients:7:name");
+
+        Assert.Equal(name, strings.Decrypt(stored, "patients:7:name"));
+        Assert.True(stored.Length <= StringEncryptor.ColumnLength(Encoding.UTF8.GetByteCount(name), AesGcmEncryptor.Overhead + 1),
+            $"{stored.Length} chars");
     }
 }

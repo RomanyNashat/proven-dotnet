@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Auth;
@@ -184,6 +185,41 @@ public sealed class AuthTests
         Assert.Equal(HttpStatusCode.OK, await GetAsync(app, "/visits/1", Token("dr-x", realmRoles: new[] { "doctor" })));
         Assert.Equal(HttpStatusCode.NotFound, await GetAsync(app, "/visits/1", Token("patient-b")));
         Assert.Equal(HttpStatusCode.NotFound, await GetAsync(app, "/visits/2", Token("patient-a")));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_ATokenLeakedFromThePharmacyAppIsReplayed_ItsRefused_WhileTheDoctorAndThePatientGetIn()
+    {
+        await using var app = await StartAsync();
+
+        // Given: a valid token for patient B, issued to the pharmacy app, has leaked
+        var leaked = Token("patient-b", audience: "pharmacy-api");
+
+        // When: someone replays it against the visits API, and the real users come in as usual
+        var replayed = await GetAsync(app, "/visits/1", leaked);
+        var doctor = await GetAsync(app, "/visits/1", Token("dr-x", realmRoles: new[] { "doctor" }));
+        var owner = await GetAsync(app, "/visits/1", Token("patient-a"));
+        var otherPatient = await GetAsync(app, "/visits/1", Token("patient-b"));
+
+        // Then: the leaked token is refused for its audience, not for its signature; the doctor and the
+        // owner see the visit; patient B, even with a proper token, is told it doesn't exist
+        Assert.Equal(HttpStatusCode.Unauthorized, replayed);
+        Assert.Equal(HttpStatusCode.OK, doctor);
+        Assert.Equal(HttpStatusCode.OK, owner);
+        Assert.Equal(HttpStatusCode.NotFound, otherPatient);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_TokensAreValidated_AndExpiryStillCounts()
+    {
+        ProductionConditions.Require();
+        await using var app = await StartAsync();
+
+        Assert.Equal(HttpStatusCode.OK, await GetAsync(app, "/visits/1", Token("dr-x", realmRoles: new[] { "doctor" })));
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            await GetAsync(app, "/visits/1", Token("dr-x", realmRoles: new[] { "doctor" }, expiresIn: TimeSpan.FromMinutes(-2))));
     }
 
     private sealed class CountingTokenClient : IServiceTokenClient

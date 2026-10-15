@@ -1,7 +1,7 @@
 ---
 name: secret-management
 description: Secret management for .NET: no hardcoded secrets, IOptions config, Key Vault / env injection, rotation.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Secret Management Patterns
@@ -187,6 +187,9 @@ public static class RotatingPostgres
 Tested: the role's password changes, the source returns the new one, and the next connection opens. The
 connection string has no password; the data source is a singleton (`AddNpgsqlDataSource`, or register
 the built one). The method is `UsePeriodicPasswordProvider`; there is no `ConfigurePeriodicPasswordProvider`.
+As a story: the password rotates mid-shift while the service holds an open connection. That connection
+keeps working (a password change doesn't end a session), and a fresh one logs in with the new password,
+with no restart. The same rotation works on a slim image (no ICU, no tzdata).
 
 **SQL Server:** SqlClient has no password callback, so the connection string is read per request.
 
