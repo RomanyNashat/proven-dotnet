@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.2 — classified logging
+- `pii-masking` 1.3.0: a third layer. A `[LoggerMessage]` parameter marked `[PatientIdentifier]` is
+  redacted in the logging pipeline before any provider sees it (`Microsoft.Extensions.Compliance.Redaction`
+  with `EnableRedaction`). Tested with `FakeLogger` and Serilog: the classified value is `****` in the
+  message and the field; an ordinary call with the same value isn't redacted, so the pattern operators
+  stay. **Story:** Serilog as a provider keeps redaction; `UseSerilog()` replaces the factory, the
+  redactor never runs, and the classified field silently disappears from the line.
+
 ## 0.2.1 — the heartbeat measures against the container's limits
 - `production-diagnostics`: CPU and memory in the heartbeat line are measured against the container's
   cgroup limits (`ContainerLimits`: v2 with the smallest of the pod's and the container's, v1, or none).
