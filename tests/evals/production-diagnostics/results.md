@@ -28,9 +28,9 @@ are results, not rates.
   doesn't have.
 
 **Both** named starvation from the queue and thread numbers with CPU flat, and confirmed it beyond the
-heartbeat (`/health` slow, the APM gap, the Redis timeout's worker counts). Both read the CPU against the half-core limit and used the throttling counters, and put Server GC
-on a small pod as the thing making it worse. Both found the unbounded static cache and fixed it with a
-bounded one. Neither blamed a victim, made `SetMinThreads` or a bigger limit the fix, or asked for a full
+heartbeat (`/health` slow, the APM gap, the Redis timeout's worker counts). Both read the CPU against
+the half-core limit, used the throttling counters, and named Server GC on a small pod as what makes it
+worse. Both found the unbounded static cache and fixed it with a bounded one. Neither blamed a victim, made `SetMinThreads` or a bigger limit the fix, or asked for a full
 dump.
 
 ## What it means

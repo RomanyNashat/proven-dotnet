@@ -12,6 +12,8 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
 - First runs in `results.md`: with proven 9/9 Musts, rules-only baseline 8.5/9; all three diagnoses
   right and no Must-not broken either way, graded blind. The baseline's slips were in the memory case
   (a counter misread, a gcdump asked for without its cost).
+- `testing-tdd` 2.3.1: why there's no generated wrapper for statics. .NET has the seams; where it
+  doesn't, a small interface for what the code does beats a mirror of `File`.
 
 ## 0.2.12 — the test gap in a change
 - `test-coverage` 1.2.0: `scripts/changed_uncovered.py` takes a diff and a Cobertura report and lists the
