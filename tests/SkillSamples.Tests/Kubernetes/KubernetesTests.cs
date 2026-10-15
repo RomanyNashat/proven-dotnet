@@ -76,6 +76,7 @@ public sealed class KubernetesTests
         builder.Services.AddHostedService(_ => worker);
         using var host = builder.Build();
         await host.StartAsync();
+        await worker.Running.WaitAsync(TimeSpan.FromSeconds(10));   // ExecuteAsync starts in the background
 
         await host.StopAsync();   // SIGTERM
 
