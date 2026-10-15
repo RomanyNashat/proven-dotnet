@@ -35,3 +35,4 @@ production-diagnostics
 nginx
 encryption-patterns
 pii-masking
+owasp-aspnetcore

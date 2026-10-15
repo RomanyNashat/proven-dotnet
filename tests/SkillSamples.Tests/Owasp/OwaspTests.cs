@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SkillSamples.Api;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.Owasp;
@@ -236,6 +237,68 @@ public sealed class OwaspTests
             var error = await Record.ExceptionAsync(() => client.GetStringAsync(new Uri($"http://{host}:{port}/")));
             Assert.True(IsBlocked(error), $"{host}: {error}");
         }
+    }
+
+    private static async Task<(WebApplication App, int Port)> InternalServiceAsync()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.ConfigureKestrel(k => k.Listen(IPAddress.Loopback, 0));
+        builder.Logging.ClearProviders();
+        var app = builder.Build();
+        app.MapGet("/admin", () => "internal admin");
+        await app.StartAsync();
+        return (app, new Uri(app.Urls.First()).Port);
+    }
+
+    private static HttpClient PartnerWebhookClient(ServiceProvider provider) =>
+        provider.GetRequiredService<IHttpClientFactory>().CreateClient("partner-webhooks");
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_APartnerRegistersWebhookUrlsThatPointInside_EveryOneIsRefused_BeforeAByteIsSent()
+    {
+        var (internalService, port) = await InternalServiceAsync();
+        await using var _ = internalService;
+        var services = new ServiceCollection();
+        services.AddPublicOnlyHttpClient("partner-webhooks");
+        await using var provider = services.BuildServiceProvider();
+
+        // Given: a partner registers callback URLs for "their" server: a name, an IPv4 address written as
+        // IPv6, and the cloud metadata address
+        string[] callbacks =
+        [
+            $"http://localhost:{port}/admin",
+            $"http://[::ffff:127.0.0.1]:{port}/admin",
+            "http://169.254.169.254/latest/meta-data/",
+        ];
+
+        // When: the service calls each one back
+        var errors = new List<Exception?>();
+        foreach (var url in callbacks)
+        {
+            errors.Add(await Record.ExceptionAsync(() => PartnerWebhookClient(provider).GetStringAsync(new Uri(url))));
+        }
+
+        // Then: each is refused at connect time, on the address the name resolved to
+        Assert.All(errors.Select((e, i) => (e, callbacks[i])), x => Assert.True(IsBlocked(x.e), $"{x.Item2}: {x.e}"));
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    public async Task Production_NoIcuNoTzdata_TheGuardStillRefusesInternalAddresses()
+    {
+        ProductionConditions.Require();
+        var (internalService, port) = await InternalServiceAsync();
+        await using var _ = internalService;
+        var services = new ServiceCollection();
+        services.AddPublicOnlyHttpClient("partner-webhooks");
+        await using var provider = services.BuildServiceProvider();
+
+        var error = await Record.ExceptionAsync(() => PartnerWebhookClient(provider).GetStringAsync(new Uri($"http://localhost:{port}/admin")));
+
+        Assert.True(IsBlocked(error), $"{error}");
+        Assert.True(OutboundGuard.IsPublic(IPAddress.Parse("203.0.113.9")));
+        Assert.False(OutboundGuard.IsPublic(IPAddress.Parse("::ffff:10.42.0.7")));
     }
 
     private static bool IsBlocked(Exception? error)
