@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.15 — what a reference token costs per request
+- `auth-patterns` 2.1.1: OpenIddict.Validation doesn't cache introspection, now tested: ten requests with
+  one token are ten introspections, each two queries on the auth server's database. What to read in the
+  APM before deciding on a cache, which delays a revocation by its lifetime.
+- `tests/evals/full-review-hard/results.md`: a baseline with no rules at all (10/14, against 10.5 with the
+  rules and 11.5 with proven), and the known-traps scan on the same fixture (9/14 with no model, including
+  the two findings every review missed most).
+
 ## 0.2.14 — one scan for the known traps
 - New `known-traps` skill: `scan_traps.py` scans one service or many for 29 traps the skills' own tests
   found (a Quartz store that drops missed runs, SqlClient in invariant mode, a singleton holding a

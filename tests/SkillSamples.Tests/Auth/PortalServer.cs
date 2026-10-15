@@ -25,7 +25,8 @@ public static class PortalServer
 {
     public const string Secret = "test-secret-not-for-production";
 
-    public static async Task<WebApplication> StartAsync(string connectionString, bool encryptAccessTokens, bool referenceTokens)
+    public static async Task<WebApplication> StartAsync(
+        string connectionString, bool encryptAccessTokens, bool referenceTokens, PortalCounters? counters = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.ConfigureKestrel(k => k.Listen(IPAddress.Loopback, 0));
@@ -34,6 +35,10 @@ public static class PortalServer
         {
             o.UseSqlServer(connectionString);
             o.UseOpenIddict();
+            if (counters is not null)
+            {
+                o.AddInterceptors(counters);
+            }
         });
         builder.Services.AddOpenIddict()
             .AddCore(o => o.UseEntityFrameworkCore().UseDbContext<PortalAuthDbContext>())
@@ -59,6 +64,16 @@ public static class PortalServer
             });
 
         var app = builder.Build();
+        app.Use(async (http, next) =>
+        {
+            if (http.Request.Path.StartsWithSegments("/connect/introspect"))
+            {
+                counters?.CountIntrospection();
+            }
+
+            await next(http);
+        });
+        app.UseAuthentication();   // after the counter: OpenIddict answers the endpoints from here
         app.MapPost("connect/token", IssueAsync);
         await CreateSchemaAndClientsAsync(app.Services);
         await app.StartAsync();
