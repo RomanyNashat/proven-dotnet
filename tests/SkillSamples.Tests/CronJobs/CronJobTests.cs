@@ -81,6 +81,22 @@ public sealed class CronJobTests(PgDatabase db) : IClassFixture<PgDatabase>, IAs
     }
 
     [Fact]
+    public async Task RunAsync_DisposesTheHost_SoTheOutcomeIsReadBeforeIt()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.Services.AddSingleton<JobOutcome>();
+        builder.Services.AddSingleton<IReportService>(Mock.Of<IReportService>());
+        builder.Services.AddSingleton<TimeProvider>(new FakeTimeProvider(TwoAmRiyadh));
+        builder.Services.AddHostedService<DailyReportJob>();
+        using var host = builder.Build();
+
+        await host.RunAsync();
+
+        Assert.Throws<ObjectDisposedException>(() => host.Services.GetRequiredService<JobOutcome>());
+    }
+
+    [Fact]
     [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
     public async Task Story_ReportServiceDown_TheRunExitsWithOne_SoKubernetesRetriesIt()
     {
