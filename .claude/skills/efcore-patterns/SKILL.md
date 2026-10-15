@@ -1,7 +1,7 @@
 ---
 name: efcore-patterns
 description: EF Core 10/8, on PostgreSQL and SQL Server — pooled contexts with per-request state, query filters that don't leak between callers, audit interceptors, retries with transactions, concurrency, bulk updates, reviewed migration scripts, DBA column rules. Core code tested in CI on both engines.
-version: 2.3.0
+version: 2.4.0
 ---
 
 # EF Core Patterns
@@ -345,7 +345,41 @@ save is refused; the tablet reloads, sees the phone's text, adds to it, and the 
   (`new { Visit = v }`) is tracked (both tested).
 - Keyset paging (`WHERE id > @after ORDER BY id`), not `Skip`/`Take`, on anything that grows
   (`rules/performance.md`).
+- **The page order is unique.** Sorting by a column rows can share (a timestamp, a status, a name) and
+  paging on it loses rows: a cursor of "later than the last row" skips the rest of that row's ties.
+  Tested as a story: five visits saved in one instant, paged two at a time by time alone, show two and
+  lose three, with no error. End the order with the id and put the id in the cursor:
+
+<!-- sample: tests/SkillSamples.Tests/EfCore/VisitPages.cs -->
+```csharp
+    public static Task<List<VisitRow>> NextAsync(VisitsDbContext db, VisitCursor? after, int size, CancellationToken ct)
+    {
+        var visits = db.Visits.AsQueryable();
+        if (after is not null)
+        {
+            visits = visits.Where(v => v.CreatedAt > after.CreatedAt || (v.CreatedAt == after.CreatedAt && v.Id > after.Id));
+        }
+
+        return visits
+            .OrderBy(v => v.CreatedAt).ThenBy(v => v.Id)
+            .Take(size)
+            .Select(v => new VisitRow(v.Id, v.CreatedAt, v.Notes))
+            .ToListAsync(ct);
+    }
+```
+
+  The same holds for `Skip`/`Take`: the database promises no order among ties, so two requests can
+  return them differently, and a row shows on two pages or on none. An index on `(CreatedAt, Id)` serves
+  the cursor.
 - `AsSplitQuery()` when including two or more collections; `Include` chains no deeper than two levels.
+  What it costs: one round trip per collection, and the queries don't see the same moment. A row
+  changed between them gives a parent and children that never existed together. When that matters, run
+  them in a transaction at snapshot or repeatable-read isolation. With `Skip`/`Take`, the order must be
+  unique, or the parents and their children come from different pages.
+- **`AsNoTracking()` copies shared rows.** Fifty visits that include the same doctor get fifty doctor
+  objects. Usually harmless; when the results are big or the code compares references, use
+  `AsNoTrackingWithIdentityResolution()`, which shares one instance per key and still tracks nothing. A
+  projection avoids the question.
 - Compiled queries (`EF.CompileAsyncQuery`) only for a measured hot path. Reports and complex reads go to
   Dapper.
 - Slow queries show up as database spans in Elastic APM (`observability`); no logging interceptor needed.
