@@ -25,6 +25,9 @@ jobs:
           python-version: '3.12'
       - name: Unit tests
         run: python -m unittest discover tests/installer -v
+      # The known-traps scan runs on developers' Windows machines too: test it there.
+      - name: Known-traps scan
+        run: python -m unittest discover tests/traps -v
       - name: End to end (bash wrappers)
         if: runner.os != 'Windows'
         run: bash tests/installer/e2e.sh

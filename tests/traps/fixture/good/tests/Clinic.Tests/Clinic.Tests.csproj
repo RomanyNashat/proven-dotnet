@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="[7.0.0,8.0.0)" />
+  </ItemGroup>
+</Project>
