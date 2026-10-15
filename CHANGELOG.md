@@ -3,6 +3,12 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.3 — statics a test can't control
+- `testing-tdd` 2.3.0: "Code a test can't control": finding the clock, disk, network, random and
+  environment statics with `proven-roslyn`'s `find_references`, and the seam for each (`TimeProvider`,
+  injected `Random`, `IOptions<T>`, a small file interface, typed `HttpClient`). Moving one is a refactor,
+  so a characterization test comes first.
+
 ## 0.2.2 — classified logging
 - `pii-masking` 1.3.0: a third layer. A `[LoggerMessage]` parameter marked `[PatientIdentifier]` is
   redacted in the logging pipeline before any provider sees it (`Microsoft.Extensions.Compliance.Redaction`

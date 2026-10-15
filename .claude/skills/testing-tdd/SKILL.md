@@ -1,7 +1,7 @@
 ---
 name: testing-tdd
 description: TDD for .NET — red-green-refactor, xUnit + Moq + FluentAssertions 7 + AutoFixture, AAA, naming, theories at the edges, verifying the side effects that matter, a fixed clock. Test behaviour, not implementation. Tested in CI, also under slim-image conditions.
-version: 2.2.0
+version: 2.3.0
 ---
 
 # TDD & Unit Testing Patterns
@@ -318,6 +318,27 @@ ICU): `new CultureInfo("en-US")` throws `CultureNotFoundException`, so such a te
 crashes in CI. Code that formats for machines uses `CultureInfo.InvariantCulture`, and its tests need no
 culture. Arabic formatting belongs to localization tests that check ICU first (`localization`).
 
+## Code a test can't control: statics
+
+A static call reaches the clock, the disk or the network, and no test can set it. Before writing tests
+for existing code, find them. It's a symbol question: `find_references` in `proven-roslyn` on
+`System.DateTime.UtcNow` lists the real calls, not comments or a `UtcNowish` helper. Text search is the
+fallback when the server isn't loaded.
+
+| Static | Why the test can't control it | The seam |
+|---|---|---|
+| `DateTime.Now`/`UtcNow`/`Today`, `DateTimeOffset.UtcNow`, `Stopwatch` | the real clock | inject `TimeProvider`; `time.GetUtcNow()`, `time.GetTimestamp()` and `GetElapsedTime`; `FakeTimeProvider` in tests |
+| `Task.Delay(x)`, `Thread.Sleep`, a `PeriodicTimer` without a provider | real waiting | `Task.Delay(x, time)`, `new PeriodicTimer(x, time)` |
+| `Random.Shared`, `new Random()` | unseeded | inject `Random`; seed it in tests |
+| `Guid.NewGuid()`, `Guid.CreateVersion7()` | new every run | usually fine: assert the shape, not the value. When the value matters (an idempotency key), take it as a parameter |
+| `Environment.GetEnvironmentVariable` | process-wide | `IOptions<T>` bound from configuration |
+| `File.*`, `Directory.*` | the real disk | a small interface for what the code does with files (`IReportStore`), or a temp folder in an integration test |
+| `new HttpClient()` | the real network | a typed client from `IHttpClientFactory`; a stub `HttpMessageHandler` in tests |
+| a static field used as a cache or a `.Instance` singleton | shared by every test | an instance registered as a DI singleton |
+
+Moving a call behind a seam is a refactor: pin today's behaviour with a characterization test first
+(`remediation-parity`), then change it.
+
 ## Reviewing a test: what to fix
 
 A test that passes proves something only if it could fail. When writing or reviewing one, fix these:
@@ -343,4 +364,6 @@ reached, and `VerifyAll()` on that mock fails, which is how to find it.
 - A `FakeTimeProvider` for time, injected into AutoFixture too.
 - Theories at the edges; verify the side effects that matter, not every call.
 - No culture set in unit tests.
+- Find the statics before testing existing code (`find_references`); move them behind a seam only
+  after a characterization test.
 - A test that can't fail is fixed before it's merged ("Reviewing a test").
