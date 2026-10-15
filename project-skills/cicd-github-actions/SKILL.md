@@ -1,14 +1,15 @@
 ---
 name: cicd-github-actions
 description: GitHub Actions for .NET: build/test/publish pipelines, caching, matrix builds, secrets, container publishing. The workflows shown pass actionlint (with shellcheck) in CI.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # GitHub Actions CI/CD Patterns
 
 Every workflow below is a file in `tests/Workflows/` that CI checks with actionlint, including shellcheck
-on the `run:` scripts. That proves they're valid workflows with sound shell; it doesn't run them against
-your registry or cluster.
+on the `run:` scripts. That proves they're valid workflows with sound shell. Tests in the same folder read
+them as YAML and check what they decide: which runs reach production, which image tag gets deployed, what
+each job may do. Nothing here runs against a real registry or cluster.
 
 ## PR Validation Pipeline
 
@@ -73,13 +74,22 @@ jobs:
       - name: Unit Tests
         run: |
           dotnet test --no-build \
-            --filter "Category!=Integration" \
+            --filter "Category!=Integration&Category!=Production" \
             --logger "trx;LogFileName=unit-tests.trx" \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=cobertura \
             /p:CoverletOutput=./coverage/ \
             /p:Threshold=80 \
             /p:ThresholdType=line
+
+      # The runner has ICU and time zone data; the production image may not. Tests marked Production run
+      # again without them, in UTC, and each checks those conditions before it starts.
+      - name: Production-condition Tests
+        env:
+          DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: '1'
+          TZDIR: /nonexistent-tzdata
+          TZ: UTC
+        run: dotnet test --no-build --filter "Category=Production"
 
       - name: Architecture Tests
         run: dotnet test --no-build --filter "Category=Architecture"
@@ -115,6 +125,10 @@ jobs:
           path: '**/*.trx'
 ```
 
+Production-condition tests: the runner has ICU and time zone data, and a slim production image may not.
+Tests marked `Production` run in their own step without them, in UTC, and are left out of the ordinary
+run, where they'd fail by design (tested: the step recreates exactly the conditions our own CI uses).
+
 ## Deploy Pipeline
 
 <!-- sample: tests/Workflows/deploy.yml -->
@@ -132,10 +146,9 @@ on:
         type: choice
         options: [staging, production]
 
+# Nothing by default; each job asks for what it uses.
 permissions:
-  id-token: write   # OIDC token for Azure
   contents: read
-  packages: write    # push Docker images
 
 env:
   REGISTRY: ghcr.io
@@ -144,8 +157,13 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # push the image
     outputs:
-      image-tag: ${{ steps.meta.outputs.version }}
+      # The commit, never the branch tag: `main` is the same string on every push, so `kubectl set image`
+      # would see no change and nothing would roll out.
+      image-tag: ${{ github.sha }}
 
     steps:
       - uses: actions/checkout@v4
@@ -156,7 +174,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=
+            type=sha,prefix=,format=long
             type=ref,event=branch
             type=semver,pattern={{version}}
 
@@ -185,6 +203,9 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: staging
+    permissions:
+      contents: read
+      id-token: write   # OIDC token for Azure
 
     steps:
       - uses: actions/checkout@v4
@@ -212,11 +233,16 @@ jobs:
 
   deploy-production:
     needs: [build-and-push, deploy-staging]
-    if: github.event.inputs.environment == 'production' || github.ref == 'refs/heads/main'
+    # Only a manual run that chose production. A push to main stops at staging, and a manual run that
+    # chose staging stays there even when it runs from main.
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
     runs-on: ubuntu-latest
     environment:
-      name: production
+      name: production   # required reviewers on this environment are the approval
       url: https://api.example.com
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -241,8 +267,9 @@ jobs:
             -n order-service
           kubectl rollout status deployment/order-service-canary -n order-service --timeout=300s
 
-          # Monitor for 5 minutes
-          echo "Monitoring canary for 5 minutes..."
+          # A wait is not a check: promote only if the canary's error rate held. Replace this with a query
+          # against your monitoring that exits non-zero when it didn't.
+          echo "Watching the canary for 5 minutes..."
           sleep 300
 
           # Promote to full deployment
@@ -251,6 +278,19 @@ jobs:
             -n order-service
           kubectl rollout status deployment/order-service -n order-service --timeout=300s
 ```
+
+What the deploy decides (the first three are tested against the file):
+- **Production runs only from a manual run that chose it.** A push to `main` stops at staging. The
+  condition this replaced, `inputs.environment == 'production' || github.ref == 'refs/heads/main'`, sent
+  a manual run that chose *staging* to production too, whenever it ran from `main` (a story test). The
+  `production` environment's required reviewers are the approval.
+- **The deployed tag is the commit.** `docker/metadata-action`'s `version` output is the highest-priority
+  tag, which on a push is the branch name. `main` is the same string every time, so `kubectl set image`
+  sees no change and nothing rolls out.
+- **Each job asks for its own permissions.** The workflow default is `contents: read`; only the build
+  can push packages, and only the deploy jobs get an OIDC token.
+- **A wait is not a check.** `sleep 300` only waits. Promote the canary after a query against your
+  monitoring that fails when the error rate went up.
 
 ## Reusable Workflow (shared across services)
 
