@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.29 — triage from heartbeat lines
+- `production-diagnostics`: a window of heartbeat lines becomes **signals** (what is out of range, with
+  the numbers) and **hypotheses** (likely cause, why, next check), most likely first. Rules for the
+  queue, threads, CPU, memory near the limit and growing, GC pauses, lock contention and exception
+  bursts, with thresholds to tune per service. Tested as a story (an API slow at nine with low CPU points
+  at blocked threads, not the database), plus: busy cores are CPU-bound, not starving; memory rising
+  through full collections is pressure; one bad line raises nothing; a slim-image run.
+
 ## 0.1.28 — the tracking rule, stated precisely
 - "`AsNoTracking()` on every read" becomes "on a read that returns entities". Tested on both engines: a
   projection to plain values tracks nothing already, so `AsNoTracking()` there changes nothing and
