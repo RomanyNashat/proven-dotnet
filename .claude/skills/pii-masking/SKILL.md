@@ -1,7 +1,7 @@
 ---
 name: pii-masking
-description: PII/PHI masking for .NET healthcare: Serilog masking (destructuring policy + pattern operators for national ID, mobile, MRN), [Sensitive] strategies, keyed tokenization. Code tested in CI.
-version: 1.2.0
+description: PII/PHI masking for .NET healthcare: Serilog masking (destructuring policy + pattern operators for national ID, mobile, MRN), classified logging with redaction before any provider, [Sensitive] strategies, keyed tokenization. Code tested in CI.
+version: 1.3.0
 ---
 
 # PII Masking Patterns
@@ -29,6 +29,69 @@ see it.
 **Arabic-Indic digits.** Arabic keyboards type `١٠٨٩٢٣٤٥٦٧`. `\d` matches those digits, but a pattern
 that starts with `[12]` doesn't, and the ID went through whole. Found by a production test; the operators
 below list both.
+
+## Classified logging: redact by what the value is
+
+The two layers above work on names and patterns, after the fact. A third, for code you write now: mark
+the parameter with what it is, and the logging pipeline redacts it before any provider sees it, wherever
+the line goes (`Microsoft.Extensions.Compliance.Redaction` with `Microsoft.Extensions.Telemetry`).
+
+<!-- sample: tests/SkillSamples.Tests/PiiMasking/ClinicData.cs -->
+```csharp
+/// <summary>The service's data classes. A redactor is chosen per class, at startup.</summary>
+public static class ClinicData
+{
+    public const string Taxonomy = "Clinic";
+
+    /// <summary>Identifies a patient on its own: national ID, mobile, MRN.</summary>
+    public static DataClassification PatientIdentifier => new(Taxonomy, nameof(PatientIdentifier));
+}
+
+/// <summary>Marks a log parameter or a property as <see cref="ClinicData.PatientIdentifier"/>.</summary>
+public sealed class PatientIdentifierAttribute() : DataClassificationAttribute(ClinicData.PatientIdentifier);
+```
+
+<!-- sample: tests/SkillSamples.Tests/PiiMasking/BookingLog.cs -->
+```csharp
+public static partial class BookingLog
+{
+    // The classification travels with the parameter: wherever this line is written, the national ID goes
+    // through the redactor chosen for PatientIdentifier, before any provider sees it.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Booking {BookingId} refused for {NationalId}: {Reason}")]
+    public static partial void BookingRefused(ILogger logger, int bookingId, [PatientIdentifier] string nationalId, string reason);
+}
+```
+
+<!-- sample: tests/SkillSamples.Tests/PiiMasking/RedactionSetup.cs -->
+```csharp
+public static class RedactionSetup
+{
+    // Redaction runs in the logger factory that EnableRedaction installs. Serilog has to be a provider
+    // under it (AddSerilog). UseSerilog() replaces the factory, and the classified fields never reach the
+    // redactor.
+    public static IServiceCollection AddClassifiedLogging(this IServiceCollection services, Action<ILoggingBuilder> providers) => services
+        .AddRedaction(redaction => redaction.SetRedactor<StarRedactor>(ClinicData.PatientIdentifier))
+        .AddLogging(logging =>
+        {
+            logging.EnableRedaction();
+            providers(logging);
+        });
+}
+```
+
+Tested with `FakeLogger` and with Serilog:
+- The classified parameter is `****` in the message and in the field; the booking id and the reason are
+  untouched.
+- **It covers only what is classified.** The same ID through an ordinary
+  `logger.LogWarning("... {NationalId}", id)` goes through in clear. Keep the pattern operators: they're
+  the net for every line nobody marked.
+- **Story: Serilog must be a provider, not the factory.** `builder.Logging.AddSerilog()` keeps the
+  redacting factory, and Elastic gets `****`. `UseSerilog()` (or registering `SerilogLoggerFactory`)
+  replaces it: the redactor never runs, and the classified field silently vanishes from the line. It
+  doesn't leak, but nobody can search by it either.
+- The redactor is chosen per class at startup. `StarRedactor` here; the library's `ErasingRedactor` is
+  the fallback for a class with none. To correlate lines about one patient without the ID, use a keyed
+  hash (the library's HMAC redactor, still experimental, or the tokenizer below).
 
 ## Setup
 
@@ -269,6 +332,8 @@ detokenize call (who, which token, why), never the value.
 - Never log PII: passwords, tokens, national IDs, health data, card numbers, mobiles, emails.
 - Register masking before any log statement runs.
 - Mark PII properties on DTOs with `[Sensitive]`, or give them a name the policy knows.
+- New log lines with patient identifiers: a `[LoggerMessage]` method with the parameter classified, and
+  Serilog added as a provider (`AddSerilog`), never as the factory (`UseSerilog`).
 - Every service has a test that logs a known PII value and asserts it's masked (like the tests behind
   this skill).
 - Tokens are keyed (HMAC), never a plain hash of the value.
