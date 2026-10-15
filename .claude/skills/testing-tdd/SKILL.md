@@ -1,7 +1,7 @@
 ---
 name: testing-tdd
 description: TDD for .NET — red-green-refactor, xUnit + Moq + FluentAssertions 7 + AutoFixture, AAA, naming, theories at the edges, verifying the side effects that matter, a fixed clock. Test behaviour, not implementation. Tested in CI, also under slim-image conditions.
-version: 2.3.0
+version: 2.3.1
 ---
 
 # TDD & Unit Testing Patterns
@@ -338,6 +338,11 @@ fallback when the server isn't loaded.
 
 Moving a call behind a seam is a refactor: pin today's behaviour with a characterization test first
 (`remediation-parity`), then change it.
+
+Don't generate a wrapper for every static (`IFileSystem`, `IDateTime`, `IEnvironment`). .NET already
+ships the seam for the clock, timers, configuration and HTTP, and a wrapper that mirrors `File` has
+dozens of methods to fake. Where there is no built-in seam, write the small interface for what this code
+does (`IReportStore.SaveAsync`), which says more and fakes in one line.
 
 ## Reviewing a test: what to fix
 

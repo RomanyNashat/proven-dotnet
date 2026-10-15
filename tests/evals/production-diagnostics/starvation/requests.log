@@ -1,0 +1,10 @@
+2026-10-14T05:50:12Z INF GET /api/appointments/today 200 elapsed 41 ms
+2026-10-14T05:50:40Z INF GET /api/reports/daily-summary 200 elapsed 380 ms
+2026-10-14T05:52:15Z INF GET /api/appointments/today 200 elapsed 52 ms
+2026-10-14T05:53:02Z INF GET /api/reports/daily-summary 200 elapsed 2410 ms
+2026-10-14T05:53:30Z INF GET /api/appointments/today 200 elapsed 1180 ms
+2026-10-14T05:54:11Z INF GET /health 200 elapsed 3020 ms
+2026-10-14T05:55:44Z INF GET /api/appointments/today 200 elapsed 6900 ms
+2026-10-14T05:56:20Z ERR GET /api/patients/42 500 elapsed 30004 ms TaskCanceledException: The request was canceled due to the configured HttpClient.Timeout of 30 seconds elapsing.
+2026-10-14T05:56:21Z WRN StackExchange.Redis.RedisTimeoutException: Timeout performing GET (5000ms), inst: 0, qu: 0, qs: 0, aw: False, rs: ReadAsync, ws: Idle, in: 0, serverEndpoint: redis:6379, IOCP: (Busy=0,Free=1000,Min=2,Max=1000), WORKER: (Busy=58,Free=32709,Min=2,Max=32767)
+2026-10-14T05:57:02Z INF GET /api/reports/daily-summary 200 elapsed 14200 ms

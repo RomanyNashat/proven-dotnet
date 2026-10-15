@@ -3,6 +3,18 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.13 — an eval for production-diagnostics
+- `tests/evals/production-diagnostics/`: three incidents as a developer gets them (heartbeat CSV, request
+  logs or APM numbers, what SRE sent, the suspect code): thread-pool starvation from `.Result`, a pod
+  throttled at a half-core limit with Server GC, and a leak from an unbounded static cache ending in
+  OOM kills. `evals.md` holds the answers, what each run must find and what it must not do (blame a
+  victim, ask for a full dump of patient data, raise the limit as the fix).
+- First runs in `results.md`: with proven 9/9 Musts, rules-only baseline 8.5/9; all three diagnoses
+  right and no Must-not broken either way, graded blind. The baseline's slips were in the memory case
+  (a counter misread, a gcdump asked for without its cost).
+- `testing-tdd` 2.3.1: why there's no generated wrapper for statics. .NET has the seams; where it
+  doesn't, a small interface for what the code does beats a mirror of `File`.
+
 ## 0.2.12 — the test gap in a change
 - `test-coverage` 1.2.0: `scripts/changed_uncovered.py` takes a diff and a Cobertura report and lists the
   changed lines no test runs, by method, plus changed files no test loads; `--min` makes it a gate.
