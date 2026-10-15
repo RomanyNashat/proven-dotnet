@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.25 — story and production tests for the API and platform skills
+- `api-design`, `localization`, `nginx` and `production-diagnostics` each have a story test and a
+  production test. Stories: a third code request told to wait while another patient is served, and a
+  crash that shows support only a `traceId`; an Arabic phone's reminder (Arabic text, western-digit
+  reference, English where Arabic is missing); a 6 MB scan refused by nginx before the app; an exception
+  burst that shows in that minute's heartbeat. On a slim image: the JSON localization pattern works, and
+  everything that needs a culture fails loudly.
+- `CLAUDE.md`: ideas from other projects are rewritten in our own words and code, tested, and never copied.
+
 ## 0.1.24 — two new advisories on System.Security.Cryptography.Pkcs
 - CVE-2026-70162 and CVE-2026-84008 (denial of service) affect `System.Security.Cryptography.Pkcs` before
   10.0.13, which `Microsoft.Data.SqlClient` brings in. The zero-vulns gate failed the build as it should;

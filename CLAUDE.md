@@ -26,3 +26,6 @@ This file is for sessions that change this repo. It is not installed.
 - Defaults are the community's. Where teams reasonably differ (mocking library, branch model, key
   type), the rules say "unless your team's rules say otherwise" and show the trade-off.
 - Nothing here names an employer, a client, an internal service or an internal host.
+- **Ideas from other projects are rewritten, never copied.** Borrow what strengthens the harness, then
+  write it in our own words and code and test it like everything else. No pasted text or code, and no
+  references to where an idea came from.

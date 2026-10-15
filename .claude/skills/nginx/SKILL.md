@@ -1,7 +1,7 @@
 ---
 name: nginx
 description: nginx with .NET services — which layer an error came from (ingress or the service's nginx), the 413/502/504/499/client-IP/CORS/gzip/stale-cache playbook, aligning limits and timeouts with Kestrel, ForwardedHeaders, static-file services, asking SRE. Configs tested in CI.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # nginx
@@ -29,6 +29,9 @@ client ──> ingress-nginx ──> [ nginx in front of the service | nginx ser
   nginx's access log, the ingress answered it: ask SRE for the ingress log at that time.
 - `$upstream_status` in the service nginx's log is empty when nginx answered by itself (a 413, a denied
   path) and holds the app's status otherwise. See the log format in §4.
+- Tested as a story: a patient's 6 MB scan gets nginx's own 413 page, so the app's logs have nothing and
+  the answer is in nginx's; the retaken 1 MB scan reaches the app whole, and the app sees the patient's IP
+  and `https`. The same app behind nginx works on a slim image (no ICU, no tzdata).
 
 How the config reaches a pod depends on your pipeline, which allows pre- and post-build scripts
 but no Dockerfile in the repo. Copy what an existing nginx service does rather than inventing a path.

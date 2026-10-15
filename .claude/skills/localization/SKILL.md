@@ -21,7 +21,7 @@ Three rules carry most of the value:
 |---|---|---|
 | `new CultureInfo("ar-SA")` | Calendar is **Umm al-Qura (Hijri)**: `DateTime.ToString()` gives `23/4/1448 بعد الهجرة`; `DateTime.Parse("2026-10-04")` **fails** | Never make `ar-SA` the formatting culture (§3) |
 | Numbers under Arabic cultures | `1234.5.ToString("N2")` gives `1٬234٫50`; parsing `"1234.50"` back can fail | Same: formatting culture stays `en-US`; machine values use `InvariantCulture` |
-| Alpine or chiseled image | No ICU, globalization-invariant mode: creating `ar-SA` **throws** `CultureNotFoundException`. With resx set up, the service won't start | §4 guard; or use JSON (§5) |
+| Alpine or chiseled image | No ICU, globalization-invariant mode: creating `ar-SA` **throws** `CultureNotFoundException`, and so does `en-US` (only the invariant culture exists). With resx set up, the service won't start. Tested on a slim image: the JSON pattern works there; the resx guard, Arabic dates and `en-US` all fail loudly | §4 guard; or use JSON (§5), with `InvariantCulture` for formatting |
 | Same images, time zones | No tzdata: `FindSystemTimeZoneById("Asia/Riyadh")` **throws** | §7 fixed-offset fallback |
 | `CultureInfo("ar")` (neutral) | Gregorian calendar, but still Arabic separators | Don't rely on it for formatting either |
 
@@ -371,6 +371,10 @@ every engine.
 - **OpenAPI:** document `x-language` once, as a global header parameter, not on every operation.
 
 ## 12. Testing
+
+Tested as a story: a phone sends `AR-sa`; the reminder SMS comes out in Arabic with a Gregorian Arabic
+date, a reference in western digits (it's typed into a search box later), and the English footer where
+Arabic has no text yet.
 
 Run the culture-sensitive code under `ar-SA` on purpose. On a developer machine it never is, which is
 why these bugs reach production.

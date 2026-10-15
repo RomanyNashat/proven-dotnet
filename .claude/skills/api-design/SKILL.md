@@ -1,7 +1,7 @@
 ---
 name: api-design
 description: ASP.NET Core APIs — endpoints with injected handlers and TypedResults, ownership checks on every id, ProblemDetails that leak nothing, validation, X-API-Version/path versioning, keyset paging, per-caller rate limits, health checks. Core code tested in CI.
-version: 3.0.0
+version: 3.1.0
 ---
 
 # API Design
@@ -219,6 +219,9 @@ group.MapPost("/otp", SendOtp).RequireRateLimiting(PerClientRateLimits.Otp);
 ```
 
 Tested: each caller has their own quota, and a rejected call is a 429 ProblemDetails with `Retry-After`.
+As a story: a patient asks for a code a third time and is told to wait; another patient asking at the same
+moment is served; a crash on another page gives support a `traceId` and nothing about the patient. The
+same holds on a slim image (no ICU, no tzdata).
 The common version, `AddFixedWindowLimiter("api", ...)` with no partition, is one bucket that every user
 of the endpoint shares.
 
