@@ -19,78 +19,107 @@ This skill covers the **console app + external scheduler** pattern. For Quartz.N
 
 ## Console App Job (run once, exit)
 
+The job runs, stops the host, and **Main returns its exit code**. That code is what Kubernetes reads:
+non-zero and `backoffLimit` retries the run; zero and the run is recorded as a success.
+
 ### Program.cs
+
 ```csharp
-// Minimal host — no web server, no Kestrel
-var builder = Host.CreateApplicationBuilder(args);
+return await DailyReportHost.RunAsync(args, builder =>
+{
+    builder.Services.AddDbContext<ReportsDbContext>(o => o.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+    builder.Services.AddScoped<IReportService, ReportService>();
+});
+```
 
-// Configuration
-builder.Services.Configure<JobOptions>(builder.Configuration.GetSection("Job"));
+<!-- sample: tests/SkillSamples.Tests/CronJobs/DailyReportHost.cs -->
+```csharp
+public static class DailyReportHost
+{
+    /// <summary>Program.cs is <c>return await DailyReportHost.RunAsync(args, ...)</c>: the exit code Kubernetes reads.</summary>
+    public static async Task<int> RunAsync(string[] args, Action<HostApplicationBuilder> configure)
+    {
+        var builder = Host.CreateApplicationBuilder(args);
+        builder.Services.AddSingleton<JobOutcome>();
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddHostedService<DailyReportJob>();
+        configure(builder);   // the report service and its database
 
-// DI — same as your microservice infrastructure layer
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));   // SQL Server: UseSqlServer
-
-builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
-
-// Register the job
-builder.Services.AddHostedService<DailyReportJob>();
-
-// Logging
-builder.Services.AddSerilog(config => config
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.WithProperty("JobName", "daily-report")
-    .WriteTo.Console(new RenderedCompactJsonFormatter()));
-
-var host = builder.Build();
-
-// Run — the host starts, executes the job, then exits
-await host.RunAsync();
+        using var host = builder.Build();
+        await host.RunAsync();
+        return host.Services.GetRequiredService<JobOutcome>().ExitCode;
+    }
+}
 ```
 
 ### Job Implementation
+
+<!-- sample: tests/SkillSamples.Tests/CronJobs/DailyReportJob.cs -->
 ```csharp
 public sealed class DailyReportJob(
     IServiceScopeFactory scopeFactory,
     IHostApplicationLifetime lifetime,
+    JobOutcome outcome,
+    TimeProvider time,
     ILogger<DailyReportJob> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var exitCode = 0;
-
         try
         {
-            logger.LogInformation("Daily report job started at {Time}", DateTimeOffset.UtcNow);
-            var sw = Stopwatch.StartNew();
-
+            var day = ReportDay.Yesterday(time, RiyadhTime.Zone);
             await using var scope = scopeFactory.CreateAsyncScope();
-            var reportService = scope.ServiceProvider.GetRequiredService<IReportService>();
-
-            var result = await reportService.GenerateDailyReportAsync(
-                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)),
-                stoppingToken);
-
-            sw.Stop();
-            logger.LogInformation(
-                "Daily report completed in {ElapsedMs}ms. Records processed: {Count}",
-                sw.ElapsedMilliseconds, result.RecordsProcessed);
+            var records = await scope.ServiceProvider.GetRequiredService<IReportService>()
+                .GenerateDailyReportAsync(day, stoppingToken);
+            logger.LogInformation("Daily report for {Day}: {Count} records", day, records);
         }
         catch (Exception ex)
         {
-            logger.LogCritical(ex, "Daily report job FAILED");
-            exitCode = 1;
+            // Includes a SIGTERM mid-run: the report isn't done, so the run failed and Kubernetes retries it.
+            logger.LogCritical(ex, "Daily report failed");
+            outcome.Failed();
         }
         finally
         {
-            // Signal the host to shut down — the app exits
-            lifetime.StopApplication();
-            Environment.ExitCode = exitCode;
+            lifetime.StopApplication();   // run once: the host stops, Main returns the exit code
         }
     }
 }
 ```
+
+<!-- sample: tests/SkillSamples.Tests/CronJobs/JobOutcome.cs -->
+```csharp
+/// <summary>What a run-once job reports back to Main, which returns it as the process exit code.</summary>
+public sealed class JobOutcome
+{
+    public int ExitCode { get; private set; }
+
+    public void Failed() => ExitCode = 1;
+}
+```
+
+### "Yesterday" is in the business's time zone
+
+The CronJob below runs at 02:00 Riyadh (`timeZone: Asia/Riyadh`), which is **23:00 UTC the evening
+before**. `DateTime.UtcNow.AddDays(-1)` then gives the day before yesterday: the report covers the wrong
+day, every day, and nothing fails. Tested: at 23:00 UTC on 15 October the UTC way gives the 14th; this
+gives the 15th, also on an image without tzdata (`RiyadhTime` falls back to a fixed UTC+3).
+
+<!-- sample: tests/SkillSamples.Tests/CronJobs/ReportDay.cs -->
+```csharp
+public static class ReportDay
+{
+    /// <summary>
+    /// The day before today in the business's time zone. A job scheduled for 02:00 Riyadh runs at 23:00 UTC
+    /// the evening before, so "yesterday" worked out in UTC is the day before yesterday.
+    /// </summary>
+    public static DateOnly Yesterday(TimeProvider time, TimeZoneInfo zone) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(time.GetUtcNow(), zone).DateTime).AddDays(-1);
+}
+```
+
+Tested (`CronJobs/CronJobTests.cs`): the report service fails → exit code 1, so Kubernetes retries; it
+succeeds → exit code 0 and the report is for Riyadh's yesterday.
 
 ### .csproj
 ```xml
@@ -173,58 +202,81 @@ concurrencyPolicy: Allow    # allow overlapping runs (DANGEROUS for most jobs)
 
 ## Data Migration Job Pattern
 
+Idempotent (a second run finds its record and stops), in batches, and **sure to finish**. Page by id,
+never by "rows not migrated yet": a legacy value nobody mapped stays unmigrated, so a loop that reads
+"rows still Unknown" until none are left gets the same rows back on every pass and runs until
+`activeDeadlineSeconds` kills it. Tested: three orders, one with a status nobody mapped; the job
+finishes, migrates two, and records one left Unknown.
+
+<!-- sample: tests/SkillSamples.Tests/CronJobs/OrderStatusMigrationJob.cs -->
 ```csharp
-// One-time or repeatable data migration as a console app
-public sealed class DataMigrationJob(
+/// <summary>A data migration as a run-once job: idempotent, in batches, and sure to finish.</summary>
+public sealed class OrderStatusMigrationJob(
     IServiceScopeFactory scopeFactory,
     IHostApplicationLifetime lifetime,
-    ILogger<DataMigrationJob> logger) : BackgroundService
+    JobOutcome outcome,
+    TimeProvider time,
+    ILogger<OrderStatusMigrationJob> logger) : BackgroundService
 {
+    public const string Name = "2026-10-order-status";
+    private const int BatchSize = 500;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            // Idempotent migration — safe to run multiple times
-            var migrationId = "2026-03-migrate-order-status";
-            if (await HasAlreadyRunAsync(context, migrationId, stoppingToken))
+            var db = scope.ServiceProvider.GetRequiredService<CronDbContext>();
+            if (await db.DataMigrations.AnyAsync(m => m.Name == Name, stoppingToken))
             {
-                logger.LogInformation("Migration {MigrationId} already completed, skipping",
-                    migrationId);
+                logger.LogInformation("{Migration} already ran; nothing to do", Name);
                 return;
             }
 
-            logger.LogInformation("Starting migration {MigrationId}", migrationId);
-
-            var batchSize = 1000;
-            var totalMigrated = 0;
-
+            int lastId = 0, migrated = 0, unmapped = 0;
             while (true)
             {
-                var batch = await context.Orders
-                    .Where(o => o.LegacyStatus != null && o.Status == OrderStatus.Unknown)
-                    .Take(batchSize)
+                // Page by id. Paging by "rows still Unknown" never ends: a legacy value nobody mapped stays
+                // Unknown, so the same rows come back on every pass.
+                var batch = await db.Orders
+                    .Where(o => o.Id > lastId && o.LegacyStatus != null && o.Status == OrderStatus.Unknown)
+                    .OrderBy(o => o.Id)
+                    .Take(BatchSize)
                     .ToListAsync(stoppingToken);
-
-                if (batch.Count == 0) break;
+                if (batch.Count == 0)
+                {
+                    break;
+                }
 
                 foreach (var order in batch)
                 {
-                    order.Status = MapLegacyStatus(order.LegacyStatus!);
+                    order.Status = Map(order.LegacyStatus!);
+                    if (order.Status == OrderStatus.Unknown)
+                    {
+                        unmapped++;
+                    }
+                    else
+                    {
+                        migrated++;
+                    }
                 }
 
-                await context.SaveChangesAsync(stoppingToken);
-                totalMigrated += batch.Count;
-
-                logger.LogInformation("Migrated {Batch} orders (total: {Total})",
-                    batch.Count, totalMigrated);
+                lastId = batch[^1].Id;
+                await db.SaveChangesAsync(stoppingToken);
+                db.ChangeTracker.Clear();
             }
 
-            await MarkAsCompletedAsync(context, migrationId, totalMigrated, stoppingToken);
-            logger.LogInformation("Migration {MigrationId} completed: {Total} records",
-                migrationId, totalMigrated);
+            db.DataMigrations.Add(new DataMigrationRun
+            {
+                Name = Name, RecordsMigrated = migrated, RecordsUnmapped = unmapped, CompletedAt = time.GetUtcNow(),
+            });
+            await db.SaveChangesAsync(stoppingToken);
+            logger.LogInformation("{Migration}: {Migrated} migrated, {Unmapped} left Unknown", Name, migrated, unmapped);
+        }
+        catch (Exception ex)
+        {
+            logger.LogCritical(ex, "{Migration} failed", Name);
+            outcome.Failed();
         }
         finally
         {
@@ -232,54 +284,57 @@ public sealed class DataMigrationJob(
         }
     }
 
-    private static async Task<bool> HasAlreadyRunAsync(
-        AppDbContext context, string migrationId, CancellationToken ct)
+    public static OrderStatus Map(string legacy) => legacy switch
     {
-        return await context.DataMigrations
-            .AnyAsync(m => m.Id == migrationId && m.CompletedAt != null, ct);
-    }
-
-    private static async Task MarkAsCompletedAsync(
-        AppDbContext context, string id, int count, CancellationToken ct)
-    {
-        context.DataMigrations.Add(new DataMigrationRecord
-        {
-            Id = id,
-            RecordsMigrated = count,
-            CompletedAt = DateTimeOffset.UtcNow
-        });
-        await context.SaveChangesAsync(ct);
-    }
+        "NEW" => OrderStatus.Placed,
+        "SHIPPED" => OrderStatus.Shipped,
+        "DONE" => OrderStatus.Delivered,
+        _ => OrderStatus.Unknown,
+    };
 }
 ```
 
 ## Cleanup / Retention Job
 
+Delete in batches. One `DELETE` of a year of rows holds its locks and fills the log for the whole run.
+Tested: 12,000 expired rows go in three batches; the recent one stays.
+
+<!-- sample: tests/SkillSamples.Tests/CronJobs/AuditRetentionJob.cs -->
 ```csharp
-// Common pattern: delete old data on schedule
-public sealed class AuditLogRetentionJob(
+/// <summary>Deletes what's past its retention, in batches so one run never holds a long lock.</summary>
+public sealed class AuditRetentionJob(
     IServiceScopeFactory scopeFactory,
     IHostApplicationLifetime lifetime,
-    IOptions<RetentionOptions> options,
-    ILogger<AuditLogRetentionJob> logger) : BackgroundService
+    JobOutcome outcome,
+    TimeProvider time,
+    ILogger<AuditRetentionJob> logger) : BackgroundService
 {
+    public static readonly TimeSpan Retention = TimeSpan.FromDays(365);
+    private const int BatchSize = 5_000;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<CronDbContext>();
+            var cutoff = time.GetUtcNow() - Retention;
 
-            var cutoff = DateTimeOffset.UtcNow.AddDays(-options.Value.RetentionDays);
+            int deleted, total = 0;
+            do
+            {
+                var ids = db.AuditLog.Where(a => a.CreatedAt < cutoff).OrderBy(a => a.Id).Select(a => a.Id).Take(BatchSize);
+                deleted = await db.AuditLog.Where(a => ids.Contains(a.Id)).ExecuteDeleteAsync(stoppingToken);
+                total += deleted;
+            }
+            while (deleted == BatchSize);
 
-            // Use ExecuteDeleteAsync for bulk deletion — no entity loading
-            var deleted = await context.AuditLogs
-                .Where(l => l.CreatedAt < cutoff)
-                .ExecuteDeleteAsync(stoppingToken);
-
-            logger.LogInformation(
-                "Retention job completed: deleted {Count} audit logs older than {Cutoff}",
-                deleted, cutoff);
+            logger.LogInformation("Retention: deleted {Count} audit entries older than {Cutoff}", total, cutoff);
+        }
+        catch (Exception ex)
+        {
+            logger.LogCritical(ex, "Retention failed");
+            outcome.Failed();
         }
         finally
         {
@@ -288,6 +343,7 @@ public sealed class AuditLogRetentionJob(
     }
 }
 ```
+
 
 ## Dockerfile for Console App Jobs
 
@@ -342,36 +398,7 @@ Register-ScheduledTask -TaskName "DailyReport" `
 
 ## Testing Console App Jobs
 
-```csharp
-[Fact]
-public async Task DailyReportJob_ProcessesRecords_AndExits()
-{
-    // Arrange
-    var builder = Host.CreateApplicationBuilder();
-    builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(_connectionString));   // the test container for your engine (testing-integration)
-    builder.Services.AddHostedService<DailyReportJob>();
-    builder.Services.AddScoped<IReportService, ReportService>();
-
-    var host = builder.Build();
-
-    // Seed test data
-    using (var scope = host.Services.CreateScope())
-    {
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await SeedTestDataAsync(context);
-    }
-
-    // Act — run the host (job executes, then stops the host)
-    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-    await host.RunAsync(cts.Token);
-
-    // Assert — verify the job produced output
-    using (var scope = host.Services.CreateScope())
-    {
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var report = await context.Reports.OrderByDescending(r => r.CreatedAt).FirstAsync();
-        report.Should().NotBeNull();
-        report.RecordsProcessed.Should().BeGreaterThan(0);
-    }
-}
-```
+Run the job in a real host against a real database (`testing-integration`), and assert on what it
+changed and on its exit code. `CronJobs/CronJobTests.cs` does both: the host is built the way Program.cs
+builds it, the clock is a `FakeTimeProvider`, and every test fails if the job doesn't stop the host.
+Assert the outcome (rows migrated, the report's day, the exit code), never only that something exists.

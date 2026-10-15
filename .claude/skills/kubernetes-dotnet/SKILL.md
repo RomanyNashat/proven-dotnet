@@ -98,26 +98,29 @@ spec:
 
 ## Health Checks (.NET side)
 
+<!-- sample: tests/SkillSamples.Tests/Kubernetes/Probes.cs -->
 ```csharp
-builder.Services.AddHealthChecks()
-    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"])
-    .AddNpgSql(connectionString, name: "postgresql", tags: ["ready"])      // SQL Server: .AddSqlServer(...)
-    .AddRedis(redisConnectionString, name: "redis", tags: ["ready"])
-    .AddKafka(new ProducerConfig { BootstrapServers = kafkaServers },
-        name: "kafka", tags: ["ready"]);
-
-// Liveness: just "is the process alive?"
-app.MapHealthChecks("/health/live", new HealthCheckOptions
+public static class Probes
 {
-    Predicate = check => check.Tags.Contains("live")
-});
+    public static IHealthChecksBuilder AddProbes(this IServiceCollection services, string redisConnectionString) =>
+        services.AddHealthChecks()
+            // Liveness: is the process alive? Nothing outside it, or an outage restarts every pod.
+            .AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"])
+            // Readiness: can it serve traffic? One check per dependency (.AddNpgSql, .AddSqlServer, .AddKafka).
+            .AddRedis(redisConnectionString, name: "redis", tags: ["ready"]);
 
-// Readiness: "can I serve traffic?" (all dependencies up)
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready")
-});
+    public static WebApplication MapProbes(this WebApplication app)
+    {
+        app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = check => check.Tags.Contains("live") });
+        app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
+        return app;
+    }
+}
 ```
+
+Tested with Redis down: `/health/ready` answers 503 and `/health/live` 200. Kubernetes takes the pod out
+of the Service and leaves it running. Put Redis in liveness and an outage restarts every pod, over and
+over, without bringing Redis back.
 
 ## HorizontalPodAutoscaler
 
@@ -275,18 +278,16 @@ other production problems, is in `production-diagnostics`.
 
 ## Graceful Shutdown
 
-```csharp
-// Ensure in-flight requests complete before pod termination
-builder.Services.Configure<HostOptions>(options =>
-{
-    options.ShutdownTimeout = TimeSpan.FromSeconds(30);
-});
+On SIGTERM the host cancels every `BackgroundService`'s token and waits for them, but only for
+`HostOptions.ShutdownTimeout` (30 s by default, tested). Work still running after that is cut off
+mid-batch. Tested: a worker that needs 3 s to finish its batch finishes with a 10 s timeout and is cut
+with a 1 s one.
 
-// Kafka consumer: stop consuming, process remaining messages
-// gRPC: drain connections
-// Background services: CancellationToken is triggered
+```csharp
+builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(30));
 ```
 
 A pod that's stopping can still get requests for a few seconds while the ingress updates its endpoints,
-and those requests fail with 502. A short `preStop` sleep (5–10 s) before SIGTERM covers that window;
-keep `terminationGracePeriodSeconds` above the sleep plus `ShutdownTimeout`. More 502 causes in `nginx`.
+and those requests fail with 502. A short `preStop` sleep (5–10 s) before SIGTERM covers that window.
+Keep `terminationGracePeriodSeconds` above the sleep plus `ShutdownTimeout`, or Kubernetes kills the
+process before the host has finished. More 502 causes in `nginx`.

@@ -65,6 +65,7 @@
     <PackageVersion Include="Serilog.Enrichers.Sensitive" Version="2.1.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="9.*" />
     <PackageVersion Include="StackExchange.Redis" Version="2.8.*" />
+    <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.*" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.*" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.*" />
   </ItemGroup>

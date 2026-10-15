@@ -41,3 +41,5 @@ auth-patterns
 dotnet-upgrade
 msbuild
 cicd-github-actions
+cronjob-patterns
+kubernetes-dotnet
