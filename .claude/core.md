@@ -50,6 +50,7 @@ definition.** Before you type `grep -rn "SomeMethod"` to see who calls it, call 
 - "is this still used / is this dead" → `find_references`, `find_dead_code`
 - "what's the type hierarchy" → `get_type_hierarchy`
 - "what's the public surface" → `get_public_api`
+- "how do I call this package" → `get_package_api` (signatures from metadata, never decompiled)
 - "what are the build errors" → `get_diagnostics`
 
 **Check once, then commit for the session.** The first symbol question of a session goes to the MCP.
@@ -95,8 +96,9 @@ pick one, say which and why, and follow it.
 ## Never decompile a package to learn its API
 
 Not your organisation's internal packages, not third-party ones. In this order instead: the skills,
-then how this codebase already calls it (existing usage is the source of truth), then the package's own
-docs (a read-only docs MCP server, if one is connected), then ask the developer. If none of those answer it, say so and ask.
+then how this codebase already calls it (existing usage is the source of truth), then its signatures
+(`get_package_api`, read from metadata), then the package's own docs (a read-only docs MCP server, if one
+is connected), then ask the developer. If none of those answer it, say so and ask.
 
 ## Shell portability — assume Windows too
 

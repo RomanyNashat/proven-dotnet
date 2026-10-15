@@ -1,7 +1,7 @@
 ---
 name: build-error-resolver
 description: Diagnoses and fixes build failures, compiler errors, NuGet conflicts, test failures, and runtime exceptions. Use when the build is broken and you need fast resolution.
-tools: Read, Write, Edit, Bash, Grep, Glob, mcp__proven-roslyn__workspace_status, mcp__proven-roslyn__find_symbol, mcp__proven-roslyn__find_callers, mcp__proven-roslyn__find_references, mcp__proven-roslyn__find_implementations, mcp__proven-roslyn__get_type_hierarchy, mcp__proven-roslyn__get_public_api, mcp__proven-roslyn__find_dead_code, mcp__proven-roslyn__get_diagnostics, mcp__proven-roslyn__detect_circular_dependencies, mcp__proven-roslyn__find_tests_for_symbol, mcp__proven-roslyn__get_test_coverage_map
+tools: Read, Write, Edit, Bash, Grep, Glob, mcp__proven-roslyn__workspace_status, mcp__proven-roslyn__find_symbol, mcp__proven-roslyn__find_callers, mcp__proven-roslyn__find_references, mcp__proven-roslyn__find_implementations, mcp__proven-roslyn__get_type_hierarchy, mcp__proven-roslyn__get_public_api, mcp__proven-roslyn__get_package_api, mcp__proven-roslyn__find_dead_code, mcp__proven-roslyn__get_diagnostics, mcp__proven-roslyn__detect_circular_dependencies, mcp__proven-roslyn__find_tests_for_symbol, mcp__proven-roslyn__get_test_coverage_map
 model: opus
 ---
 

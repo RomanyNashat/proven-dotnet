@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.7 — a package's API without decompiling it
+- `proven-roslyn`: `get_package_api` lists a referenced package's public and protected types and member
+  signatures, with their XML summaries, from the metadata the compiler already loaded. Nothing is
+  decompiled. It says so when the package isn't referenced instead of guessing. Tested on the sample
+  solution: `System.Text.Json`'s `JsonSerializer` and its generic `Serialize`/`Deserialize`, an
+  unreferenced package, and internal types left out.
+- `core.md`: "how do I call this package" goes to `get_package_api`, after the codebase's own usage and
+  before the docs. The agents that use `proven-roslyn` have the tool.
+
 ## 0.2.6 — our own tests on Central Package Management
 - `tests/Directory.Packages.props` holds one version for each package of the three test projects; the
   projects name packages without versions. The Pkcs security pin is one `PackageVersion` under
