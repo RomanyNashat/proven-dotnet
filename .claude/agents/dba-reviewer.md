@@ -43,6 +43,11 @@ You are a Senior Database Architect with deep expertise in PostgreSQL, SQL Serve
 - [ ] Connection disposed properly (using statement or DI-managed)
 - [ ] Dapper.AOT `[DapperAot]` attribute used where applicable for build-time validation
 
+## Scheduler Review Checklist (see `skills/quartz-scheduling/`)
+- [ ] Quartz persistent store: `ScheduleTriggerRelativeToReplacedTrigger = true`, or a run missed during a deploy or outage is silently dropped when the trigger is re-registered at start
+- [ ] Cron triggers say `InTimeZone(...)`; without it they fire in the pod's zone (UTC)
+- [ ] More than one replica on a persistent store → `UseClustering()`; the scheduler tables are created by a reviewed script, with DBA approval where the team requires it
+
 ## Migration Review Checklist
 - [ ] No destructive operations (DROP COLUMN, DROP TABLE) without data migration plan
 - [ ] New columns are nullable or have defaults — support N-1 deployment
