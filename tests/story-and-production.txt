@@ -45,3 +45,4 @@ cronjob-patterns
 kubernetes-dotnet
 caching
 aspire-patterns
+code-quality

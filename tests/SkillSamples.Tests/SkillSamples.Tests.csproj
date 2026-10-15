@@ -88,6 +88,7 @@
     <Compile Include="../Workflows/*.cs" Link="Workflows/%(Filename)%(Extension)" />
     <None Include="../Workflows/*.yml" Link="Workflows/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="MsBuild/**/*.props;MsBuild/**/*.csproj;MsBuild/nuget.config" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="CodeQuality/sample/**/*.props;CodeQuality/sample/**/*.csproj;CodeQuality/sample/.editorconfig" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Protobuf Include="Grpc/orders.proto" GrpcServices="Both" />

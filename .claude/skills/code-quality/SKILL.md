@@ -8,6 +8,7 @@ version: 1.0.0
 
 ## Directory.Build.props (solution root)
 
+<!-- sample: tests/SkillSamples.Tests/CodeQuality/sample/Directory.Build.props -->
 ```xml
 <Project>
   <PropertyGroup>
@@ -85,75 +86,12 @@ public static class ServiceRegistration { }
 
 ## BenchmarkDotNet
 
-```csharp
-// Benchmark project setup
-[MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net100)]  // .NET 10
-public class OrderQueryBenchmarks
-{
-    private AppDbContext _context = null!;
-    private NpgsqlConnection _connection = null!;
-    private Guid _customerId;
-
-    [GlobalSetup]
-    public async Task Setup()
-    {
-        // Setup real database connection for benchmarks
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql("Host=localhost;Database=benchmarks;...")
-            .Options;
-        _context = new AppDbContext(options);
-        _connection = new NpgsqlConnection("Host=localhost;Database=benchmarks;...");
-        await _connection.OpenAsync();
-        _customerId = Guid.Parse("...");  // known test data
-    }
-
-    [Benchmark(Baseline = true)]
-    public async Task<List<Order>> EfCore_WithTracking()
-    {
-        return await _context.Orders
-            .Where(o => o.CustomerId == _customerId)
-            .Take(20)
-            .ToListAsync();
-    }
-
-    [Benchmark]
-    public async Task<List<Order>> EfCore_NoTracking()
-    {
-        return await _context.Orders
-            .AsNoTracking()
-            .Where(o => o.CustomerId == _customerId)
-            .Take(20)
-            .ToListAsync();
-    }
-
-    [Benchmark]
-    public async Task<List<OrderDto>> Dapper_RawSql()
-    {
-        return (await _connection.QueryAsync<OrderDto>(
-            "SELECT id, total, status FROM orders WHERE customer_id = @Id LIMIT 20",
-            new { Id = _customerId })).AsList();
-    }
-
-    [Benchmark]
-    public async Task<Order?> EfCore_CompiledQuery()
-    {
-        return await OrderQueries.GetById(_context, _customerId, CancellationToken.None);
-    }
-
-    [GlobalCleanup]
-    public async Task Cleanup()
-    {
-        await _context.DisposeAsync();
-        await _connection.DisposeAsync();
-    }
-}
-
-// Run: dotnet run -c Release --project Benchmarks/
-```
+Measure before optimising a hot path, with `[MemoryDiagnoser]`, against a real database, in Release.
+The `/benchmark` command sets it up.
 
 ## .editorconfig
 
+<!-- sample: tests/SkillSamples.Tests/CodeQuality/sample/.editorconfig -->
 ```ini
 root = true
 
