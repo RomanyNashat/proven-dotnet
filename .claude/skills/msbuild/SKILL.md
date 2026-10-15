@@ -1,7 +1,7 @@
 ---
 name: msbuild
 description: Solution-wide build settings and package versions — Directory.Build.props, Central Package Management (Directory.Packages.props, transitive pinning, version ranges), moving a solution onto it, and finding out why the build or restore did what it did (-getProperty, dotnet nuget why, binary logs). Restored in CI with the real CLI.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # MSBuild and package versions
@@ -131,7 +131,9 @@ keeps FluentAssertions below 8, and it restores 7.0.0 until someone raises the l
 the point of a range here: a fence, not a way to float.
 
 **Floating versions (`10.*`) are refused** under CPM (**NU1011**). Pick exact versions. Restores become
-repeatable, and Dependabot or Renovate proposes each bump as a change you review.
+repeatable, and Dependabot or Renovate proposes each bump as a change you review. (A test suite that
+exists to catch what the newest patch breaks can set `CentralPackageFloatingVersionsEnabled`, as this
+repo's own tests do; a service doesn't.)
 
 **One feed per package.** With CPM and more than one feed, NuGet warns (**NU1507**) until every package
 is mapped to a source. Map them: it also stops a same-named package on a public feed from replacing an

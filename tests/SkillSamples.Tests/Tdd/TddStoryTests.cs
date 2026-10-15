@@ -68,10 +68,11 @@ public sealed class TddStoryTests
     [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
     public void Story_APackageUpdateOffersFluentAssertions8_ThePinKeepsSeven()
     {
-        // 8.0 and later need a paid licence for commercial use; the range in the project file stops the bump.
+        // 8.0 and later need a paid licence for commercial use; the range in the central version file (one
+        // for every test project, msbuild skill) stops the bump.
         typeof(AssertionExtensions).Assembly.GetName().Version!.Major.Should().Be(7);
-        var project = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "SkillSamples.Tests.csproj"));
-        project.Should().Contain("""Include="FluentAssertions" Version="[7.0.0,8.0.0)" """);
+        var versions = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Directory.Packages.props"));
+        versions.Should().Contain("""<PackageVersion Include="FluentAssertions" Version="[7.0.0,8.0.0)" />""");
     }
 
     [Fact]

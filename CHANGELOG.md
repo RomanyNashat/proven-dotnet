@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.6 — our own tests on Central Package Management
+- `tests/Directory.Packages.props` holds one version for each package of the three test projects; the
+  projects name packages without versions. The Pkcs security pin is one `PackageVersion` under
+  transitive pinning instead of a direct reference in two projects. The samples keep floating
+  (`CentralPackageFloatingVersionsEnabled`) so CI keeps testing what a service restores today.
+- The eval fixtures under `tests/evals/` opt out: they stand for someone else's service.
+- `msbuild` 1.2.0: when floating under CPM is reasonable (a test suite like this one) and when it isn't.
+
 ## 0.2.5 — CI on Ubuntu 26.04, and ar-SA's calendar isn't fixed
 - Every Linux job runs on `ubuntu-26.04`, pinned rather than `ubuntu-latest`, which moves between
   19 October and 19 November. The Windows jobs are unchanged. `.github/actionlint.yaml` declares the

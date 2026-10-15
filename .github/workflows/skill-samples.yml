@@ -4,10 +4,10 @@ name: skill-samples
 
 on:
   pull_request:
-    paths: ['.claude/skills/**', 'project-skills/**', 'tests/SkillSamples.Tests/**', 'tests/SkillSamples.OrdersApi/**', 'tools/ci/service.sh', '.github/workflows/skill-samples.yml']
+    paths: ['.claude/skills/**', 'project-skills/**', 'tests/SkillSamples.Tests/**', 'tests/SkillSamples.OrdersApi/**', 'tests/Workflows/**', 'tests/Directory.Packages.props', 'tools/ci/service.sh', '.github/workflows/skill-samples.yml']
   push:
     branches: [main]
-    paths: ['.claude/skills/**', 'project-skills/**', 'tests/SkillSamples.Tests/**', 'tests/SkillSamples.OrdersApi/**', 'tools/ci/service.sh', '.github/workflows/skill-samples.yml']
+    paths: ['.claude/skills/**', 'project-skills/**', 'tests/SkillSamples.Tests/**', 'tests/SkillSamples.OrdersApi/**', 'tests/Workflows/**', 'tests/Directory.Packages.props', 'tools/ci/service.sh', '.github/workflows/skill-samples.yml']
 
 jobs:
   samples:
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('tests/SkillSamples.Tests/*.csproj', 'tests/SkillSamples.OrdersApi/*.csproj') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('tests/Directory.Packages.props', 'tests/SkillSamples.Tests/*.csproj', 'tests/SkillSamples.OrdersApi/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
       # One step per stage, so the run shows where the time went. The downloads start first and run in the
       # background while the samples build; each service then has its own step that waits for it, with a
