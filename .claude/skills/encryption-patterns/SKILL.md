@@ -1,7 +1,7 @@
 ---
 name: encryption-patterns
 description: Encryption for .NET: AES-GCM with associated data, envelope encryption (DEK/KEK), PBKDF2, a versioned format for migrations, key rotation. Core code tested in CI.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Encryption Patterns
@@ -234,6 +234,12 @@ public sealed class VersionedEncryptor(byte[] key) : IEncryptor
     }
 }
 ```
+
+Tested as a story: a national ID written last year in the CBC format is read and saved again. The old
+value decrypted in any row (CBC carries no row binding); the new one is GCM, bound to its row, and a copy
+pasted into another patient's row fails instead of showing the first patient's ID. That's the reason to
+re-encrypt legacy rows rather than leave them until they're next edited. Arabic values round-trip on a
+slim image (no ICU, no tzdata) and fit a column sized with the 29-byte overhead.
 
 ## Key rotation
 
