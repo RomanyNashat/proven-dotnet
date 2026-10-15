@@ -1,6 +1,6 @@
 ---
 name: localization
-description: Arabic/English localization for .NET services — x-language header, resx or JSON text (both supported), the ar-SA Hijri and digit traps, ICU/tzdata on Alpine images, NameAr/NameEn data (nvarchar on SQL Server), Arabic search, SMS. Code tested in CI, the data part on PostgreSQL and SQL Server.
+description: Arabic/English localization for .NET services — x-language header, resx or JSON text (both supported), the ar-SA calendar (Hijri or Gregorian, by ICU version) and digit traps, ICU/tzdata on Alpine images, NameAr/NameEn data (nvarchar on SQL Server), Arabic search, SMS. Code tested in CI, the data part on PostgreSQL and SQL Server.
 ---
 
 # Localization (Arabic / English)
@@ -9,8 +9,9 @@ Callers send `x-language: ar` or `en`. Every service reads it itself, and servic
 with either **resx** or **JSON** files. Both are supported here; neither is forced.
 
 Three rules carry most of the value:
-1. **The header changes the text, never the formatting.** `ar-SA` defaults to the Hijri calendar and
-   Arabic number separators; if it becomes the formatting culture, dates and numbers break.
+1. **The header changes the text, never the formatting.** `ar-SA`'s defaults come from the machine's
+   ICU: its calendar is Hijri on one image and Gregorian on the next. If it becomes the formatting
+   culture, dates and numbers change with the machine.
 2. **Follow the service's existing pattern** (resx or JSON). Never mix the two in one service.
 3. **Know whether the runtime has ICU.** Many teams' images are Alpine, which ships without ICU and
    tzdata. resx needs ICU; JSON doesn't.
@@ -19,8 +20,8 @@ Three rules carry most of the value:
 
 | What | What happens | Fix |
 |---|---|---|
-| `new CultureInfo("ar-SA")` | Calendar is **Umm al-Qura (Hijri)**: `DateTime.ToString()` gives `23/4/1448 بعد الهجرة`; `DateTime.Parse("2026-10-04")` **fails** | Never make `ar-SA` the formatting culture (§3) |
-| Numbers under Arabic cultures | `1234.5.ToString("N2")` gives `1٬234٫50`; parsing `"1234.50"` back can fail | Same: formatting culture stays `en-US`; machine values use `InvariantCulture` |
+| `new CultureInfo("ar-SA")` | **Its calendar depends on the machine's ICU.** With Ubuntu 24.04's it is Umm al-Qura (Hijri): `DateTime.ToString()` gives `23/4/1448 بعد الهجرة` and `DateTime.Parse("2026-10-04")` **fails**. With Ubuntu 26.04's it is Gregorian. Both seen in CI: the laptop, the CI runner and the pod can each give a different date from the same code | Never make `ar-SA` the formatting culture (§3); where a person reads a date, name the calendar (§6) |
+| Numbers under Arabic cultures | `1234.5.ToString("N2")` can give `1٬234٫50` (measured with Ubuntu 24.04's ICU); parsing `"1234.50"` back can fail | Same: formatting culture stays `en-US`; machine values use `InvariantCulture` |
 | Alpine or chiseled image | No ICU, globalization-invariant mode: creating `ar-SA` **throws** `CultureNotFoundException`, and so does `en-US` (only the invariant culture exists). With resx set up, the service won't start. Tested on a slim image: the JSON pattern works there; the resx guard, Arabic dates and `en-US` all fail loudly | §4 guard; or use JSON (§5), with `InvariantCulture` for formatting |
 | Same images, time zones | No tzdata: `FindSystemTimeZoneById("Asia/Riyadh")` **throws** | §7 fixed-offset fallback |
 | `CultureInfo("ar")` (neutral) | Gregorian calendar, but still Arabic separators | Don't rely on it for formatting either |
@@ -192,22 +193,25 @@ expiry or a reload signal, plus a local file fallback so a store outage doesn't 
 
 - **API:** ISO 8601 UTC, always. The frontend formats.
 - **Text the backend writes itself** (SMS, push, email, PDF):
-  - Arabic month names on the Gregorian calendar (`4 أكتوبر 2026`): use a clone of `ar-SA` with the
-    calendar switched.
-  - **Hijri, only where the business asks for it** (`23 ربيع الآخر 1448`): use `ar-SA` explicitly, named
-    as Hijri so nobody uses it by accident.
+  - Arabic month names on the Gregorian calendar (`4 أكتوبر 2026`): a clone of `ar-SA` with the
+    Gregorian calendar set.
+  - **Hijri, only where the business asks for it** (`23 ربيع الآخر 1448`): a clone with `UmAlQuraCalendar`
+    set, named as Hijri so nobody uses it by accident. Never plain `ar-SA` for either: its calendar is
+    whatever the machine's ICU says.
 
 <!-- sample: tests/SkillSamples.Tests/Localization/Cultures.cs -->
 ```csharp
 public static class Cultures
 {
-    public static readonly CultureInfo ArabicGregorian = CreateArabicGregorian();
-    public static readonly CultureInfo ArabicHijri = CultureInfo.ReadOnly(new CultureInfo("ar-SA"));
+    // ar-SA's default calendar comes from the machine's ICU: Umm al-Qura (Hijri) with Ubuntu 24.04's, Gregorian
+    // with 26.04's. Both cultures set the calendar themselves, so a date reads the same on every machine.
+    public static readonly CultureInfo ArabicGregorian = ArabicWith(new GregorianCalendar(GregorianCalendarTypes.Localized));
+    public static readonly CultureInfo ArabicHijri = ArabicWith(new UmAlQuraCalendar());
 
-    private static CultureInfo CreateArabicGregorian()
+    private static CultureInfo ArabicWith(Calendar calendar)
     {
         var culture = (CultureInfo)CultureInfo.GetCultureInfo("ar-SA").Clone();
-        culture.DateTimeFormat.Calendar = new GregorianCalendar(GregorianCalendarTypes.Localized);
+        culture.DateTimeFormat.Calendar = calendar;
         return CultureInfo.ReadOnly(culture);
     }
 }
@@ -386,10 +390,14 @@ public sealed class CultureScope : IDisposable
     private readonly CultureInfo _culture = CultureInfo.CurrentCulture;
     private readonly CultureInfo _uiCulture = CultureInfo.CurrentUICulture;
 
-    public CultureScope(string name)
+    public CultureScope(string name) : this(CultureInfo.GetCultureInfo(name))
     {
-        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(name);
-        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(name);
+    }
+
+    public CultureScope(CultureInfo culture)
+    {
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
     }
 
     public void Dispose()
@@ -400,8 +408,10 @@ public sealed class CultureScope : IDisposable
 }
 ```
 
-The trap it catches, tested: `$"APT-{date:yyyyMMdd}"` under `ar-SA` writes a **Hijri** date, while
-`string.Create(CultureInfo.InvariantCulture, $"APT-{date:yyyyMMdd}")` stays `APT-20261004`.
+The trap it catches, tested: `$"APT-{date:yyyyMMdd}"` under a Hijri culture (`ar-SA` with older ICU)
+writes a **Hijri** date, while `string.Create(CultureInfo.InvariantCulture, $"APT-{date:yyyyMMdd}")` stays
+`APT-20261004`. Test under `Cultures.ArabicHijri`, not `ar-SA`: with newer ICU, `ar-SA` is Gregorian and
+the bug hides.
 
 In a service test (FluentAssertions, as in the rules):
 
@@ -423,6 +433,7 @@ public void BuildReference_UnderArabicCulture_StaysGregorianAndLatin()
   cache key or file, without `CultureInfo.InvariantCulture` or an explicit format.
 - `ar-SA` (or the header) used as the formatting culture rather than the UI culture.
 - A Hijri date produced anywhere the business didn't ask for one.
+- Plain `ar-SA` formatting a date a person reads: its calendar differs by machine. Use the named cultures.
 - `FindSystemTimeZoneById` with no fallback, or `DateTime.Now`.
 - resx and JSON both in one service, or a third pattern added.
 - resx in a service whose runtime has no ICU, without the guard.

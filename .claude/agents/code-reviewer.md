@@ -66,7 +66,7 @@ You are a Principal .NET Developer conducting a thorough code review.
 
 ### Localization (Arabic/English) — checklist in `skills/localization/` §13
 - [ ] Dates and numbers that reach an API, log, SQL, cache key or file use `InvariantCulture` or an explicit format
-- [ ] `ar-SA` / the `x-language` header sets the UI culture only, never the formatting culture (it is Hijri by default)
+- [ ] `ar-SA` / the `x-language` header sets the UI culture only, never the formatting culture (its calendar is Hijri or Gregorian depending on the machine's ICU)
 - [ ] One text pattern per service (resx OR JSON); resx only where the runtime has ICU
 - [ ] `FindSystemTimeZoneById` has a fallback (no tzdata on Alpine images)
 

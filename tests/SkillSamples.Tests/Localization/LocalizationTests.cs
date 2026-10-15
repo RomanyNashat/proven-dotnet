@@ -53,13 +53,17 @@ public sealed class LocalizationTests
     public void Header_ParsesToArOrEn(string? header, string expected) => Assert.Equal(expected, LanguageHeader.Parse(header));
 
     [Fact]
-    public void Trap_ArSaIsHijri_AndCantParseAGregorianDate()
+    public void Trap_ArSaDefaultCalendar_DependsOnTheMachine_TheNamedCulturesDont()
     {
+        // Umm al-Qura with Ubuntu 24.04's ICU, Gregorian with 26.04's (both seen in CI): the same code writes
+        // a Hijri date on one image and a Gregorian one on the next. Only the named cultures are certain.
         var arSa = CultureInfo.GetCultureInfo("ar-SA");
 
-        Assert.IsType<UmAlQuraCalendar>(arSa.Calendar);
-        Assert.Throws<FormatException>(() => DateTime.Parse("2026-10-04", arSa));
-        Assert.NotEqual("1,234.50", 1234.5.ToString("N2", arSa));
+        Assert.True(arSa.Calendar is UmAlQuraCalendar or GregorianCalendar, arSa.Calendar.GetType().Name);
+        // CultureInfo.Calendar is the culture's default; the calendar a culture formats with is DateTimeFormat's.
+        Assert.IsType<GregorianCalendar>(Cultures.ArabicGregorian.DateTimeFormat.Calendar);
+        Assert.IsType<UmAlQuraCalendar>(Cultures.ArabicHijri.DateTimeFormat.Calendar);
+        Assert.Throws<FormatException>(() => DateTime.Parse("2026-10-04", Cultures.ArabicHijri));
     }
 
     [Theory]
@@ -154,9 +158,9 @@ public sealed class LocalizationTests
         Assert.Equal(expected, ArabicSearch.NormalizeForSearch(input));
 
     [Fact]
-    public void Reference_UnderArabicCulture_InvariantStaysGregorian_NaiveTurnsHijri()
+    public void Reference_UnderAHijriCulture_InvariantStaysGregorian_NaiveTurnsHijri()
     {
-        using var _ = new CultureScope("ar-SA");
+        using var _ = new CultureScope(Cultures.ArabicHijri);
 
         Assert.Equal("APT-20261004-1234", AppointmentReference.Build(Oct4, 1234));
         Assert.NotEqual("APT-20261004-1234", AppointmentReference.BuildNaive(Oct4, 1234));

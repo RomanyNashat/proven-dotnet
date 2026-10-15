@@ -46,9 +46,10 @@ When targeting .NET 8, limit to C# 12 features. When targeting .NET 10, use C# 1
 - NEVER use `Thread.Sleep()` — use `await Task.Delay()` with `TimeProvider`
 - ALWAYS enable nullable reference types — treat CS8600/CS8602/CS8603 as errors
 - ALWAYS use `CultureInfo.InvariantCulture` for parsing/formatting non-user-facing data
-- NEVER let `ar-SA` become the formatting culture: its default calendar is Hijri (`2026` parses as a Hijri
-  year and fails) and its numbers use Arabic separators. A language header sets the UI culture only —
-  see `skills/localization/`.
+- NEVER let `ar-SA` become the formatting culture: its default calendar comes from the machine's ICU,
+  Hijri on one image (`2026` then parses as a Hijri year and fails) and Gregorian on another, and its
+  numbers can use Arabic separators. A language header sets the UI culture only; a date a person reads
+  names its calendar — see `skills/localization/`.
 - ALWAYS seal classes unless explicitly designed for inheritance
 - Database primary keys are `int` identity (`bigint` for very large tables) unless your team's rules say
   otherwise — see `rules/efcore-rules.md`. GUIDs for IDs created outside the database; then
