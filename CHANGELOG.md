@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.9 — a harder /full-review fixture
+- `tests/evals/full-review-hard/ClinicReminders`: 14 planted findings a careful review without the
+  skills tends to miss, each one proven by a skill's test (a singleton holding a DbContext, SqlClient on
+  an invariant-mode image, Asia/Riyadh without tzdata, `ar-SA`'s machine-dependent calendar, a Quartz
+  cron in UTC and dropped misfires, a base address without `/`, `UseSerilog()` bypassing redaction, keyset
+  paging on a shared timestamp, a transitive Pkcs vulnerability, and more), with 5 distractors. The
+  first fixture was too easy: the baseline found everything too.
+- `skill-evals`: a fixture both runs pass measures nothing; how to build one that doesn't.
+
 ## 0.2.8 — which calendar a culture writes with
 - `localization`: `CultureInfo.Calendar` is the default calendar and doesn't follow the one you set;
   `DateTimeFormat.Calendar` is the one used to write dates. Tested on Ubuntu 26.04, where the two differ
