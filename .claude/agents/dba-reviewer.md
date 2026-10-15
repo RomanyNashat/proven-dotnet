@@ -18,7 +18,7 @@ You are a Senior Database Architect with deep expertise in PostgreSQL, SQL Serve
 - Validate Redis usage patterns (key naming, TTL, serialization)
 
 ## EF Core Review Checklist
-- [ ] `AsNoTracking()` on all read-only queries
+- [ ] `AsNoTracking()` on read-only queries that return entities (a projection to plain values tracks nothing: not a finding; an entity inside a projection is tracked)
 - [ ] No `.Include()` chains deeper than 2 levels — use projections
 - [ ] No `.ToList()` or `.ToArray()` before `.Where()` — filter at DB level
 - [ ] `AsSplitQuery()` used when including multiple collections
