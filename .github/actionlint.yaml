@@ -1,0 +1,5 @@
+# actionlint 1.7.7 predates the ubuntu-26.04 hosted runner (GA 17 September 2026) and would report the
+# label as unknown. Remove this once the pinned actionlint in ci.yml knows it.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
