@@ -1,7 +1,7 @@
 ---
 name: pii-masking
 description: PII/PHI masking for .NET healthcare: Serilog masking (destructuring policy + pattern operators for national ID, mobile, MRN), [Sensitive] strategies, keyed tokenization. Code tested in CI.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # PII Masking Patterns
@@ -14,11 +14,21 @@ don't reach the output, which is the test the rules below ask every service to h
 
 1. **Objects** logged with `{@Patient}`: a destructuring policy masks properties by name or by a
    `[Sensitive]` attribute.
-2. **Strings and scalars** (`{Input}`, a message from an exception): pattern operators find national IDs,
+2. **Strings and scalars** (`{Input}`, an exception message logged as a property): pattern operators find national IDs,
    mobiles, MRNs, emails and card numbers inside the text.
 
 Neither layer alone is enough. A property called `Notes` can contain a national ID; a pattern can't tell
 a diagnosis from any other text.
+
+**Neither layer touches the exception.** `logger.Error(ex, ...)` hands the exception to the sink as it is,
+and its message reaches Elastic unmasked. Tested as a story: a failed booking's note is masked, the
+exception text in the same event still carries the national ID. Where an exception can echo patient data
+(a downstream error, a validation message), log its type, or its message as a property so the operators
+see it.
+
+**Arabic-Indic digits.** Arabic keyboards type `١٠٨٩٢٣٤٥٦٧`. `\d` matches those digits, but a pattern
+that starts with `[12]` doesn't, and the ID went through whole. Found by a production test; the operators
+below list both.
 
 ## Setup
 
@@ -56,14 +66,15 @@ Register it before anything logs.
 ```csharp
 // Saudi national ID or iqama: 10 digits starting with 1 or 2. Keep the last four only: the first digit
 // says citizen or resident, which is itself personal data. Also matches 10-digit epoch seconds; masking
-// those too is the safe side of the trade.
-public sealed class SaudiNationalIdMaskingOperator() : RegexMaskingOperator(@"(?<!\d)[12]\d{9}(?!\d)")
+// those too is the safe side of the trade. Arabic keyboards type Arabic-Indic digits (١٠٨٩...): \d
+// matches them, but the leading [12] must list them too, or the whole ID goes through unmasked.
+public sealed class SaudiNationalIdMaskingOperator() : RegexMaskingOperator(@"(?<!\d)[12\u0661\u0662\u06F1\u06F2]\d{9}(?!\d)")
 {
     protected override string PreprocessMask(string mask, Match match) => "******" + match.Value[^4..];
 }
 
-// Saudi mobile: 05XXXXXXXX, 5XXXXXXXX, +9665XXXXXXXX or 009665XXXXXXXX.
-public sealed class SaudiMobileMaskingOperator() : RegexMaskingOperator(@"(?<!\d)(?:\+966|00966|0)?5\d{8}(?!\d)")
+// Saudi mobile: 05XXXXXXXX, 5XXXXXXXX, +9665XXXXXXXX or 009665XXXXXXXX, in Western or Arabic-Indic digits.
+public sealed class SaudiMobileMaskingOperator() : RegexMaskingOperator(@"(?<!\d)(?:\+966|00966|[0\u0660\u06F0])?[5\u0665\u06F5]\d{8}(?!\d)")
 {
     protected override string PreprocessMask(string mask, Match match) => "*******" + match.Value[^2..];
 }

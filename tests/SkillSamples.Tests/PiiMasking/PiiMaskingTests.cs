@@ -3,6 +3,7 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using SkillSamples.Encryption;
+using SkillSamples.Production;
 using Xunit;
 
 namespace SkillSamples.PiiMasking;
@@ -163,5 +164,64 @@ public sealed class PiiMaskingTests
         store.Rows[b] = store.Rows[a];
 
         await Assert.ThrowsAnyAsync<CryptographicException>(() => tokenizer.DetokenizeAsync(b, default));
+    }
+
+    // What a real sink writes: the message and, separately, the exception.
+    private sealed class MessageAndExceptionSink : ILogEventSink
+    {
+        public List<(string Message, string? Exception)> Lines { get; } = [];
+
+        public void Emit(LogEvent logEvent)
+        {
+            using var writer = new StringWriter();
+            logEvent.RenderMessage(writer);
+            Lines.Add((writer.ToString(), logEvent.Exception?.Message));
+        }
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public void Story_ABookingFails_TheNoteIsMaskedInTheMessage_ButTheExceptionTextIsNot_SoItsTypeIsWhatGetsLogged()
+    {
+        var sink = new MessageAndExceptionSink();
+        using (var logger = new LoggerConfiguration().AddPiiMasking().WriteTo.Sink(sink).CreateLogger())
+        {
+            // Given: a receptionist's free-text note with the patient's mobile and ID, and a downstream
+            // error whose message repeats the ID
+            const string note = "patient 1089234567 asked to be called on 0551234589";
+            var error = new InvalidOperationException("No booking slot for 1089234567");
+
+            // When: the failure is logged the common way, and the way the skill says
+            logger.Error(error, "Booking failed: {Note}", note);
+            logger.Error("Booking failed: {Note} ({ErrorType})", note, error.GetType().Name);
+        }
+
+        // Then: the note is masked in both, but the exception's own text reaches the sink untouched:
+        // the masking works on properties, and an exception isn't one
+        var (commonMessage, commonException) = sink.Lines[0];
+        var (skillMessage, skillException) = sink.Lines[1];
+        Assert.DoesNotContain("1089234567", commonMessage);
+        Assert.DoesNotContain("0551234589", commonMessage);
+        Assert.Contains("1089234567", commonException);
+        Assert.DoesNotContain("1089234567", skillMessage);
+        Assert.Null(skillException);
+        Assert.Contains("InvalidOperationException", skillMessage);
+    }
+
+    [Theory]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Production)]
+    [InlineData("١٠٨٩٢٣٤٥٦٧")]
+    [InlineData("٠٥٥١٢٣٤٥٨٩")]
+    [InlineData("1089234567")]
+    public void Production_NoIcuNoTzdata_IdsAndMobilesInArabicDigitsAreMaskedToo(string pii)
+    {
+        ProductionConditions.Require();
+        var (logger, sink) = NewLogger();
+
+        logger.Information("Caller sent {Input}", $"رقم {pii} انتهى");
+        logger.Dispose();
+
+        Assert.DoesNotContain(pii, sink.Rendered[0]);
+        Assert.Contains("انتهى", sink.Rendered[0]);
     }
 }
