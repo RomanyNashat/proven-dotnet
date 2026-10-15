@@ -25,6 +25,7 @@ context cost you've been fighting.
 | `find_implementations` | What implements this interface / derives from this base? |
 | `get_type_hierarchy` | Base chain, interfaces, derived types of a type |
 | `get_public_api` | The public surface of a service/namespace |
+| `get_package_api` | A referenced package's public types and member signatures, from metadata (never decompiled) |
 | `get_diagnostics` | Errors/warnings from a real compile, with file:line |
 | `find_dead_code` | Private/internal members with no references (heuristic) |
 | `detect_circular_dependencies` | Namespace cycles (signature-level) |

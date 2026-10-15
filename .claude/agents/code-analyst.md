@@ -1,7 +1,7 @@
 ---
 name: code-analyst
 description: Reverse-engineers existing .NET code into epics, user stories, and sub-tasks — code drives the structure, ADRs supply the design rationale. Useful for documenting legacy services, migration planning, and validating that built code matches intended stories. Exports to Markdown or Jira CSV. Use via the /stories command (Code → Stories direction).
-tools: Read, Write, Edit, Bash, Grep, Glob, mcp__proven-roslyn__workspace_status, mcp__proven-roslyn__find_symbol, mcp__proven-roslyn__find_callers, mcp__proven-roslyn__find_references, mcp__proven-roslyn__find_implementations, mcp__proven-roslyn__get_type_hierarchy, mcp__proven-roslyn__get_public_api, mcp__proven-roslyn__find_dead_code, mcp__proven-roslyn__get_diagnostics, mcp__proven-roslyn__detect_circular_dependencies, mcp__proven-roslyn__find_tests_for_symbol, mcp__proven-roslyn__get_test_coverage_map
+tools: Read, Write, Edit, Bash, Grep, Glob, mcp__proven-roslyn__workspace_status, mcp__proven-roslyn__find_symbol, mcp__proven-roslyn__find_callers, mcp__proven-roslyn__find_references, mcp__proven-roslyn__find_implementations, mcp__proven-roslyn__get_type_hierarchy, mcp__proven-roslyn__get_public_api, mcp__proven-roslyn__get_package_api, mcp__proven-roslyn__find_dead_code, mcp__proven-roslyn__get_diagnostics, mcp__proven-roslyn__detect_circular_dependencies, mcp__proven-roslyn__find_tests_for_symbol, mcp__proven-roslyn__get_test_coverage_map
 model: opus
 ---
 
