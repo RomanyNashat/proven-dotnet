@@ -219,6 +219,11 @@ public static class Cultures
 
 `date.ToString("d MMMM yyyy", Cultures.ArabicGregorian)` gives `4 أكتوبر 2026`; with `ArabicHijri`, `23 ربيع الآخر 1448`. Both are tested, and both need ICU.
 
+To check which calendar a culture writes with, read `culture.DateTimeFormat.Calendar`. `culture.Calendar`
+is the culture's *default* and doesn't change when you set one: `Cultures.ArabicHijri.Calendar` still
+reports Gregorian on a machine whose ICU defaults `ar-SA` to Gregorian, while it writes Hijri dates
+(tested; an assertion on `.Calendar` is how this repo's own test went wrong first).
+
 On a JSON-pattern service without ICU, write the date as `yyyy-MM-dd` or keep Arabic
 month names in the translation file.
 

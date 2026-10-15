@@ -3,6 +3,11 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.8 — which calendar a culture writes with
+- `localization`: `CultureInfo.Calendar` is the default calendar and doesn't follow the one you set;
+  `DateTimeFormat.Calendar` is the one used to write dates. Tested on Ubuntu 26.04, where the two differ
+  for the Hijri culture.
+
 ## 0.2.7 — a package's API without decompiling it
 - `proven-roslyn`: `get_package_api` lists a referenced package's public and protected types and member
   signatures, with their XML summaries, from the metadata the compiler already loaded. Nothing is
