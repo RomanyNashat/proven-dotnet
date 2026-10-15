@@ -175,3 +175,55 @@ public sealed class LocalizationTests
         Assert.Empty(en.Keys.Except(ar.Keys));
     }
 }
+
+public sealed class LocalizationStoryTests
+{
+    private static InMemorySource Texts() => new(new()
+    {
+        ["en"] = new() { ["Sms.Reminder"] = "Your appointment {0} is on {1}.", ["Sms.Footer"] = "Reply STOP to opt out." },
+        ["ar"] = new() { ["Sms.Reminder"] = "موعدك {0} يوم {1}." },
+    });
+
+    [Fact]
+    [Trait(SkillSamples.Production.ProductionConditions.Trait, SkillSamples.Production.ProductionConditions.Story)]
+    public async Task Story_AnArabicPhoneAsksForItsReminder_GetsArabicText_WesternDigits_AndEnglishWhereArabicIsMissing()
+    {
+        // Given: the app sends "AR-sa" (the casing phones really send), on a server whose culture is Arabic
+        var language = LanguageHeader.Parse("AR-sa");
+        var catalog = new TranslationCatalog(Texts());
+        using var _ = new CultureScope("ar-SA");
+
+        // When: the reminder SMS is written, with the reference and the date as the machine knows them
+        var reference = AppointmentReference.Build(new DateTime(2026, 10, 4), 1234);
+        var day = new DateTime(2026, 10, 4).ToString("d MMMM yyyy", Cultures.ArabicGregorian);
+        var text = string.Format(CultureInfo.InvariantCulture, await catalog.GetAsync("Sms.Reminder", language), reference, day);
+        var footer = await catalog.GetAsync("Sms.Footer", language);
+
+        // Then: Arabic words, a Gregorian Arabic date, a reference with western digits (it's typed into a
+        // search box later), and the English footer because Arabic has none yet
+        Assert.Equal("ar", language);
+        Assert.Equal("موعدك APT-20261004-1234 يوم 4 أكتوبر 2026.", text);
+        Assert.Equal("Reply STOP to opt out.", footer);
+    }
+
+    [Fact]
+    [Trait(SkillSamples.Production.ProductionConditions.Trait, SkillSamples.Production.ProductionConditions.Production)]
+    public async Task Production_NoIcu_TheJsonPatternWorks_AndNothingThatNeedsACultureCanStart()
+    {
+        SkillSamples.Production.ProductionConditions.Require();
+        var catalog = new TranslationCatalog(Texts());
+
+        // The JSON pattern needs no culture at all: the header picks the file, placeholders are invariant.
+        var text = string.Format(CultureInfo.InvariantCulture, await catalog.GetAsync("Sms.Reminder", LanguageHeader.Parse("ar")),
+            AppointmentReference.Build(new DateTime(2026, 10, 4), 1234), "2026-10-04");
+        Assert.Equal("موعدك APT-20261004-1234 يوم 2026-10-04.", text);
+        Assert.Equal("1,234.50", 1234.5m.ToString("N2", CultureInfo.CurrentCulture));   // the invariant culture
+
+        // What needs ICU fails loudly: the resx guard with its message, Arabic dates on first use, and even
+        // en-US, so the resx pattern's culture options can't be built on this image either.
+        var guard = Assert.Throws<InvalidOperationException>(GlobalizationGuard.RequireArabicCulture);
+        Assert.Contains("Add ICU to the runtime image", guard.Message, StringComparison.Ordinal);
+        Assert.Throws<TypeInitializationException>(() => Cultures.ArabicGregorian);
+        Assert.Throws<CultureNotFoundException>(() => new CultureInfo("en-US"));
+    }
+}
