@@ -40,10 +40,14 @@ public sealed class SampleSolution : IDisposable
         return relativePath;
     }
 
+    /// <summary>Replaces the root Directory.Build.props, to try a variant of it.</summary>
+    public void WriteRootBuildProps(string xml) => File.WriteAllText(Path.Combine(Root, "Directory.Build.props"), xml);
+
     /// <summary>The version of a package that restore chose for a project, read from its assets file.</summary>
     public string? ResolvedVersion(string project, string packageId)
     {
-        var assets = Path.Combine(Root, Path.GetDirectoryName(project)!, "obj", "project.assets.json");
+        // UseArtifactsOutput: obj is artifacts/obj/<project name>/, not next to the project file.
+        var assets = Path.Combine(Root, "artifacts", "obj", Path.GetFileNameWithoutExtension(project), "project.assets.json");
         using var json = JsonDocument.Parse(File.ReadAllText(assets));
         var prefix = packageId + "/";
         return json.RootElement.GetProperty("libraries").EnumerateObject()

@@ -1,7 +1,7 @@
 ---
 name: msbuild
 description: Solution-wide build settings and package versions — Directory.Build.props, Central Package Management (Directory.Packages.props, transitive pinning, version ranges), moving a solution onto it, and finding out why the build or restore did what it did (-getProperty, dotnet nuget why, binary logs). Restored in CI with the real CLI.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # MSBuild and package versions
@@ -25,6 +25,11 @@ SQL Server and a test project.
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Every project's bin and obj under artifacts/<project>/, so no two projects can share a folder.
+         The path is set here because the default follows the nearest Directory.Build.props, and the
+         nested one under tests/ would move the test projects to tests/artifacts. -->
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
     <!-- zero-vulns: direct and transitive packages are audited, and a known vulnerability fails the restore. -->
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
@@ -51,6 +56,14 @@ starts with the import:
   </PropertyGroup>
 </Project>
 ```
+
+**Outputs: `UseArtifactsOutput`, never a shared `obj`.** "Tidying" outputs by pointing every project's
+`BaseIntermediateOutputPath` or `BaseOutputPath` at one folder makes the projects share it (tested):
+one `project.assets.json` for all of them, so each restore overwrites the last project's, and builds
+overwrite each other's files. `UseArtifactsOutput` gives each project its own
+`artifacts/bin/<project>/` and `artifacts/obj/<project>/` (tested). Set `ArtifactsPath` with it: the
+default sits next to the *nearest* `Directory.Build.props`, so a nested one under `tests/` moves the
+test projects to `tests/artifacts/` (tested).
 
 What goes where:
 - **`Directory.Build.props`** is read *before* the project file: defaults the project can still change.
@@ -192,6 +205,8 @@ artifact.
 ## Rules
 
 - Shared settings in `Directory.Build.props`; a nested one imports its parent first.
+- Outputs through `UseArtifactsOutput` with an explicit `ArtifactsPath`; never one `obj` or `bin` for
+  several projects.
 - No `PackageReference` in `Directory.Build.props` or `.targets`. `GlobalPackageReference` for analyzers.
 - With CPM: no `Version` on `PackageReference`, `VersionOverride` off, no floating versions.
 - A transitive security pin is a `PackageVersion` under transitive pinning, with the advisory in a
