@@ -1,7 +1,7 @@
 ---
 name: aspire-patterns
 description: .NET Aspire: AppHost composition, service discovery, resource wiring, ServiceDefaults telemetry.
-version: 1.0.0
+version: 2.0.0
 ---
 
 # .NET Aspire Patterns
@@ -66,85 +66,70 @@ builder.Build().Run();
 
 ## ServiceDefaults Extension
 
+<!-- sample: tests/SkillSamples.Tests/Aspire/ServiceDefaults.cs -->
 ```csharp
-// ServiceDefaults/Extensions.cs — shared across all services
-public static class ServiceDefaultsExtensions
+// ServiceDefaults/Extensions.cs: shared by every service.
+public static class ServiceDefaults
 {
-    public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
+    public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
-        // OpenTelemetry
         builder.ConfigureOpenTelemetry();
-
-        // Health checks
-        builder.AddDefaultHealthChecks();
-
-        // HTTP client defaults
+        builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+        builder.Services.AddServiceDiscovery();
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
-            http.AddStandardResilienceHandler();
+            // The template's AddStandardResilienceHandler() retries every method: a POST that timed out
+            // but went through (a payment, a booking) is sent again. Only safe methods are retried here.
+            http.AddStandardResilienceHandler(o => o.Retry.DisableForUnsafeHttpMethods());
             http.AddServiceDiscovery();
         });
-
-        // Service discovery
-        builder.Services.AddServiceDiscovery();
-
         return builder;
     }
 
-    private static IHostApplicationBuilder ConfigureOpenTelemetry(
-        this IHostApplicationBuilder builder)
+    public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         builder.Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
             logging.IncludeScopes = true;
         });
-
         builder.Services.AddOpenTelemetry()
-            .WithMetrics(metrics =>
-            {
-                metrics.AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
-            })
-            .WithTracing(tracing =>
-            {
-                tracing.AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddGrpcClientInstrumentation()
-                    .AddEntityFrameworkCoreInstrumentation()
-                    .AddSource("Npgsql");   // SQL Server: .AddSqlClientInstrumentation() (OpenTelemetry.Instrumentation.SqlClient)
-            });
+            .WithMetrics(metrics => metrics
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddRuntimeInstrumentation())
+            .WithTracing(tracing => tracing
+                // Kubernetes probes every pod every few seconds: keep them out of the traces.
+                .AddAspNetCoreInstrumentation(o => o.Filter = http => !http.Request.Path.StartsWithSegments("/health"))
+                .AddHttpClientInstrumentation()
+                .AddSource("Npgsql"));   // SQL Server: .AddSqlClientInstrumentation()
 
-        builder.AddOpenTelemetryExporters();
-        return builder;
-    }
-
-    private static IHostApplicationBuilder AddOpenTelemetryExporters(
-        this IHostApplicationBuilder builder)
-    {
-        var useOtlp = !string.IsNullOrWhiteSpace(
-            builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
-
-        if (useOtlp)
+        if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
         {
-            builder.Services.AddOpenTelemetry()
-                .UseOtlpExporter();
+            builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
 
         return builder;
     }
 
-    private static IHostApplicationBuilder AddDefaultHealthChecks(
-        this IHostApplicationBuilder builder)
+    public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        builder.Services.AddHealthChecks()
-            .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
-
-        return builder;
+        // In every environment: Kubernetes probes Production. (The template maps these in Development only.)
+        app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = check => check.Tags.Contains("live") });
+        app.MapHealthChecks("/health/ready");
+        return app;
     }
 }
 ```
+
+Three changes from the template, each tested (`Aspire/AspireTests.cs`):
+- **POSTs aren't retried.** The template adds `AddStandardResilienceHandler()` to every client, and it
+  retries every method. Tested: against a payments API answering 503, the template's defaults sent one
+  payment four times; these send it once. The full story is in `polly-resilience`.
+- **The health endpoints exist in Production.** The template maps them in Development only, and
+  Kubernetes probes Production. Tested with the environment set to Production.
+- **Probes stay out of the traces.** Every pod is probed every few seconds; tested: `/api/ping` is
+  traced, `/health/live` isn't.
 
 ### Use in each service
 ```csharp
@@ -158,7 +143,7 @@ builder.AddRedisDistributedCache("redis");
 builder.AddKafkaProducer<string, string>("kafka");
 
 var app = builder.Build();
-app.MapDefaultEndpoints();  // /health/live, /health/ready, /alive
+app.MapDefaultEndpoints();  // /health/live, /health/ready
 ```
 
 ## Service Discovery
@@ -178,11 +163,12 @@ builder.Services.AddGrpcClient<OrderGrpcService.OrderGrpcServiceClient>(options 
     options.Address = new Uri("https+http://order-service");
 });
 
-// The "https+http://" scheme tells Aspire to:
-// 1. Try HTTPS first
-// 2. Fall back to HTTP if HTTPS isn't available
-// 3. Resolve the service name via configured discovery provider
+// "https+http://": HTTPS when the service has an HTTPS endpoint, HTTP otherwise,
+// with the name resolved by service discovery (configuration, or Kubernetes DNS)
 ```
+
+Tested with endpoints from configuration (`services:orders:http:0`, `services:orders:https:0`): the
+request goes to the HTTPS endpoint when there is one and to the HTTP one when there isn't.
 
 ## Aspire Dashboard
 
