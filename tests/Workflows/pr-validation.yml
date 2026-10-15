@@ -57,13 +57,22 @@ jobs:
       - name: Unit Tests
         run: |
           dotnet test --no-build \
-            --filter "Category!=Integration" \
+            --filter "Category!=Integration&Category!=Production" \
             --logger "trx;LogFileName=unit-tests.trx" \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=cobertura \
             /p:CoverletOutput=./coverage/ \
             /p:Threshold=80 \
             /p:ThresholdType=line
+
+      # The runner has ICU and time zone data; the production image may not. Tests marked Production run
+      # again without them, in UTC, and each checks those conditions before it starts.
+      - name: Production-condition Tests
+        env:
+          DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: '1'
+          TZDIR: /nonexistent-tzdata
+          TZ: UTC
+        run: dotnet test --no-build --filter "Category=Production"
 
       - name: Architecture Tests
         run: dotnet test --no-build --filter "Category=Architecture"

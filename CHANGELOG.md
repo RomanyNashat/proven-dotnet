@@ -3,6 +3,18 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.1.36 — what the deploy workflow decides
+- `cicd-github-actions` 1.2.0, the last skill with code to get story and production tests:
+  - **Story:** a manual deploy that chose staging, run from `main`, went to production too; the
+    production job now runs only for a manual run that chose it.
+  - The deployed tag is the commit, not `main` (the same string on every push, so nothing rolled out).
+  - Permissions per job instead of for the whole workflow.
+  - The PR pipeline runs production-condition tests in their own step (no ICU, no tzdata, UTC). The
+    production test checks that step against the conditions it runs under itself.
+  - The workflows are read with YamlDotNet; job conditions go through a small evaluator for GitHub's
+    expression syntax.
+- Every skill with tested code now has both kinds of test.
+
 ## 0.1.35 — paging that doesn't lose rows
 - `efcore-patterns` 2.4.0: the page order must be unique. Tested as a story on PostgreSQL and SQL Server:
   five visits saved in one instant, paged two at a time by timestamp alone, show two and lose three with

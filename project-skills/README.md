@@ -28,7 +28,7 @@ production tests, like the installed skills:
 | `rabbitmq-patterns` | RabbitMQ 4.1 |
 | `cap-library` | PostgreSQL and RabbitMQ 4.1 |
 | `fhir` | the Firely SDK in-process (messaging, parsing, FHIRPath) |
-| `cicd-github-actions` | actionlint and shellcheck (valid workflows, not a real deploy) |
+| `cicd-github-actions` | actionlint and shellcheck, plus tests of what the workflows decide (who reaches production, the deployed tag, permissions); not a real deploy |
 | `bigquery`, `firebase` | **not tested:** they need the Google services; the code is reviewed against the SDKs |
 | `cassandra` | no code: modelling guidance only |
 
