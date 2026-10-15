@@ -46,6 +46,8 @@ jobs:
         run: python tools/check-content.py
       - name: Skill samples match their tested files
         run: python tools/ci/check-skill-samples.py
+      - name: Skill scripts
+        run: python -m unittest discover tests/coverage -v
       # The workflows cicd-github-actions shows, and this repo's own, checked by actionlint (with shellcheck
       # for their scripts). The sample caller points at a reusable workflow that lives in the service's repo.
       - name: Workflows pass actionlint
