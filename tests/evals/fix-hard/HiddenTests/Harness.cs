@@ -123,6 +123,9 @@ public sealed class Clinic : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("Serilog__MinimumLevel__Default", "Information");
         Environment.SetEnvironmentVariable("Serilog__WriteTo__0__Name", "File");
         Environment.SetEnvironmentVariable("Serilog__WriteTo__0__Args__path", LogFile);
+        // One JSON object per event, with every property: a field that vanished is visible as missing.
+        Environment.SetEnvironmentVariable("Serilog__WriteTo__0__Args__formatter",
+            "Serilog.Formatting.Compact.CompactJsonFormatter, Serilog.Formatting.Compact");
         Crash = new CrashAfterSend(Sms);
     }
 
@@ -226,26 +229,26 @@ public sealed class Clinic : WebApplicationFactory<Program>
         return Sms.Requests;
     }
 
-    /// <summary>Everything the service logged, through Serilog's file and the Microsoft logger factory.</summary>
-    public string Logs()
+    /// <summary>
+    /// Everything the service logged, one line per event: Serilog's file as compact JSON, and the records the
+    /// Microsoft logger factory passed to its providers as "[Level] message | key=value; ... | exception".
+    /// </summary>
+    public IReadOnlyList<string> Logs()
     {
-        var text = new System.Text.StringBuilder();
+        var lines = new List<string>();
         if (File.Exists(LogFile))
         {
             using var stream = new FileStream(LogFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            text.Append(new StreamReader(stream).ReadToEnd());
+            lines.AddRange(new StreamReader(stream).ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries));
         }
 
         foreach (var record in Services.GetFakeLogCollector().GetSnapshot())
         {
-            text.Append('[').Append(record.Level).Append("] ").Append(record.Message).Append(' ').Append(record.Exception).AppendLine();
-            foreach (var pair in record.StructuredState ?? [])
-            {
-                text.Append("  ").Append(pair.Key).Append('=').Append(pair.Value).AppendLine();
-            }
+            var state = string.Join("; ", (record.StructuredState ?? []).Select(p => p.Key + "=" + p.Value));
+            lines.Add($"[{record.Level}] {record.Message} | {state} | {record.Exception}".ReplaceLineEndings(" "));
         }
 
-        return text.ToString();
+        return lines;
     }
 
     protected override void Dispose(bool disposing)

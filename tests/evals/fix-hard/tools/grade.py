@@ -17,7 +17,7 @@ def outcomes(folder):
             name = r.get("testName").rsplit(".", 1)[-1]
             key = name.split("_", 1)[0]
             msg = r.find(".//t:Message", NS)
-            found[key] = (r.get("outcome") == "Passed", (msg.text or "").strip().splitlines()[0][:160] if msg is not None and msg.text else "")
+            found[key] = (r.get("outcome") == "Passed", (msg.text or "").strip().splitlines()[0][:450] if msg is not None and msg.text else "")
     audit = (folder / "audit.txt").read_text().strip() if (folder / "audit.txt").exists() else "fail"
     found["H11"] = (audit == "pass", "" if audit == "pass" else "restore reports a known-vulnerable package")
     return found
@@ -68,6 +68,16 @@ def main(root):
         for k in REGRESSIONS:
             if o.get(k, (False,))[0] != want_regressions:
                 problems.append(f"{name} {k} should pass: {o.get(k, (False, 'did not run'))[1]}")
+    for name, (built, o) in table.items():
+        score = sum(o.get(k, (False,))[0] for k in FINDINGS)
+        kept = sum(o.get(k, (False,))[0] for k in REGRESSIONS)
+        print(f"::notice title=fix eval: {name}::findings fixed {score}/{len(FINDINGS)}, regressions kept {kept}/{len(REGRESSIONS)}, builds: {'yes' if built else 'no'}", file=sys.stderr)
+        if name == "original":
+            continue
+        for k in FINDINGS + REGRESSIONS:
+            ok, msg = o.get(k, (False, "did not run"))
+            if not ok:
+                print(f"::warning title=fix eval: {name} {k}::{msg}", file=sys.stderr)
     for p in problems:
         print(f"::error title=fix eval fixture::{p}", file=sys.stderr)
     return 1 if problems else 0

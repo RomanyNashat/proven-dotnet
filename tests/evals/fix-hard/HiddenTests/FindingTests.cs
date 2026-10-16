@@ -100,8 +100,14 @@ public sealed class FindingTests
         await clinic.SmsAsync(1);
 
         var logs = clinic.Logs();
-        Assert.Contains(logs.Split('\n'), line => line.Contains("sent", StringComparison.OrdinalIgnoreCase) && line.Contains(id, StringComparison.Ordinal));
-        Assert.DoesNotContain(Clinic.Mobile, logs, StringComparison.Ordinal);
+        AssertNoMobile(logs);
+        var sent = logs.Where(l => l.Contains("sent", StringComparison.OrdinalIgnoreCase) && l.Contains(id, StringComparison.Ordinal)).ToList();
+        Assert.True(sent.Count > 0, "no line says the reminder was sent");
+        // A template that still names {Mobile} must carry the field, redacted. Serilog as the logger factory
+        // drops a classified field without a word; leaving the number out of the line is a fix too.
+        Assert.All(sent, line => Assert.True(!line.Contains("{Mobile}", StringComparison.Ordinal)
+            || line.Contains("\"Mobile\":", StringComparison.Ordinal) || line.Contains("; Mobile=", StringComparison.Ordinal)
+            || line.Contains("| Mobile=", StringComparison.Ordinal), "the Mobile field vanished: " + line));
     }
 
     [Fact]
@@ -158,10 +164,10 @@ public sealed class FindingTests
         await clinic.SmsAsync(1);
 
         var logs = clinic.Logs();
-        Assert.True(logs.Contains("[ERR]", StringComparison.Ordinal) || logs.Contains("[WRN]", StringComparison.Ordinal)
-            || logs.Contains("[Error]", StringComparison.Ordinal) || logs.Contains("[Warning]", StringComparison.Ordinal),
-            "the failure must still be logged");
-        Assert.DoesNotContain(Clinic.Mobile, logs, StringComparison.Ordinal);
+        AssertNoMobile(logs);
+        Assert.True(logs.Any(l => l.Contains("\"@l\":\"Error\"", StringComparison.Ordinal) || l.Contains("\"@l\":\"Warning\"", StringComparison.Ordinal)
+            || l.StartsWith("[Error]", StringComparison.Ordinal) || l.StartsWith("[Warning]", StringComparison.Ordinal)),
+            "the failure must still be logged at warning or error");
     }
 
     [Fact]
@@ -189,6 +195,12 @@ public sealed class FindingTests
         await Clinic.ScheduleAsync(client, 2, Appointment);
 
         Assert.Equal(0, Sql.Scalar(clinic.ConnectionString, "SELECT COUNT(*) FROM Reminders WHERE PatientId = 2"));
+    }
+
+    private static void AssertNoMobile(IReadOnlyList<string> logs)
+    {
+        var leak = logs.FirstOrDefault(l => l.Contains(Clinic.Mobile, StringComparison.Ordinal));
+        Assert.True(leak is null, "the mobile number is in the logs: " + (leak?.Length > 400 ? leak[..400] : leak));
     }
 
     internal static string Text(string body) => JsonDocument.Parse(body).RootElement.EnumerateObject()

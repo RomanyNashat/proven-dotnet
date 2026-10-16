@@ -26,18 +26,19 @@ jobs:
         run: |
           base=tests/evals/fix-hard
           copies="original=$base reference=$base/reference"
-          for d in $base/runs/*/; do [ -d "$d/ClinicReminders" ] && copies="$copies $(basename "$d")=${d%/}"; done
+          for d in "$base"/runs/*/; do [ -d "$d/ClinicReminders" ] && copies="$copies $(basename "$d")=${d%/}"; done
           mkdir -p results
           for c in $copies; do
             name=${c%%=*}; src=${c#*=}
             echo "::group::$name"
             docker run --rm --network host -v "$PWD:/w" -w /w -e EVAL_SQL \
-              mcr.microsoft.com/dotnet/sdk:10.0-noble bash $base/tools/grade-one.sh "$src" "$name" /w/results
+              mcr.microsoft.com/dotnet/sdk:10.0-noble bash "$base/tools/grade-one.sh" "$src" "$name" /w/results
             echo "::endgroup::"
           done
         env:
           EVAL_SQL: "Server=localhost,1433;User Id=sa;Password=Samples-2026!;TrustServerCertificate=true;Encrypt=false"
       - name: Results
+        shell: bash
         run: python3 tests/evals/fix-hard/tools/grade.py results | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Build and test logs
         if: always()
