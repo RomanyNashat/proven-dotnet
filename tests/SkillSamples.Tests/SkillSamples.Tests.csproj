@@ -55,6 +55,8 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+    <!-- azure-deployment: a managed identity's token as the PostgreSQL password. -->
+    <PackageReference Include="Azure.Core" />
     <PackageReference Include="Confluent.Kafka" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />

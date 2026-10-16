@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="../OrderService.Application/OrderService.Application.csproj" />
+    <ProjectReference Include="../OrderService.Infrastructure/OrderService.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

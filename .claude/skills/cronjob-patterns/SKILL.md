@@ -126,18 +126,23 @@ Tested (`CronJobs/CronJobTests.cs`): the report service fails → exit code 1, s
 succeeds → exit code 0 and the report is for Riyadh's yesterday.
 
 ### .csproj
+<!-- sample: tests/Infra/docker/src/DailyReport.Job/DailyReport.Job.csproj -->
 ```xml
 <Project Sdk="Microsoft.NET.Sdk.Worker">
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <OutputType>Exe</OutputType>
-    </PropertyGroup>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The Worker SDK's implicit usings (Microsoft.Extensions.Hosting and friends) need the package. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
 </Project>
 ```
 
 ## Kubernetes CronJob Manifest
 
 ### Basic CronJob
+<!-- sample: tests/Infra/k8s/cronjob.yaml -->
 ```yaml
 apiVersion: batch/v1
 kind: CronJob
@@ -168,9 +173,11 @@ spec:
             - name: daily-report
               image: registry.example.com/daily-report:1.0.0
               env:
-                - name: ASPNETCORE_ENVIRONMENT
+                - name: DOTNET_ENVIRONMENT  # a console host doesn't read ASPNETCORE_ENVIRONMENT
                   value: "Production"
-                - name: DOTNET_EnableDiagnostics
+                - name: DOTNET_EnableDiagnostics_Debugger
+                  value: "0"
+                - name: DOTNET_EnableDiagnostics_Profiler
                   value: "0"
               envFrom:
                 - configMapRef:
@@ -185,6 +192,10 @@ spec:
                   cpu: "1000m"
                   memory: "512Mi"
 ```
+
+`DOTNET_ENVIRONMENT`, not `ASPNETCORE_ENVIRONMENT`: a console host built with `Host.CreateApplicationBuilder`
+reads only the first (tested: with `ASPNETCORE_ENVIRONMENT=Staging` it runs as Production and never loads
+`appsettings.Staging.json`). Validated in CI with kubeconform against Kubernetes 1.30.
 
 ### Common Cron Schedules
 ```yaml
@@ -351,6 +362,7 @@ public sealed class AuditRetentionJob(
 
 ## Dockerfile for Console App Jobs
 
+<!-- sample: tests/Infra/docker/src/DailyReport.Job/Dockerfile -->
 ```dockerfile
 # Use runtime image (not aspnet — no web server needed)
 FROM mcr.microsoft.com/dotnet/runtime:10.0-noble-chiseled AS base
@@ -359,16 +371,20 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY ["src/DailyReport.Job/DailyReport.Job.csproj", "src/DailyReport.Job/"]
-RUN dotnet restore
+COPY ["Directory.Build.props", "Directory.Packages.props", "NuGet.Config", "./"]
+RUN dotnet restore "src/DailyReport.Job/DailyReport.Job.csproj"
 COPY . .
 RUN dotnet publish "src/DailyReport.Job/DailyReport.Job.csproj" \
-    -c Release -o /app/publish
+    -c Release --no-restore -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "DailyReport.Job.dll"]
 ```
+
+Tested in CI: it builds, a successful run exits 0 and a failed one exits 1 from the container, which is
+what the CronJob's `backoffLimit` reads.
 
 **Key difference from API/Worker Dockerfiles**: use `runtime` image (not `aspnet`) — no Kestrel, no HTTP stack, smaller image.
 

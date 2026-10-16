@@ -39,9 +39,13 @@ for skill in skills:
         return root.joinpath(*parts[:3]) if parts[:2] == ("tests", "SkillSamples.Tests") and len(parts) > 3 else (root / path).parent
     folders = {area(p) for p in paths}
     code = "".join(f.read_text(encoding="utf-8") for d in folders if d.is_dir() for f in d.rglob("*.cs"))
-    missing = [kind for kind in ("Story", "Production")
-               if f"ProductionConditions.{kind})" not in code and f'"Kind", "{kind}")' not in code]
+    # Infrastructure samples (tests/Infra) are checked by scripts; each check names its skill.
+    script = "".join(f.read_text(encoding="utf-8") for f in (root / "tests" / "Infra").rglob("*.sh")) \
+        if any(p.startswith("tests/Infra/") for p in paths) else ""
     name = skill.parent.name
+    missing = [kind for kind in ("Story", "Production")
+               if f"ProductionConditions.{kind})" not in code and f'"Kind", "{kind}")' not in code
+               and f"{kind.lower()} [{name}]:" not in script]
     if missing and name in required:
         problems.append(f"{name}: no {' and no '.join(k.lower() for k in missing)} test")
     elif missing:

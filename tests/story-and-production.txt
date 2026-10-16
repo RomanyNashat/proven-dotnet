@@ -46,3 +46,6 @@ kubernetes-dotnet
 caching
 aspire-patterns
 code-quality
+docker-dotnet
+k6-load-testing
+azure-deployment

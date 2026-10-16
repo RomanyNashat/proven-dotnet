@@ -1,13 +1,14 @@
 ---
 name: kubernetes-dotnet
 description: Kubernetes for .NET: health probes, resource limits/QoS, graceful shutdown, config/secrets, rolling deploys.
-version: 1.0.0
+version: 2.0.0
 ---
 
 # Kubernetes Patterns for .NET
 
 ## Deployment Manifest
 
+<!-- sample: tests/Infra/k8s/deployment.yaml -->
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -37,7 +38,7 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: order-service-sa
-      terminationGracePeriodSeconds: 60
+      terminationGracePeriodSeconds: 60  # above preStop (5 s) + ShutdownTimeout (30 s)
       containers:
         - name: order-service
           image: registry.example.com/order-service:1.0.0
@@ -48,7 +49,11 @@ spec:
           env:
             - name: ASPNETCORE_ENVIRONMENT
               value: "Production"
-            - name: DOTNET_EnableDiagnostics
+            # No debugger or profiler attach in production. Not DOTNET_EnableDiagnostics=0: that also
+            # turns off the IPC channel dotnet-counters and dotnet-gcdump need (production-diagnostics).
+            - name: DOTNET_EnableDiagnostics_Debugger
+              value: "0"
+            - name: DOTNET_EnableDiagnostics_Profiler
               value: "0"
           envFrom:
             - configMapRef:
@@ -60,6 +65,10 @@ spec:
             limits:
               cpu: "1000m"
               memory: "512Mi"
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5  # the ingress stops routing here first; chiseled images have no sleep binary
           livenessProbe:
             httpGet:
               path: /health/live
@@ -96,6 +105,14 @@ spec:
               secretProviderClass: order-service-secrets
 ```
 
+Every manifest here is validated in CI with kubeconform against Kubernetes 1.30 in strict mode (an
+unknown or misplaced field fails), the CSI driver's CRD included. Two choices in this one:
+- **`DOTNET_EnableDiagnostics_Debugger` and `_Profiler` off, not `DOTNET_EnableDiagnostics=0`.** The
+  single switch also closes the channel `dotnet-counters` and `dotnet-gcdump` use, so the gcdump
+  `production-diagnostics` asks SRE for becomes impossible.
+- **`preStop: sleep`, not `exec: ["sleep", "5"]`.** A chiseled image has no `sleep` binary; the sleep
+  action (Kubernetes 1.30) needs none.
+
 ## Health Checks (.NET side)
 
 <!-- sample: tests/SkillSamples.Tests/Kubernetes/Probes.cs -->
@@ -124,6 +141,7 @@ over, without bringing Redis back.
 
 ## HorizontalPodAutoscaler
 
+<!-- sample: tests/Infra/k8s/hpa.yaml -->
 ```yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -137,18 +155,13 @@ spec:
   minReplicas: 3
   maxReplicas: 20
   metrics:
+    # CPU only: the GC keeps memory it may need again, so a memory target scales up and rarely back down.
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
           averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300  # wait 5 min before scaling down
@@ -166,6 +179,7 @@ spec:
 
 ## PodDisruptionBudget
 
+<!-- sample: tests/Infra/k8s/pdb.yaml -->
 ```yaml
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -180,6 +194,7 @@ spec:
 
 ## NetworkPolicy (zero-trust)
 
+<!-- sample: tests/Infra/k8s/networkpolicy.yaml -->
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -238,6 +253,7 @@ spec:
 
 ## Azure Key Vault CSI Driver
 
+<!-- sample: tests/Infra/k8s/secretproviderclass.yaml -->
 ```yaml
 apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
@@ -288,6 +304,7 @@ builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSe
 ```
 
 A pod that's stopping can still get requests for a few seconds while the ingress updates its endpoints,
-and those requests fail with 502. A short `preStop` sleep (5–10 s) before SIGTERM covers that window.
+and those requests fail with 502. A short `preStop` sleep (5–10 s) before SIGTERM covers that window (the
+Deployment above has one).
 Keep `terminationGracePeriodSeconds` above the sleep plus `ShutdownTimeout`, or Kubernetes kills the
 process before the host has finished. More 502 causes in `nginx`.

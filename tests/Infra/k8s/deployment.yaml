@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  labels:
+    app: order-service
+    version: "1.0.0"
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # zero-downtime
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+        version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: order-service-sa
+      terminationGracePeriodSeconds: 60  # above preStop (5 s) + ShutdownTimeout (30 s)
+      containers:
+        - name: order-service
+          image: registry.example.com/order-service:1.0.0
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+            # No debugger or profiler attach in production. Not DOTNET_EnableDiagnostics=0: that also
+            # turns off the IPC channel dotnet-counters and dotnet-gcdump need (production-diagnostics).
+            - name: DOTNET_EnableDiagnostics_Debugger
+              value: "0"
+            - name: DOTNET_EnableDiagnostics_Profiler
+              value: "0"
+          envFrom:
+            - configMapRef:
+                name: order-service-config
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5  # the ingress stops routing here first; chiseled images have no sleep binary
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30  # 5 * 30 = 150s max startup
+          volumeMounts:
+            - name: secrets
+              mountPath: /mnt/secrets
+              readOnly: true
+      volumes:
+        - name: secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: order-service-secrets
