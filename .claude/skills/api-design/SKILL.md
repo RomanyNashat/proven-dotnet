@@ -136,6 +136,9 @@ public sealed class BookAppointmentValidator : AbstractValidator<BookAppointment
 
 ## 4. Versioning
 
+A new version is the last resort. Most changes can stay compatible with the apps already installed; what
+breaks them, and how to change without breaking, is in `api-contract-evolution`.
+
 The API version comes from the **`X-API-Version` header or the path**, depending on the service. Read
 both, so a service can move from one to the other without breaking callers:
 

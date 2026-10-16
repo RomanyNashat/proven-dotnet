@@ -76,6 +76,7 @@
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.*" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.*" />
     <PackageVersion Include="Azure.Core" Version="1.*" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.*" />
     <!-- aspire-patterns: the AppHost in tests/SkillSamples.Aspire (its SDK version is in AppHost.csproj). -->
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.0.0" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.0.0" />

@@ -57,6 +57,8 @@
     <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     <!-- azure-deployment: a managed identity's token as the PostgreSQL password. -->
     <PackageReference Include="Azure.Core" />
+    <!-- api-contract-evolution: the OpenAPI documents oasdiff compares. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Confluent.Kafka" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
@@ -91,6 +93,7 @@
     <None Include="../Workflows/*.yml" Link="Workflows/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="MsBuild/**/*.props;MsBuild/**/*.csproj;MsBuild/nuget.config" CopyToOutputDirectory="PreserveNewest" />
     <None Include="CodeQuality/sample/**/*.props;CodeQuality/sample/**/*.csproj;CodeQuality/sample/.editorconfig" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Contracts/oasdiff-levels.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Protobuf Include="Grpc/orders.proto" GrpcServices="Both" />

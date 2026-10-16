@@ -44,6 +44,12 @@ jobs:
       # One step per stage, so the run shows where the time went. The downloads start first and run in the
       # background while the samples build; each service then has its own step that waits for it, with a
       # timeout, and a notice on the run with its timing. tools/ci/service.sh holds the docker commands.
+      # api-contract-evolution: its tests run oasdiff on the OpenAPI documents they generate.
+      - name: Install oasdiff
+        run: |
+          curl -sSfL -o /tmp/oasdiff.tgz https://github.com/oasdiff/oasdiff/releases/download/v1.11.7/oasdiff_1.11.7_linux_amd64.tar.gz
+          mkdir -p /tmp/oasdiff && tar -xzf /tmp/oasdiff.tgz -C /tmp/oasdiff
+          echo "OASDIFF=/tmp/oasdiff/oasdiff" >> "$GITHUB_ENV"
       - name: Start downloading this job's services
         run: for s in $SERVICES; do bash tools/ci/service.sh start "$s"; done
       - name: Build the samples

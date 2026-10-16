@@ -49,3 +49,4 @@ code-quality
 docker-dotnet
 k6-load-testing
 azure-deployment
+api-contract-evolution
