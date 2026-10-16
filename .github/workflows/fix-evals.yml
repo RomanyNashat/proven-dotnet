@@ -1,0 +1,47 @@
+# The fix eval: hidden tests grade each fixed copy of tests/evals/fix-hard/ClinicReminders by what the
+# code does, not by what a review says. The original must fail every finding test and the reference fix
+# must pass them all, or the job fails; a run's own score is reported, never enforced.
+name: fix-evals
+
+on:
+  pull_request:
+    paths: ['tests/evals/fix-hard/**', 'tools/ci/service.sh', '.github/workflows/fix-evals.yml']
+  push:
+    branches: [main]
+    paths: ['tests/evals/fix-hard/**', 'tools/ci/service.sh', '.github/workflows/fix-evals.yml']
+
+jobs:
+  grade:
+    name: Fix eval (hidden tests)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - name: Start SQL Server
+        run: bash tools/ci/service.sh start mssql
+      - name: SQL Server 2022
+        timeout-minutes: 8
+        run: bash tools/ci/service.sh wait mssql
+      - name: Grade every copy
+        run: |
+          base=tests/evals/fix-hard
+          copies="original=$base reference=$base/reference"
+          for d in $base/runs/*/; do [ -d "$d/ClinicReminders" ] && copies="$copies $(basename "$d")=${d%/}"; done
+          mkdir -p results
+          for c in $copies; do
+            name=${c%%=*}; src=${c#*=}
+            echo "::group::$name"
+            docker run --rm --network host -v "$PWD:/w" -w /w -e EVAL_SQL \
+              mcr.microsoft.com/dotnet/sdk:10.0-noble bash $base/tools/grade-one.sh "$src" "$name" /w/results
+            echo "::endgroup::"
+          done
+        env:
+          EVAL_SQL: "Server=localhost,1433;User Id=sa;Password=Samples-2026!;TrustServerCertificate=true;Encrypt=false"
+      - name: Results
+        run: python3 tests/evals/fix-hard/tools/grade.py results | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Build and test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fix-eval-results
+          path: results/
