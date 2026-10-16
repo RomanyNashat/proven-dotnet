@@ -70,7 +70,9 @@ public sealed class FindingTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         using var clinic = new Clinic();
         var options = clinic.Services.GetRequiredService<IOptions<QuartzOptions>>().Value;
-        var persistent = (options["quartz.jobStore.type"] ?? "").Contains("JobStoreTX", StringComparison.Ordinal);
+        // No job store configured is the in-memory default: the key is then absent, not null.
+        var persistent = options.TryGetValue("quartz.jobStore.type", out var store)
+            && (store ?? "").Contains("JobStoreTX", StringComparison.Ordinal);
         Assert.True(!persistent || options.Scheduling.ScheduleTriggerRelativeToReplacedTrigger,
             "a persistent store re-registers the trigger at start and drops the missed run");
     }
