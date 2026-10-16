@@ -1,7 +1,7 @@
 ---
 name: code-quality
 description: Code quality gates for .NET: Roslyn analyzers (Roslynator/Meziantou/.NET), warnings-as-errors, format verification, architecture tests.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Code Quality Patterns

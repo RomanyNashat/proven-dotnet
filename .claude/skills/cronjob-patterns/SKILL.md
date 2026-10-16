@@ -1,7 +1,7 @@
 ---
 name: cronjob-patterns
 description: Cron jobs for .NET (not Quartz in-process): run-once console apps via K8s CronJob/crontab, manifests, retries, data-migration jobs.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Cron Job Patterns (Run-Once Console Apps)

@@ -40,12 +40,19 @@ The AppHost project is `<Project Sdk="Aspire.AppHost.Sdk/13.0.0">` on .NET 10, w
 resource (`Aspire.Hosting.PostgreSQL`, `Aspire.Hosting.Redis`); Aspire 13 needs no `Aspire.Hosting.AppHost`
 reference. Tested in CI: this AppHost starts the service and the containers, and the integration test
 below goes through the Redis it wired.
-Aspire 13.0.0 brings MessagePack 2.5.192, which has known advisories (GHSA-qhrr-8q5h-9q3h and three more):
-with NuGetAudit as errors the AppHost doesn't restore. Pin `MessagePack` 2.5.303 directly (`zero-vulns`)
-until Aspire depends on a fixed version. With Central Package Management and transitive pinning,
-`StackExchange.Redis` must be at least 2.9.32, the floor `Aspire.Hosting.Redis` 13 asks for, or restore
-fails with NU1109. Dev tools (`WithPgAdmin()`, `WithRedisCommander()`, Kafka and
-MongoDB with `AddKafka`, `AddMongoDB`) attach the same way.
+Dev tools (`WithPgAdmin()`, `WithRedisCommander()`, Kafka and MongoDB with `AddKafka`, `AddMongoDB`)
+attach the same way.
+
+Three things that stop it working, all found in CI:
+- **A service without `Properties/launchSettings.json` has no endpoints.** `AddProject` takes the
+  service's endpoints from its launch profile; with no profile (a repo that ignores the file, a project
+  created without one), the service starts but `CreateHttpClient` fails with "Endpoint '' not found".
+  Commit the profile, or declare the endpoint in the AppHost with `.WithHttpEndpoint()`.
+- **MessagePack:** Aspire 13.0.0 brings 2.5.192, which has known advisories (GHSA-qhrr-8q5h-9q3h and
+  three more): with NuGetAudit as errors the AppHost doesn't restore. Pin `MessagePack` 2.5.303 directly
+  (`zero-vulns`) until Aspire depends on a fixed version.
+- **StackExchange.Redis:** with Central Package Management and transitive pinning, the central version
+  must be at least 2.9.32, the floor `Aspire.Hosting.Redis` 13 asks for, or restore fails with NU1109.
 
 ## ServiceDefaults Extension
 
