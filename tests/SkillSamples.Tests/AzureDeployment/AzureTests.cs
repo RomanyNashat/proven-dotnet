@@ -106,6 +106,6 @@ public sealed class AzureSqlTests(SqlDatabase sql) : IClassFixture<SqlDatabase>
         var method = typeof(SqlServerDbContextOptionsBuilder).GetMethod("UseAzureSqlDefaults");
 
         Assert.NotNull(method);
-        Assert.True(method.IsDefined(typeof(ObsoleteAttribute)));
+        Assert.True(method.IsDefined(typeof(ObsoleteAttribute), inherit: false));
     }
 }
