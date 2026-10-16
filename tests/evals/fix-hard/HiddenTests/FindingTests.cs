@@ -101,7 +101,8 @@ public sealed class FindingTests(Xunit.Abstractions.ITestOutputHelper output)
 
         var logs = clinic.Logs();
         AssertNoMobile(logs);
-        var sent = logs.Where(l => l.Contains("sent", StringComparison.OrdinalIgnoreCase) && l.Contains(id, StringComparison.Ordinal)).ToList();
+        var sent = logs.Where(l => System.Text.RegularExpressions.Regex.IsMatch(l, @"(?i)\bsent\b") && l.Contains(id, StringComparison.Ordinal)
+            && !l.Contains("Executed DbCommand", StringComparison.Ordinal)).ToList();
         Assert.True(sent.Count > 0, "no line says the reminder was sent");
         sent.ForEach(output.WriteLine);
         // A template that still names {Mobile} must carry the field, redacted (a string, empty when erased).
