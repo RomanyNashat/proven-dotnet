@@ -93,6 +93,14 @@ class ScanTrapsTests(unittest.TestCase):
             # Then the scan still reads it and finds the trap on line 1
             self.assertEqual([("cors-any-origin", 1)], [(f.check, f.line) for f in scan_traps.scan(tmp)])
 
+    def test_a_startup_check_that_ar_sa_exists_is_not_a_finding(self):
+        # Given a guard that only checks the culture is there (it fails start-up without ICU), next to a
+        # culture that sets its calendar in another file
+        with tempfile.TemporaryDirectory() as tmp:
+            write(pathlib.Path(tmp), {"Api/GlobalizationGuard.cs":
+                'try { _ = CultureInfo.GetCultureInfo("ar-SA", predefinedOnly: true); } catch (CultureNotFoundException) { throw; }\n'})
+            self.assertEqual([], scan_traps.scan(tmp))
+
     def test_commented_out_code_is_not_a_finding(self):
         with tempfile.TemporaryDirectory() as tmp:
             write(pathlib.Path(tmp), {"Program.cs": "// p.SetIsOriginAllowed(_ => true)\n/* old:\n * ValidateAudience = false\n */\n"})

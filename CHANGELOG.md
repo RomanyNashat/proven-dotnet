@@ -3,6 +3,23 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.17 — does the fix work?
+- `tests/evals/fix-hard/`: an eval that grades fixes, not findings. A run reviews and fixes a service with
+  14 planted findings; hidden tests decide, by behavior, whether each is fixed and whether five things that
+  worked still work. No judge. `fix-evals.yml` checks the eval itself on every change (the original fails
+  every finding test, the reference fix passes them all) and grades every copy under `runs/`. H03 runs with
+  no time-zone database, H04 on an ICU whose `ar-SA` is Hijri, H11 is a NuGet audit.
+- First runs in `results.md`: with proven 13/14 findings fixed, rules only 12, no rules 10; every run built
+  and kept all five regressions. All three missed the same one (H12, below).
+- `pii-masking` 1.5.0: `HttpClient` logs a failed request's exception, message and all, so a provider
+  error that repeats the number lands in the logs whatever the service's own catch does.
+  `.RemoveAllLoggers()` on that client stops it. Tested; found by the reference fix in CI.
+- `pii-masking`: what `UseSerilog()` beside `EnableRedaction()` really does, tested in a real host. With
+  `EnableRedaction()` after it, nothing logged through `ILogger` reaches Serilog; before it, the
+  classified field vanishes. The setup example now adds Serilog as a provider.
+- `known-traps` 1.2.0 (31 checks): `serilog-factory-with-redaction`; a start-up check that `ar-SA` exists
+  is no longer reported as formatting with its default calendar.
+
 ## 0.2.16 — the skills' remaining code, tested
 Every skill that shows code now has it tested, with a story test and a production test. What the tests
 found was fixed in the skill:

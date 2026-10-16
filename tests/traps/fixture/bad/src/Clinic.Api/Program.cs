@@ -24,6 +24,8 @@ builder.Services.AddCap(x =>
 });
 builder.Services.AddGrpcClient<Greeter.GreeterClient>(o => o.Address = new Uri("https://greeter"))
     .AddStandardResilienceHandler();
+builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
+builder.Logging.EnableRedaction();
 
 var app = builder.Build();
 app.UseHangfireDashboard();

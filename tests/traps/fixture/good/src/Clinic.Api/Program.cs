@@ -30,6 +30,9 @@ builder.Services.AddCap(x =>
     x.FailedRetryCount = 5;
 });
 builder.Services.AddGrpcClient<Greeter.GreeterClient>(o => o.Address = new Uri("https://greeter"));
+// Serilog as a provider under the redacting factory, never as the factory.
+builder.Logging.EnableRedaction();
+builder.Logging.AddSerilog(new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration).CreateLogger(), dispose: true);
 
 var app = builder.Build();
 app.MapHangfireDashboard("/jobs", new DashboardOptions { Authorization = [] }).RequireAuthorization("ops");
