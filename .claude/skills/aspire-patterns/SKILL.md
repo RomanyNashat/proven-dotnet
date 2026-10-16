@@ -39,7 +39,10 @@ builder.Build().Run();
 The AppHost project is `<Project Sdk="Aspire.AppHost.Sdk/13.0.0">` on .NET 10, with one hosting package per
 resource (`Aspire.Hosting.PostgreSQL`, `Aspire.Hosting.Redis`); Aspire 13 needs no `Aspire.Hosting.AppHost`
 reference. Tested in CI: this AppHost starts the service and the containers, and the integration test
-below goes through the Redis it wired. Dev tools (`WithPgAdmin()`, `WithRedisCommander()`, Kafka and
+below goes through the Redis it wired.
+Aspire 13.0.0 brings MessagePack 2.5.192, which has known advisories (GHSA-2f33-pr97-265q and two more):
+with NuGetAudit as errors the AppHost doesn't restore. Pin `MessagePack` 2.5.301 directly (`zero-vulns`)
+until Aspire depends on a fixed version. Dev tools (`WithPgAdmin()`, `WithRedisCommander()`, Kafka and
 MongoDB with `AddKafka`, `AddMongoDB`) attach the same way.
 
 ## ServiceDefaults Extension
