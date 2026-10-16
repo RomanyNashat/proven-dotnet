@@ -85,8 +85,8 @@ jobs:
           if [ "${{ matrix.group }}" = sql ]; then op='~'; join='|'; else op='!~'; join='&'; fi
           filter=""
           for ns in $SQL_NAMESPACES; do filter="${filter:+$filter$join}FullyQualifiedName${op}SkillSamples.$ns."; done
-          echo "filter: ($filter)&Kind!=Production"
-          bash tools/ci/annotate.sh dotnet test tests/SkillSamples.Tests -c Release --no-build --filter "($filter)&Kind!=Production" --logger "console;verbosity=normal"
+          echo "filter: ($filter)&Kind!=Production&Kind!=NoIcu"
+          bash tools/ci/annotate.sh dotnet test tests/SkillSamples.Tests -c Release --no-build --filter "($filter)&Kind!=Production&Kind!=NoIcu" --logger "console;verbosity=normal"
         env:
           MONGO_URL: mongodb://localhost:27017/?replicaSet=rs0&directConnection=true
           REDIS_URL: localhost:6379
@@ -95,6 +95,17 @@ jobs:
           RABBITMQ_URL: amqp://samples:samples@localhost:5672/
           PG_URL: Host=localhost;Username=postgres;Password=postgres;Database=postgres
           MSSQL_URL: Server=localhost,1433;User Id=sa;Password=Samples-2026!;Encrypt=True;TrustServerCertificate=True
+      # An image with tzdata added but no ICU (the common Alpine half-fix): time zones work, cultures don't.
+      - name: Run this job's no-ICU tests (tzdata present)
+        if: matrix.group == 'sql'   # they live in Localization
+        run: |
+          if [ "${{ matrix.group }}" = sql ]; then op='~'; join='|'; else op='!~'; join='&'; fi
+          filter=""
+          for ns in $SQL_NAMESPACES; do filter="${filter:+$filter$join}FullyQualifiedName${op}SkillSamples.$ns."; done
+          echo "filter: ($filter)&Kind=NoIcu"
+          bash tools/ci/annotate.sh dotnet test tests/SkillSamples.Tests -c Release --no-build --filter "($filter)&Kind=NoIcu" --logger "console;verbosity=normal"
+        env:
+          DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: '1'
       # Production tests run again under a slim image's conditions: no ICU, no time-zone database, UTC.
       # Each test checks the conditions first (tests/SkillSamples.Tests/Production/ProductionConditions.cs).
       - name: Run this job's production tests (no ICU, no tzdata, UTC)

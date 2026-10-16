@@ -260,6 +260,15 @@ def timezone_fallback(repo):
             yield rel, line, None
 
 
+@check("windows-timezone-id", "warning", "A Windows time-zone id",
+       "On Linux it only resolves through ICU: an image with tzdata but no ICU throws. Use the IANA id (Asia/Riyadh).",
+       "localization")
+def windows_timezone(repo):
+    for rel, text in repo.of(".cs", ".json"):
+        for line, _ in matches(text, r"\"[A-Z][A-Za-z.\- ]+ Standard Time\""):
+            yield rel, line, None
+
+
 # --- Scheduling ---------------------------------------------------------------------------------
 
 @check("quartz-missed-run-dropped", "critical", "Quartz persistent store without ScheduleTriggerRelativeToReplacedTrigger",
