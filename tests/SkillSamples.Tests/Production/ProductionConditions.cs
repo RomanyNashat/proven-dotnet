@@ -14,10 +14,19 @@ public static class ProductionConditions
     public const string Production = "Production";
     public const string Story = "Story";
 
+    /// <summary>An image with tzdata added but no ICU: the common Alpine half-fix. Its own CI step.</summary>
+    public const string NoIcu = "NoIcu";
+
     public static void Require()
     {
         Assert.Throws<TimeZoneNotFoundException>(() => TimeZoneInfo.FindSystemTimeZoneById("Asia/Riyadh"));
         Assert.Throws<CultureNotFoundException>(() => CultureInfo.GetCultureInfo("ar-SA"));
         Assert.Equal(TimeSpan.Zero, TimeZoneInfo.Local.BaseUtcOffset);
+    }
+
+    public static void RequireNoIcuWithTzdata()
+    {
+        Assert.Throws<CultureNotFoundException>(() => CultureInfo.GetCultureInfo("ar-SA"));
+        Assert.NotNull(TimeZoneInfo.FindSystemTimeZoneById("Asia/Riyadh"));
     }
 }

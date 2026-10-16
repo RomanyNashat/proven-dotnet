@@ -1,165 +1,155 @@
 ---
 name: aspire-patterns
 description: .NET Aspire: AppHost composition, service discovery, resource wiring, ServiceDefaults telemetry.
-version: 1.0.0
+version: 2.0.0
 ---
 
 # .NET Aspire Patterns
 
 ## AppHost (Orchestration)
 
+<!-- sample: tests/SkillSamples.Aspire/AppHost/Program.cs -->
 ```csharp
-// AppHost/Program.cs — defines the entire distributed application
+// AppHost/Program.cs — defines the distributed application
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Infrastructure
+// Infrastructure: containers locally, with data that survives a restart
 var postgres = builder.AddPostgres("postgres")
-    .WithPgAdmin()
     .WithDataVolume("postgres-data");
-
 var orderDb = postgres.AddDatabase("orderdb");
-var inventoryDb = postgres.AddDatabase("inventorydb");
 
 // SQL Server instead (Aspire.Hosting.SqlServer):
 // var sql = builder.AddSqlServer("sql").WithDataVolume("sql-data");
 // var orderDb = sql.AddDatabase("orderdb");
 
 var redis = builder.AddRedis("redis")
-    .WithRedisCommander()
     .WithDataVolume("redis-data");
 
-var kafka = builder.AddKafka("kafka")
-    .WithKafkaUI();
-
-var mongo = builder.AddMongoDB("mongodb")
-    .WithMongoExpress()
-    .AddDatabase("notificationdb");
-
-// Services
-var orderService = builder.AddProject<Projects.OrderService_Api>("order-service")
+// Services get their connection strings from WithReference, and start once WaitFor's resources are up
+builder.AddProject<Projects.OrderService_Api>("order-service")
     .WithReference(orderDb)
     .WithReference(redis)
-    .WithReference(kafka)
     .WaitFor(orderDb)
-    .WaitFor(redis);
-
-var inventoryService = builder.AddProject<Projects.InventoryService_Api>("inventory-service")
-    .WithReference(inventoryDb)
-    .WithReference(kafka)
-    .WaitFor(inventoryDb);
-
-var notificationService = builder.AddProject<Projects.NotificationService_Api>("notification-service")
-    .WithReference(mongo)
-    .WithReference(redis)
-    .WithReference(kafka)
-    .WaitFor(mongo);
-
-// API Gateway
-builder.AddProject<Projects.ApiGateway>("api-gateway")
-    .WithReference(orderService)
-    .WithReference(inventoryService)
-    .WithReference(notificationService)
+    .WaitFor(redis)
     .WithExternalHttpEndpoints();
 
 builder.Build().Run();
 ```
 
+The AppHost project is `<Project Sdk="Aspire.AppHost.Sdk/13.0.0">` on .NET 10, with one hosting package per
+resource (`Aspire.Hosting.PostgreSQL`, `Aspire.Hosting.Redis`); Aspire 13 needs no `Aspire.Hosting.AppHost`
+reference. Tested in CI: this AppHost starts the service and the containers, and the integration test
+below goes through the Redis it wired.
+Dev tools (`WithPgAdmin()`, `WithRedisCommander()`, Kafka and MongoDB with `AddKafka`, `AddMongoDB`)
+attach the same way.
+
+Three things that stop it working, all found in CI:
+- **A service without `Properties/launchSettings.json` has no endpoints.** `AddProject` takes the
+  service's endpoints from its launch profile; with no profile (a repo that ignores the file, a project
+  created without one), the service starts but `CreateHttpClient` fails with "Endpoint '' not found".
+  Commit the profile, or declare the endpoint in the AppHost with `.WithHttpEndpoint()`.
+- **MessagePack:** Aspire 13.0.0 brings 2.5.192, which has known advisories (GHSA-qhrr-8q5h-9q3h and
+  three more): with NuGetAudit as errors the AppHost doesn't restore. Pin `MessagePack` 2.5.303 directly
+  (`zero-vulns`) until Aspire depends on a fixed version.
+- **StackExchange.Redis:** with Central Package Management and transitive pinning, the central version
+  must be at least 2.9.32, the floor `Aspire.Hosting.Redis` 13 asks for, or restore fails with NU1109.
+
 ## ServiceDefaults Extension
 
+<!-- sample: tests/SkillSamples.Tests/Aspire/ServiceDefaults.cs -->
 ```csharp
-// ServiceDefaults/Extensions.cs — shared across all services
-public static class ServiceDefaultsExtensions
+// ServiceDefaults/Extensions.cs: shared by every service.
+public static class ServiceDefaults
 {
-    public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
+    public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
-        // OpenTelemetry
         builder.ConfigureOpenTelemetry();
-
-        // Health checks
-        builder.AddDefaultHealthChecks();
-
-        // HTTP client defaults
+        builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+        builder.Services.AddServiceDiscovery();
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
-            http.AddStandardResilienceHandler();
+            // The template's AddStandardResilienceHandler() retries every method: a POST that timed out
+            // but went through (a payment, a booking) is sent again. Only safe methods are retried here.
+            http.AddStandardResilienceHandler(o => o.Retry.DisableForUnsafeHttpMethods());
             http.AddServiceDiscovery();
         });
-
-        // Service discovery
-        builder.Services.AddServiceDiscovery();
-
         return builder;
     }
 
-    private static IHostApplicationBuilder ConfigureOpenTelemetry(
-        this IHostApplicationBuilder builder)
+    public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         builder.Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
             logging.IncludeScopes = true;
         });
-
         builder.Services.AddOpenTelemetry()
-            .WithMetrics(metrics =>
-            {
-                metrics.AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
-            })
-            .WithTracing(tracing =>
-            {
-                tracing.AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddGrpcClientInstrumentation()
-                    .AddEntityFrameworkCoreInstrumentation()
-                    .AddSource("Npgsql");   // SQL Server: .AddSqlClientInstrumentation() (OpenTelemetry.Instrumentation.SqlClient)
-            });
+            .WithMetrics(metrics => metrics
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddRuntimeInstrumentation())
+            .WithTracing(tracing => tracing
+                // Kubernetes probes every pod every few seconds: keep them out of the traces.
+                .AddAspNetCoreInstrumentation(o => o.Filter = http => !http.Request.Path.StartsWithSegments("/health"))
+                .AddHttpClientInstrumentation()
+                .AddSource("Npgsql"));   // SQL Server: .AddSqlClientInstrumentation()
 
-        builder.AddOpenTelemetryExporters();
-        return builder;
-    }
-
-    private static IHostApplicationBuilder AddOpenTelemetryExporters(
-        this IHostApplicationBuilder builder)
-    {
-        var useOtlp = !string.IsNullOrWhiteSpace(
-            builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
-
-        if (useOtlp)
+        if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
         {
-            builder.Services.AddOpenTelemetry()
-                .UseOtlpExporter();
+            builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
 
         return builder;
     }
 
-    private static IHostApplicationBuilder AddDefaultHealthChecks(
-        this IHostApplicationBuilder builder)
+    public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        builder.Services.AddHealthChecks()
-            .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
-
-        return builder;
+        // In every environment: Kubernetes probes Production. (The template maps these in Development only.)
+        app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = check => check.Tags.Contains("live") });
+        app.MapHealthChecks("/health/ready");
+        return app;
     }
 }
 ```
 
-### Use in each service
-```csharp
-// OrderService.Api/Program.cs
-var builder = WebApplication.CreateBuilder(args);
-builder.AddServiceDefaults();  // OpenTelemetry, health checks, HTTP defaults
+Three changes from the template, each tested (`Aspire/AspireTests.cs`):
+- **POSTs aren't retried.** The template adds `AddStandardResilienceHandler()` to every client, and it
+  retries every method. Tested: against a payments API answering 503, the template's defaults sent one
+  payment four times; these send it once. The full story is in `polly-resilience`.
+- **The health endpoints exist in Production.** The template maps them in Development only, and
+  Kubernetes probes Production. Tested with the environment set to Production.
+- **Probes stay out of the traces.** Every pod is probed every few seconds; tested: `/api/ping` is
+  traced, `/health/live` isn't.
 
-// Aspire components — auto-configured from AppHost references
-builder.AddNpgsqlDbContext<AppDbContext>("orderdb");      // SQL Server: AddSqlServerDbContext<AppDbContext>("orderdb")
-builder.AddRedisDistributedCache("redis");
-builder.AddKafkaProducer<string, string>("kafka");
+### Use in each service
+<!-- sample: tests/SkillSamples.Aspire/OrderService.Api/Program.cs -->
+```csharp
+// OrderService.Api/Program.cs: the connection string for "redis" comes from the AppHost's WithReference.
+var builder = WebApplication.CreateBuilder(args);
+builder.AddRedisClient("redis");
 
 var app = builder.Build();
-app.MapDefaultEndpoints();  // /health/live, /health/ready, /alive
+app.MapGet("/health/live", () => "Healthy");
+app.MapPost("/api/orders", async (OrderRequest order, IConnectionMultiplexer redis) =>
+{
+    var db = redis.GetDatabase();
+    var id = await db.StringIncrementAsync("orders:next-id");
+    await db.StringSetAsync($"orders:{id}", order.ProductId);
+    return Results.Created($"/api/orders/{id}", new { id });
+});
+app.MapGet("/api/orders/{id:long}", async (long id, IConnectionMultiplexer redis) =>
+{
+    var productId = await redis.GetDatabase().StringGetAsync($"orders:{id}");
+    return productId.IsNull ? Results.NotFound() : Results.Ok(new { id, productId = (int)productId });
+});
+app.Run();
+
+internal sealed record OrderRequest(int ProductId, int Quantity);
 ```
+
+The other client integrations follow the same shape: `builder.AddNpgsqlDbContext<AppDbContext>("orderdb")`
+(SQL Server: `AddSqlServerDbContext`), `builder.AddKafkaProducer<string, string>("kafka")`, each named after
+the AppHost resource. Add `builder.AddServiceDefaults()` and `app.MapDefaultEndpoints()` (above) to each.
 
 ## Service Discovery
 
@@ -178,11 +168,12 @@ builder.Services.AddGrpcClient<OrderGrpcService.OrderGrpcServiceClient>(options 
     options.Address = new Uri("https+http://order-service");
 });
 
-// The "https+http://" scheme tells Aspire to:
-// 1. Try HTTPS first
-// 2. Fall back to HTTP if HTTPS isn't available
-// 3. Resolve the service name via configured discovery provider
+// "https+http://": HTTPS when the service has an HTTPS endpoint, HTTP otherwise,
+// with the name resolved by service discovery (configuration, or Kubernetes DNS)
 ```
+
+Tested with endpoints from configuration (`services:orders:http:0`, `services:orders:https:0`): the
+request goes to the HTTPS endpoint when there is one and to the HTTP one when there isn't.
 
 ## Aspire Dashboard
 
@@ -197,66 +188,52 @@ No configuration needed — the AppHost injects OTLP exporter endpoints into all
 
 ## Integration Testing with Aspire
 
+<!-- sample: tests/SkillSamples.Aspire/Tests/OrderApiTests.cs -->
 ```csharp
 public sealed class OrderApiTests : IAsyncLifetime
 {
     private DistributedApplication _app = null!;
-    private HttpClient _httpClient = null!;
+    private HttpClient _http = null!;
+
+    private sealed record Order(long Id, int ProductId);
 
     public async Task InitializeAsync()
     {
-        var appHost = await DistributedApplicationTestingBuilder
-            .CreateAsync<Projects.AppHost>();
-
-        // Override settings for test environment
-        appHost.Services.ConfigureHttpClientDefaults(http =>
-            http.AddStandardResilienceHandler(options =>
-                options.Retry.MaxRetryAttempts = 0));  // no retries in tests
-
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.AppHost>();
         _app = await appHost.BuildAsync();
         await _app.StartAsync();
 
-        var resourceNotification = _app.Services
-            .GetRequiredService<ResourceNotificationService>();
-
-        // Wait for order-service to be running
-        await resourceNotification.WaitForResourceAsync(
-            "order-service",
-            KnownResourceStates.Running)
-            .WaitAsync(TimeSpan.FromSeconds(60));
-
-        _httpClient = _app.CreateHttpClient("order-service");
-    }
-
-    [Fact]
-    public async Task CreateOrder_ValidRequest_ReturnsCreated()
-    {
-        var request = new { Items = new[] { new { ProductId = 7, Quantity = 2 } } };
-
-        var response = await _httpClient.PostAsJsonAsync("/api/orders", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        // WaitFor in the AppHost holds the service until Postgres and Redis are up; wait for the service here.
+        await _app.ResourceNotifications.WaitForResourceHealthyAsync("order-service").WaitAsync(TimeSpan.FromMinutes(5));
+        _http = _app.CreateHttpClient("order-service");
     }
 
     public async Task DisposeAsync()
     {
+        _http.Dispose();
         await _app.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task CreateOrder_ThenReadIt_ThroughTheRedisTheAppHostWired()
+    {
+        using var created = await _http.PostAsJsonAsync("/api/orders", new { ProductId = 7, Quantity = 2 });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        var order = await _http.GetFromJsonAsync<Order>(created.Headers.Location);
+
+        Assert.Equal(7, order!.ProductId);
     }
 }
 ```
 
-## Custom Resource (external service)
+Run by CI with the real orchestrator: the test project references the AppHost, and `Projects.AppHost`
+is generated from that reference. The clients `CreateHttpClient` hands out have no retries, so there's
+nothing to turn off. (`MaxRetryAttempts = 0` isn't a way to do it: tested, it's rejected with
+`OptionsValidationException` when the client is created.)
 
-```csharp
-// Add a service that isn't a .NET project
-var legacyApi = builder.AddConnectionString("legacy-api");
+## External services and other containers
 
-// Or a container-based service
-var seq = builder.AddContainer("seq", "datalust/seq")
-    .WithHttpEndpoint(port: 5341, targetPort: 80)
-    .WithEnvironment("ACCEPT_EULA", "Y");
-
-// Wire to services
-orderService.WithReference(legacyApi);
-orderService.WithReference(seq);
-```
+A service outside the app (a legacy API) comes in as `builder.AddConnectionString("legacy-api")`, read from
+configuration; any other image as `builder.AddContainer("name", "image")` with its endpoint. Both are passed
+to projects with `WithReference`, like the resources above.

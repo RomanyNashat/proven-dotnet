@@ -1,13 +1,14 @@
 ---
 name: docker-dotnet
 description: Docker for .NET: multi-stage builds, small runtime images, layer caching, non-root users.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Docker Patterns for .NET
 
-## Five-Stage Dockerfile
+## Four-Stage Dockerfile
 
+<!-- sample: tests/Infra/docker/src/OrderService.Api/Dockerfile -->
 ```dockerfile
 # Stage 1: Base runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS base
@@ -37,21 +38,13 @@ COPY . .
 RUN dotnet build "src/OrderService.Api/OrderService.Api.csproj" \
     -c Release --no-restore
 
-# Stage 3: Test (optional — can run in CI instead)
-FROM build AS test
-RUN dotnet test --no-build -c Release \
-    --filter "Category!=Integration" \
-    --logger "trx;LogFileName=test-results.trx" \
-    /p:CollectCoverage=true \
-    /p:Threshold=80 || true
-
-# Stage 4: Publish
+# Stage 3: Publish. Tests run in CI before the image is built, not in a stage of it.
 FROM build AS publish
 RUN dotnet publish "src/OrderService.Api/OrderService.Api.csproj" \
     -c Release --no-build -o /app/publish \
     /p:UseAppHost=false
 
-# Stage 5: Final runtime
+# Stage 4: Final runtime
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
@@ -61,8 +54,14 @@ COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "OrderService.Api.dll"]
 ```
 
+Tested in CI (`infra-samples`, on a real Docker): the image builds, runs as a non-root user and answers
+`/health/live` from outside. It has no shell, and a `curl` health check on it stays unhealthy for good
+while the app answers, which is why there's no `HEALTHCHECK`. There's no test stage either: a
+`dotnet test ... || true` stage passes whatever the tests do. Run the tests in CI before the image.
+
 ## .dockerignore
 
+<!-- sample: tests/Infra/docker/.dockerignore -->
 ```
 **/.dockerignore
 **/.git
@@ -85,6 +84,7 @@ ENTRYPOINT ["dotnet", "OrderService.Api.dll"]
 
 ## Docker Compose (local development)
 
+<!-- sample: tests/Infra/docker/compose.yaml -->
 ```yaml
 services:
   order-service:
@@ -103,6 +103,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     # No healthcheck here: compose runs it inside the container, and the chiseled image has no shell or
     # curl, so a curl check marks the service unhealthy forever. Check it from the host:
@@ -141,15 +143,29 @@ services:
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      CLUSTER_ID: order-service-local
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk          # a base64 UUID (kafka-storage random-uuid), not a name
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1   # one broker: the default of 3 breaks consumer groups
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     ports:
       - "9092:9092"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
 
 volumes:
   postgres-data:
 ```
+
+Tested: `docker compose up --wait` brings every dependency up healthy and the service answers. Kafka in
+KRaft mode needs a real cluster id (a base64 UUID from `kafka-storage random-uuid`): tested, the same
+broker with `CLUSTER_ID: order-service-local` stops at start. One broker also needs the internal topics'
+replication factor set to 1.
 
 Local passwords only: the compose file is for a developer machine, never a shared environment
 (`secret-management`).
@@ -202,7 +218,9 @@ volumes:
 | `aspnet:10.0-noble-chiseled` | ~80MB | Production — no shell, no root, minimal attack surface |
 | `aspnet:10.0-noble-chiseled-extra` | ~95MB | Chiseled + globalization support (ICU) |
 
-For services needing globalization (Arabic/Saudi locale). Alpine and chiseled images also lack tzdata.
+For services needing globalization (Arabic/Saudi locale), and every service on SQL Server: SqlClient
+won't connect without ICU. Tested: the chiseled image sets `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true`,
+chiseled-extra doesn't. Alpine and chiseled images also lack tzdata.
 The `localization` skill has the startup guard, and which text pattern works without ICU:
 ```dockerfile
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS base

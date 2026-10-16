@@ -1,7 +1,7 @@
 ---
 name: known-traps
 description: Scan a .NET service, or many, for the traps this harness's own tests found in real libraries — a Quartz store that drops missed runs, SqlClient in invariant mode, a singleton holding a DbContext, ar-SA's machine-dependent calendar, OpenIddict 6 on EF Core 10 and more. One read-only command, one table with file, line, fix and the skill that proves it.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Known traps: one scan for what the tests found
@@ -46,6 +46,7 @@ that the service is right. For "who calls this" and "is this still used", use `p
 | `base-address-loses-path` | warning | a base address with a path and no trailing `/` (code or appsettings) | `dotnet-core` |
 | `ar-sa-default-calendar` | warning | `ar-SA` used without setting its calendar | `localization` |
 | `timezone-without-fallback` | warning | `FindSystemTimeZoneById` with no fallback for an image without tzdata | `localization` |
+| `windows-timezone-id` | warning | a Windows time-zone id (`"Arab Standard Time"`): it needs ICU on Linux | `localization` |
 | `quartz-missed-run-dropped` | critical | a persistent store without `ScheduleTriggerRelativeToReplacedTrigger = true` | `quartz-scheduling` |
 | `quartz-cron-in-utc` | warning | a cron trigger without `InTimeZone` | `quartz-scheduling` |
 | `quartz-script-drops-tables` | critical | Quartz's schema script with `DropDb` still 1 | `quartz-scheduling` |

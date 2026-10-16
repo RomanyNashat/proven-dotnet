@@ -1,7 +1,7 @@
 ---
 name: api-design
 description: ASP.NET Core APIs — endpoints with injected handlers and TypedResults, ownership checks on every id, ProblemDetails that leak nothing, validation, X-API-Version/path versioning, keyset paging, per-caller rate limits, health checks. Core code tested in CI.
-version: 3.1.0
+version: 3.2.0
 ---
 
 # API Design
@@ -135,6 +135,9 @@ public sealed class BookAppointmentValidator : AbstractValidator<BookAppointment
 ```
 
 ## 4. Versioning
+
+A new version is the last resort. Most changes can stay compatible with the apps already installed; what
+breaks them, and how to change without breaking, is in `api-contract-evolution`.
 
 The API version comes from the **`X-API-Version` header or the path**, depending on the service. Read
 both, so a service can move from one to the other without breaking callers:

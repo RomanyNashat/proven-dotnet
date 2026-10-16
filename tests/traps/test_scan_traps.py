@@ -46,6 +46,10 @@ class ScanTrapsTests(unittest.TestCase):
         cors = by_check(scan_traps.scan(BAD))["cors-any-origin"]
         self.assertEqual([("src/Clinic.Api/Program.cs", 7)], [(f.path, f.line) for f in cors])
 
+    def test_a_group_built_from_a_parameter_is_caught_too(self):
+        lines = [f.line for f in by_check(scan_traps.scan(BAD))["signalr-client-picks-group"]]
+        self.assertEqual([5, 7], lines)   # the bare parameter, and $"patient-{patientId}"
+
     def test_schema_change_is_critical_in_the_app_and_a_warning_in_a_test_fixture(self):
         found = {(f.path, f.severity) for f in by_check(scan_traps.scan(BAD))["app-changes-schema"]}
         self.assertEqual({("src/Clinic.Api/Program.cs", "critical"),

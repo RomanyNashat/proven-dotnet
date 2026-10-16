@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: order-service-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # ingress-nginx's names. An annotation it doesn't know (rate-limit, rate-limit-window) is ignored silently.
+    nginx.ingress.kubernetes.io/limit-rpm: "100"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [api.example.com]
+      secretName: api-tls
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /api/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: order-service
+                port:
+                  number: 80

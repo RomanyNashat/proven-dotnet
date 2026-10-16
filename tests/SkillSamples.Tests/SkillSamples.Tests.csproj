@@ -42,6 +42,23 @@
     <PackageReference Include="Serilog.Extensions.Logging" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="StackExchange.Redis" />
+    <!-- kubernetes-dotnet: the readiness check for Redis. -->
+    <PackageReference Include="AspNetCore.HealthChecks.Redis" />
+    <!-- caching: HybridCache with Redis as L2. -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
+    <!-- aspire-patterns: ServiceDefaults (service discovery, OpenTelemetry). -->
+    <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+    <!-- azure-deployment: a managed identity's token as the PostgreSQL password. -->
+    <PackageReference Include="Azure.Core" />
+    <!-- api-contract-evolution: the OpenAPI documents oasdiff compares. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Confluent.Kafka" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
@@ -75,6 +92,8 @@
     <Compile Include="../Workflows/*.cs" Link="Workflows/%(Filename)%(Extension)" />
     <None Include="../Workflows/*.yml" Link="Workflows/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="MsBuild/**/*.props;MsBuild/**/*.csproj;MsBuild/nuget.config" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="CodeQuality/sample/**/*.props;CodeQuality/sample/**/*.csproj;CodeQuality/sample/.editorconfig" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Contracts/oasdiff-levels.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Protobuf Include="Grpc/orders.proto" GrpcServices="Both" />

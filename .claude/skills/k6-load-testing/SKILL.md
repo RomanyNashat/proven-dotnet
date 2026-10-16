@@ -1,6 +1,7 @@
 ---
 name: k6-load-testing
-description: Load/performance testing for .NET with k6: scripts, thresholds as pass/fail gates, profiles (smoke/load/stress/spike/soak), CI integration.
+description: Load/performance testing for .NET with k6: scripts, thresholds as pass/fail gates, profiles (smoke/load/stress/spike/soak), CI integration. The script and the gate tested in CI.
+version: 1.1.0
 ---
 
 # k6 — load & performance testing for .NET services
@@ -20,9 +21,13 @@ environment) — not against production without care.
   leaks, connection-pool exhaustion, DB handle leaks).
 
 ## A test script (structure)
+<!-- sample: tests/Infra/k6/patients.js -->
 ```javascript
 import http from 'k6/http';
 import { check, sleep } from 'k6';
+
+// k6 run -e BASE_URL=https://orders.test.example.com patients.js
+const BASE_URL = __ENV.BASE_URL;
 
 export const options = {
   stages: [
@@ -37,7 +42,7 @@ export const options = {
 };
 
 export default function () {
-  const res = http.get('https://service-under-test/api/patients/123');
+  const res = http.get(`${BASE_URL}/api/patients/123`);
   check(res, {
     'status is 200':      (r) => r.status === 200,
     'body has patient':   (r) => r.json('id') !== undefined,
@@ -45,6 +50,11 @@ export default function () {
   sleep(1);
 }
 ```
+
+Tested in CI against a running service: the run passes against the endpoint, and against the same
+endpoint answering in 600 ms it fails with exit code 99 (`thresholds on metrics 'http_req_duration' have
+been crossed`). A short run for CI overrides the stages from the command line:
+`k6 run --stage 3s:5 --stage 5s:5 --stage 2s:0 -e BASE_URL=http://localhost:5001 patients.js`.
 
 ## Thresholds are the point (pass/fail gates)
 `thresholds` turn a load test into a **gate**: if `p(95)` latency or error rate crosses the line, k6

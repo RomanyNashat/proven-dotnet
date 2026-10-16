@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: order-service-pdb
+spec:
+  minAvailable: 2  # always keep at least 2 pods running
+  selector:
+    matchLabels:
+      app: order-service

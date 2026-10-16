@@ -260,6 +260,15 @@ def timezone_fallback(repo):
             yield rel, line, None
 
 
+@check("windows-timezone-id", "warning", "A Windows time-zone id",
+       "On Linux it only resolves through ICU: an image with tzdata but no ICU throws. Use the IANA id (Asia/Riyadh).",
+       "localization")
+def windows_timezone(repo):
+    for rel, text in repo.of(".cs", ".json"):
+        for line, _ in matches(text, r"\"[A-Z][A-Za-z.\- ]+ Standard Time\""):
+            yield rel, line, None
+
+
 # --- Scheduling ---------------------------------------------------------------------------------
 
 @check("quartz-missed-run-dropped", "critical", "Quartz persistent store without ScheduleTriggerRelativeToReplacedTrigger",
@@ -385,8 +394,9 @@ def signalr_group(repo):
         if not re.search(r":\s*Hub\b", text):
             continue
         params = set(re.findall(r"\b(?:string|int|long|Guid)\s+(\w+)\s*[,)]", text))
-        for line, match in matches(text, r"AddToGroupAsync\(\s*Context\.ConnectionId\s*,\s*(\w+)\s*[,)]"):
-            if match[1] in params:
+        for line, match in matches(text, r"AddToGroupAsync\(\s*Context\.ConnectionId\s*,"):
+            group = call_text(text, match.start())[len(match[0]):]   # the group name: a parameter, or a string built from one
+            if any(re.search(rf"\b{re.escape(p)}\b", group) for p in params):
                 yield rel, line, None
 
 

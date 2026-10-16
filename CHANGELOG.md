@@ -3,6 +3,46 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.16 — the skills' remaining code, tested
+Every skill that shows code now has it tested, with a story test and a production test. What the tests
+found was fixed in the skill:
+- `cronjob-patterns` 1.1.0: "yesterday" is computed in the clinic's time zone (UTC gives the wrong day
+  after midnight); a backfill pages by id, because paging by "still to do" never ends; the outcome is read
+  before `RunAsync` disposes the host; a console job reads `DOTNET_ENVIRONMENT`, not
+  `ASPNETCORE_ENVIRONMENT`. The job's Dockerfile builds again (a missing stage, a bad restore).
+- `kubernetes-dotnet` 2.0.0: readiness fails and liveness stays up when Redis is down; on .NET 10 a
+  stop right after start cuts a worker before it runs; `ShutdownTimeout` is 30 s by default; `preStop`
+  uses `sleep` (chiseled images have no `sleep` binary); `DOTNET_EnableDiagnostics=0` also blocks
+  dotnet-counters, so turn off only the debugger and profiler. Manifests checked with kubeconform.
+- `caching` 2.0.0: HybridCache on real Redis: one call under a stampede, tags, and the stale L1 on other
+  pods, closed by a pub/sub eviction.
+- `aspire-patterns` 2.0.0: an AppHost and its integration test run in CI. The standard resilience handler
+  retries POSTs; `DisableForUnsafeHttpMethods` sends them once. Health endpoints mapped in Production,
+  probes kept out of traces. A service with no launch profile has no endpoints in the AppHost; Aspire
+  13.0.0 needs a MessagePack pin, and StackExchange.Redis 2.9.32 or later, to restore with NuGetAudit as errors.
+- `code-quality` 1.1.0: the props and `.editorconfig` built with the CLI. MA0004 must be off beside
+  CA2007, and IDE1006 needs its own severity line to fail a command-line build.
+- `docker-dotnet` 1.1.0: four stages, built for real; a curl health check on chiseled stays unhealthy;
+  chiseled is invariant and chiseled-extra has ICU; Kafka in compose needs a base64 `CLUSTER_ID`; a
+  `dotnet test || true` stage hides failures.
+- `azure-deployment` 1.1.0: a token-refreshing Npgsql data source recovers after a refused token;
+  `UseAzureSqlDefaults` is obsolete. The Bicep compiles.
+- `k6-load-testing` 1.1.0: the script runs; k6 exits 99 when a threshold is crossed.
+- `localization`: a Windows time-zone id works only with ICU; `known-traps` 1.1.0 checks for it again
+  (30 checks), and its SignalR check sees a group name built from a parameter.
+- Ingress: `rate-limit` and `rate-limit-window` aren't ingress-nginx annotations; `limit-rpm` is.
+
+New:
+- `api-contract-evolution` 1.0.0: what breaks an app already installed on phones (a new enum value, a new
+  required field, a renamed property), versioning and deprecation headers, and oasdiff set so a new
+  response enum value fails the build (by default it is only a warning). `api-design` 3.2.0 links to it.
+- `try-first.ps1`: install into a throwaway folder, check what landed, and remove it. Tested on Windows
+  PowerShell 5.1 and PowerShell 7. The installers honour `PROVEN_CLAUDE_DIR`.
+- `tests/evals/skills-only/`: a fixture whose findings the rules don't mention, run three ways (proven
+  10/10, rules only 9.5, no rules 9.5).
+- CI: `infra-samples.yml` checks the Dockerfiles, compose, manifests, Bicep and k6, and runs the Aspire
+  AppHost.
+
 ## 0.2.15 — what a reference token costs per request
 - `auth-patterns` 2.1.1: OpenIddict.Validation doesn't cache introspection, now tested: ten requests with
   one token are ten introspections, each two queries on the auth server's database. What to read in the

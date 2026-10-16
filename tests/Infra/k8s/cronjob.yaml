@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-report
+  namespace: order-service
+spec:
+  schedule: "0 2 * * *"  # 2:00 AM daily (UTC)
+  timeZone: "Asia/Riyadh"  # K8s 1.27+: native timezone support
+  concurrencyPolicy: Forbid  # don't run if previous is still running
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  startingDeadlineSeconds: 600  # skip if delayed more than 10 minutes
+  jobTemplate:
+    spec:
+      backoffLimit: 3  # retry up to 3 times on failure
+      activeDeadlineSeconds: 3600  # kill if running longer than 1 hour
+      ttlSecondsAfterFinished: 86400  # clean up pod after 24 hours
+      template:
+        metadata:
+          labels:
+            app: daily-report
+            type: cronjob
+        spec:
+          serviceAccountName: order-service-sa  # same SA for vault access
+          restartPolicy: OnFailure  # MUST be OnFailure or Never for CronJobs
+          containers:
+            - name: daily-report
+              image: registry.example.com/daily-report:1.0.0
+              env:
+                - name: DOTNET_ENVIRONMENT  # a console host doesn't read ASPNETCORE_ENVIRONMENT
+                  value: "Production"
+                - name: DOTNET_EnableDiagnostics_Debugger
+                  value: "0"
+                - name: DOTNET_EnableDiagnostics_Profiler
+                  value: "0"
+              envFrom:
+                - configMapRef:
+                    name: order-service-config
+                - secretRef:
+                    name: order-service-secrets
+              resources:
+                requests:
+                  cpu: "250m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "1000m"
+                  memory: "512Mi"

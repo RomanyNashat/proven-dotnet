@@ -24,6 +24,7 @@ Three rules carry most of the value:
 | Numbers under Arabic cultures | `1234.5.ToString("N2")` can give `1٬234٫50` (measured with Ubuntu 24.04's ICU); parsing `"1234.50"` back can fail | Same: formatting culture stays `en-US`; machine values use `InvariantCulture` |
 | Alpine or chiseled image | No ICU, globalization-invariant mode: creating `ar-SA` **throws** `CultureNotFoundException`, and so does `en-US` (only the invariant culture exists). With resx set up, the service won't start. Tested on a slim image: the JSON pattern works there; the resx guard, Arabic dates and `en-US` all fail loudly | §4 guard; or use JSON (§5), with `InvariantCulture` for formatting |
 | Same images, time zones | No tzdata: `FindSystemTimeZoneById("Asia/Riyadh")` **throws** | §7 fixed-offset fallback |
+| A Windows time-zone id | `"Arab Standard Time"` resolves on Linux only through ICU. Tested on an image with tzdata but no ICU: `Asia/Riyadh` works, `Arab Standard Time` **throws** | IANA ids (`Asia/Riyadh`) everywhere, Windows included |
 | `CultureInfo("ar")` (neutral) | Gregorian calendar, but still Arabic separators | Don't rely on it for formatting either |
 
 **API values are never localized.** JSON bodies, query strings, logs, SQL, cache keys and message

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../OrderService.Application/OrderService.Application.csproj" />
+  </ItemGroup>
+</Project>

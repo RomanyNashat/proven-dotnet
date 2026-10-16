@@ -1,6 +1,7 @@
 ---
 name: caching
-description: Caching for .NET: HybridCache (L1+L2, stampede protection, tag invalidation), cache-aside vs write-back, TTL tiers, the multi-pod L1 gap needing a Redis backplane.
+description: Caching for .NET: HybridCache (L1+L2, stampede protection, tag invalidation), cache-aside vs write-back, TTL tiers, the multi-pod L1 gap and the Redis pub/sub eviction that closes it. Tested against real Redis.
+version: 2.0.0
 ---
 
 # Caching — the discipline, not just a Redis client
@@ -13,26 +14,41 @@ mechanics see `redis-patterns`; this skill is the layer above it.
 `HybridCache` (Microsoft.Extensions.Caching.Hybrid) is the modern default. It's a **two-level** cache:
 an in-process L1 (fast, per-pod memory) in front of a distributed L2 (Redis, shared across pods).
 
+<!-- sample: tests/SkillSamples.Tests/Caching/CachingSetup.cs -->
 ```csharp
-builder.Services.AddHybridCache(o =>
+public static class CachingSetup
 {
-    o.DefaultEntryOptions = new() { Expiration = TimeSpan.FromMinutes(10),
-                                    LocalCacheExpiration = TimeSpan.FromMinutes(2) };
-});
+    public static IServiceCollection AddTwoLevelCache(this IServiceCollection services, string redisConnectionString)
+    {
+        services.AddStackExchangeRedisCache(o => o.Configuration = redisConnectionString);   // L2: shared by every pod
+        services.AddHybridCache(o => o.DefaultEntryOptions = new HybridCacheEntryOptions
+        {
+            Expiration = TimeSpan.FromMinutes(10),            // L2
+            LocalCacheExpiration = TimeSpan.FromMinutes(2),   // L1, per pod: shorter than L2
+        });
+        return services;
+    }
+}
+```
 
-// One call — checks L1, then L2, then the factory; writes back up both levels.
-var patient = await cache.GetOrCreateAsync(
-    $"patient:{id}",
-    async ct => await repo.GetPatientAsync(id, ct),
-    cancellationToken: ct);
+<!-- sample: tests/SkillSamples.Tests/Caching/PatientNames.cs -->
+```csharp
+public sealed class PatientNames(HybridCache cache, IPatientStore store)
+{
+    public static string Key(int id) => $"patient:v1:{id}";   // prefixed and versioned: a new shape gets a new key
+
+    // L1, then L2, then the store, with one store call however many requests arrive for a cold key.
+    public ValueTask<string> NameAsync(int id, CancellationToken ct) =>
+        cache.GetOrCreateAsync(Key(id), async token => await store.LoadNameAsync(id, token), tags: ["patient"], cancellationToken: ct);
+}
 ```
 
 Why it's the default:
 - **Built-in stampede protection.** With plain cache-aside, 100 concurrent requests for a cold key
   all hit the database at once. `HybridCache.GetOrCreateAsync` collapses them into **one** factory
-  call; the other 99 await the same result. This alone is a reason to prefer it.
+  call; the other 99 await the same result (tested: 100 requests, one store call, also on a slim image).
 - **Tag-based invalidation.** Tag entries and evict a whole group at once:
-  `await cache.RemoveByTagAsync("patient")`.
+  `await cache.RemoveByTagAsync("patient")` (tested).
 - **L1+L2 in one API** — you don't hand-write the "check memory, then Redis, then DB" ladder.
 
 ## The strategies (pick per data shape)
@@ -55,9 +71,38 @@ layer.
 The one that bites in production. HybridCache's **L1 is per-pod** — evicting or updating a key on
 pod A does **not** evict L1 on pods B and C. So after a write, other pods can serve stale L1 for up
 to the L1 TTL, even though L2 (Redis) is correct.
-- **Mitigation:** a **Redis pub/sub backplane** — on a write/eviction, publish the key to a channel;
-  every pod subscribes and evicts its own L1. (HybridCache does not do this for you across nodes;
-  you wire the pub/sub eviction.)
+- **Tested:** two pods share Redis; pod A removes a corrected patient's key; pod B keeps answering
+  the old name from its L1.
+- **Mitigation:** a Redis pub/sub eviction. On a write, remove the key and publish it; every pod
+  subscribes and removes its own L1 copy. HybridCache doesn't do this across nodes. Tested: with it, pod
+  B reads the corrected name within a moment.
+
+<!-- sample: tests/SkillSamples.Tests/Caching/L1Eviction.cs -->
+```csharp
+/// <summary>
+/// HybridCache's L1 is per pod: removing a key on one pod leaves the others serving their copy until it
+/// expires. This tells every pod to drop its copy, over Redis pub/sub.
+/// </summary>
+public sealed class L1Eviction(IConnectionMultiplexer redis, HybridCache cache)
+{
+    private static readonly RedisChannel Channel = RedisChannel.Literal("hybrid-cache:evict");
+
+    /// <summary>Every pod subscribes once, at start.</summary>
+    public async Task SubscribeAsync()
+    {
+        var queue = await redis.GetSubscriber().SubscribeAsync(Channel);
+        queue.OnMessage(async message => await cache.RemoveAsync(message.Message.ToString()));
+    }
+
+    /// <summary>After a write: drop the key here and in L2, then tell the other pods to drop theirs.</summary>
+    public async Task InvalidateAsync(string key, CancellationToken ct)
+    {
+        await cache.RemoveAsync(key, ct);
+        await redis.GetSubscriber().PublishAsync(Channel, key);
+    }
+}
+```
+
 - Or keep L1 TTL short enough that the staleness window is acceptable, and rely on L2 for correctness.
 - Know which you're relying on: short-L1-window vs. active-backplane-eviction. Don't assume L1 is
   coherent across pods — it isn't.

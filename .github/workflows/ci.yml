@@ -35,6 +35,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tests/installer/e2e.ps1
+      # try-first.ps1 is what a developer runs before installing: Windows PowerShell 5.1 on Windows,
+      # PowerShell 7 elsewhere. It installs into a throw-away folder and exits 1 if a step failed.
+      - name: try-first.ps1 (Windows PowerShell)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File try-first.ps1
+      - name: try-first.ps1 (PowerShell 7)
+        if: runner.os != 'Windows'
+        run: pwsh -NoProfile -File try-first.ps1
 
   content:
     name: Content
