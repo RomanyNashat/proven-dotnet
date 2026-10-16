@@ -40,4 +40,5 @@ csharp_new_line_before_finally = true
 dotnet_diagnostic.CA1062.severity = none  # null check on public params (nullable handles this)
 dotnet_diagnostic.CA1822.severity = suggestion  # mark as static
 dotnet_diagnostic.CA2007.severity = none  # ConfigureAwait in ASP.NET Core
+dotnet_diagnostic.MA0004.severity = none  # Meziantou's ConfigureAwait rule: the same, so off too
 dotnet_diagnostic.CS8618.severity = error  # non-nullable not initialized
