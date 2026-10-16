@@ -17,7 +17,8 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
 - `pii-masking`: what `UseSerilog()` beside `EnableRedaction()` really does, tested in a real host. With
   `EnableRedaction()` after it, nothing logged through `ILogger` reaches Serilog; before it, the
   classified field vanishes. The setup example now adds Serilog as a provider.
-- `known-traps` 1.2.0 (31 checks): `serilog-factory-with-redaction`.
+- `known-traps` 1.2.0 (31 checks): `serilog-factory-with-redaction`; a start-up check that `ar-SA` exists
+  is no longer reported as formatting with its default calendar.
 
 ## 0.2.16 — the skills' remaining code, tested
 Every skill that shows code now has it tested, with a story test and a production test. What the tests

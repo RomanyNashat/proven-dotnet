@@ -45,6 +45,12 @@ meters (subagents in the session, `claude -p`'s own usage) and only show the ord
   provider's error repeated the number. Nothing in the harness said so. The reference fix ran into it in
   CI; `pii-masking` 1.5.0 now has it, tested.
 
+**The scan, run again on the fixed copies,** names the misses it knows: the Pkcs pin in rules only and
+no rules, and `EnsureCreatedAsync` in no rules. It's clean on with-proven, after one false positive was
+fixed: a start-up check that `ar-SA` exists (`_ = GetCultureInfo("ar-SA", predefinedOnly: true)`) isn't
+formatting with it. H12 and H14 aren't patterns a text scan can see. So a scan after the fix is a cheap
+second gate for half of what slipped through.
+
 ## What the eval found in the harness
 
 - `pii-masking`: the "`UseSerilog()` replaces the factory" story was half the truth. Tested in a real host
@@ -52,7 +58,8 @@ meters (subagents in the session, `claude -p`'s own usage) and only show the ord
   through `ILogger` reaches Serilog at all; only the other order drops the field. The skill's own setup
   line still showed `UseSerilog()`; it now shows Serilog as a provider. The code reviewer also suggested
   `builder.Services.AddSerilog()` "as a provider", which is the factory again; the skill now names it.
-- `known-traps` 1.2.0: `serilog-factory-with-redaction`.
+- `known-traps` 1.2.0: `serilog-factory-with-redaction`, and no `ar-sa-default-calendar` finding on a check
+  that the culture exists.
 - `pii-masking` 1.5.0: `HttpClient` logging and exception text, above.
 
 ## The hidden tests themselves

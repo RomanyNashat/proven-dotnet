@@ -257,7 +257,11 @@ def ar_sa(repo):
     for rel, text in repo.of(".cs"):
         if re.search(r"Calendar\s*=", text):
             continue
-        for line, _ in matches(text, r"(new\s+CultureInfo|GetCultureInfo|CreateSpecificCulture)\(\s*\"ar-SA\""):
+        for line, match in matches(text, r"(new\s+CultureInfo|GetCultureInfo|CreateSpecificCulture)\(\s*\"ar-SA\""):
+            # A start-up check that the culture exists formats nothing: `_ = GetCultureInfo("ar-SA", predefinedOnly: true)`.
+            before = text[text.rfind("\n", 0, match.start()) + 1:match.start()]
+            if re.search(r"\b_\s*=\s*$", before) or "predefinedOnly" in call_text(text, match.start()):
+                continue
             yield rel, line, None
 
 
