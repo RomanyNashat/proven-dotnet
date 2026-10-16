@@ -91,5 +91,9 @@
          CVE-2026-70162 (GHSA-2fmv-rv2c-59x7, moderate) and CVE-2026-84008 (GHSA-846f-f764-76mx, high), both
          denial of service. Pinned for every project here until SqlClient depends on a fixed version. -->
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <!-- Arrives through Aspire.Hosting 13.0.0 at 2.5.192. Versions below 2.5.301 (3.x below 3.1.7) are affected
+         by CVE-2026-48509 (GHSA-2f33-pr97-265q), CVE-2026-48512 (GHSA-cj9g-3mj2-g8vv) and GHSA-2x83-8g95-xh59,
+         all moderate. Pinned on the 2.x line Aspire uses, until it depends on a fixed version. -->
+    <PackageVersion Include="MessagePack" Version="2.5.301" />
   </ItemGroup>
 </Project>
