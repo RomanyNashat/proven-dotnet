@@ -236,6 +236,18 @@ def base_address(repo):
             yield rel, line, None
 
 
+@check("serilog-factory-with-redaction", "warning", "Serilog as the logger factory, with redaction enabled",
+       "Redaction runs in the factory EnableRedaction installs. UseSerilog() before it: nothing logged through "
+       "ILogger reaches Serilog. After it: classified fields vanish. Add Serilog as a provider instead: "
+       "builder.Logging.AddSerilog(logger, dispose: true).", "pii-masking")
+def serilog_factory(repo):
+    if not repo.has(r"EnableRedaction\s*\(", ".cs"):
+        return
+    for rel, text in repo.of(".cs"):
+        for line, _ in matches(text, r"(\bUseSerilog|Services\s*\.\s*AddSerilog)\s*\("):
+            yield rel, line, None
+
+
 # --- Time and culture -----------------------------------------------------------------------------
 
 @check("ar-sa-default-calendar", "warning", "ar-SA used with its default calendar",

@@ -90,10 +90,18 @@ Tested with `FakeLogger` and with Serilog:
 - **It covers only what is classified.** The same ID through an ordinary
   `logger.LogWarning("... {NationalId}", id)` goes through in clear. Keep the pattern operators: they're
   the net for every line nobody marked.
-- **Story: Serilog must be a provider, not the factory.** `builder.Logging.AddSerilog()` keeps the
-  redacting factory, and Elastic gets `****`. `UseSerilog()` (or registering `SerilogLoggerFactory`)
-  replaces it: the redactor never runs, and the classified field silently vanishes from the line. It
-  doesn't leak, but nobody can search by it either.
+- **Story: Serilog must be a provider, not the factory.** `builder.Logging.AddSerilog(logger)` keeps the
+  redacting factory, and Elastic gets `****`. `UseSerilog()`, `builder.Services.AddSerilog()` (the
+  hosting package's, not the logging builder's) and registering `SerilogLoggerFactory` all make Serilog
+  the factory, and in a real host the order with `EnableRedaction()` decides how it goes wrong
+  (`SerilogOrderTests`):
+  - **`EnableRedaction()` after it:** the redacting factory goes back over Serilog's, and Serilog isn't a
+    provider under it. **Nothing logged through `ILogger` reaches Serilog**: the service's logs stop
+    arriving, and nothing says so.
+  - **`EnableRedaction()` before it:** Serilog's factory wins, the redactor never runs, and the classified
+    field silently vanishes from the line. It doesn't leak, but nobody can search by it either.
+
+  `known-traps` checks for it (`serilog-factory-with-redaction`).
 - **`HttpClient` logs a failed request's exception, message and all.** `IHttpClientFactory`'s default
   logging writes "HTTP request failed after {ElapsedMilliseconds}ms" with the exception attached, and no
   redactor or masking operator reads exception text. A provider whose error repeats the number puts it in
@@ -135,7 +143,16 @@ public static class LoggingSetup
 }
 ```
 
-In a service: `builder.Host.UseSerilog((ctx, config) => config.ReadFrom.Configuration(ctx.Configuration).AddPiiMasking());`.
+In a service, with classified logging (Serilog as a provider under the redacting factory, never
+`UseSerilog()`, see the story above):
+```csharp
+builder.Logging.ClearProviders();
+builder.Logging.EnableRedaction();
+builder.Logging.AddSerilog(new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .AddPiiMasking()
+    .CreateLogger(), dispose: true);
+```
 Register it before anything logs.
 
 ## Pattern operators
