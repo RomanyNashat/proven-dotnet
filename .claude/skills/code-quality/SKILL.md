@@ -108,6 +108,7 @@ insert_final_newline = true
 dotnet_naming_rule.private_fields.symbols = private_fields
 dotnet_naming_rule.private_fields.style = camel_case_underscore
 dotnet_naming_rule.private_fields.severity = error
+dotnet_diagnostic.IDE1006.severity = error  # the build only enforces naming rules through this line
 
 dotnet_naming_symbols.private_fields.applicable_kinds = field
 dotnet_naming_symbols.private_fields.applicable_accessibilities = private

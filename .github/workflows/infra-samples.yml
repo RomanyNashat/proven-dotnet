@@ -59,4 +59,4 @@ jobs:
           dotnet-version: '10.0.x'
       # Starts the AppHost for real: DCP runs the service and the Postgres and Redis containers.
       - name: The AppHost and its integration test
-        run: dotnet test tests/SkillSamples.Aspire/Tests -c Release --logger "console;verbosity=normal"
+        run: bash tools/ci/annotate.sh dotnet test tests/SkillSamples.Aspire/Tests -c Release --logger "console;verbosity=normal"
