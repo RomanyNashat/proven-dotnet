@@ -40,6 +40,9 @@ cd proven-dotnet
 
 Restart Claude Code and run `/version`: it lists what's installed.
 
+- **Try it first:** `powershell -ExecutionPolicy Bypass -File try-first.ps1` (or `pwsh -File try-first.ps1`)
+  installs into a throw-away folder, lists what it put there, uninstalls, and writes
+  `try-first-report.txt`. Your real `~/.claude` isn't touched.
 - **Update:** `git pull`, then run the installer again.
 - **Remove:** `./uninstall.sh` (or `uninstall.ps1`). It takes out exactly what it put in.
 
