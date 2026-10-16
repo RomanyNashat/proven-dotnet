@@ -1,7 +1,7 @@
 ---
 name: pii-masking
 description: PII/PHI masking for .NET healthcare: Serilog masking (destructuring policy + pattern operators for national ID, mobile, MRN), classified logging with redaction before any provider, [Sensitive] strategies, keyed tokenization. Code tested in CI.
-version: 1.4.0
+version: 1.5.0
 ---
 
 # PII Masking Patterns
@@ -94,6 +94,12 @@ Tested with `FakeLogger` and with Serilog:
   redacting factory, and Elastic gets `****`. `UseSerilog()` (or registering `SerilogLoggerFactory`)
   replaces it: the redactor never runs, and the classified field silently vanishes from the line. It
   doesn't leak, but nobody can search by it either.
+- **`HttpClient` logs a failed request's exception, message and all.** `IHttpClientFactory`'s default
+  logging writes "HTTP request failed after {ElapsedMilliseconds}ms" with the exception attached, and no
+  redactor or masking operator reads exception text. A provider whose error repeats the number puts it in
+  the log even when the service's own catch logs only an id. On a client whose errors can carry patient
+  data, call `.RemoveAllLoggers()` on its builder and log your own line with the status code. Tested
+  (`HttpClientLoggingTests`); found by the fix eval in `tests/evals/fix-hard`.
 - **`[LogProperties]` logs every property, today's and tomorrow's.** Only the classified ones are redacted
   (a record's constructor parameter counts). Tested: a `Mobile` added without `[PatientIdentifier]` goes
   out as it is. Use it only on types where every patient field is classified, and review additions to
