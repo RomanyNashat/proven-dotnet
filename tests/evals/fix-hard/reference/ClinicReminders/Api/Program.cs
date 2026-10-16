@@ -21,7 +21,10 @@ builder.Services.AddScoped<ReminderService>();
 builder.Services.AddScoped<ReminderQueries>();
 builder.Services.AddScoped<DueReminders>();
 
-builder.Services.AddHttpClient<SmsClient>(c => c.BaseAddress = new Uri("https://sms.example.net/api/v2/"));
+// No HttpClient logging on this client: it logs the handler's exception text, and the provider's
+// errors can echo the number.
+builder.Services.AddHttpClient<SmsClient>(c => c.BaseAddress = new Uri("https://sms.example.net/api/v2/"))
+    .RemoveAllLoggers();
 
 builder.Services.AddQuartz(q =>
 {

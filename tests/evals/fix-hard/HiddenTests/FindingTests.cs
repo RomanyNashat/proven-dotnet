@@ -9,7 +9,7 @@ using Xunit;
 namespace HiddenTests;
 
 /// <summary>One test per planted finding. Each fails on the original and passes once that finding is fixed.</summary>
-public sealed class FindingTests
+public sealed class FindingTests(Xunit.Abstractions.ITestOutputHelper output)
 {
     private static readonly DateTimeOffset Appointment = new(2026, 11, 3, 6, 30, 0, TimeSpan.Zero);   // 09:30 in Riyadh
 
@@ -103,10 +103,12 @@ public sealed class FindingTests
         AssertNoMobile(logs);
         var sent = logs.Where(l => l.Contains("sent", StringComparison.OrdinalIgnoreCase) && l.Contains(id, StringComparison.Ordinal)).ToList();
         Assert.True(sent.Count > 0, "no line says the reminder was sent");
-        // A template that still names {Mobile} must carry the field, redacted. Serilog as the logger factory
-        // drops a classified field without a word; leaving the number out of the line is a fix too.
+        sent.ForEach(output.WriteLine);
+        // A template that still names {Mobile} must carry the field, redacted (a string, empty when erased).
+        // Serilog as the logger factory never runs the redactor: the classified field comes out null.
+        // Leaving the number out of the line is a fix too.
         Assert.All(sent, line => Assert.True(!line.Contains("{Mobile}", StringComparison.Ordinal)
-            || line.Contains("\"Mobile\":", StringComparison.Ordinal) || line.Contains("; Mobile=", StringComparison.Ordinal)
+            || line.Contains("\"Mobile\":\"", StringComparison.Ordinal) || line.Contains("; Mobile=", StringComparison.Ordinal)
             || line.Contains("| Mobile=", StringComparison.Ordinal), "the Mobile field vanished: " + line));
     }
 

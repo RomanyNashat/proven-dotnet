@@ -16,6 +16,9 @@ def outcomes(folder):
         for r in ET.parse(trx).getroot().iterfind(".//t:UnitTestResult", NS):
             name = r.get("testName").rsplit(".", 1)[-1]
             key = name.split("_", 1)[0]
+            out = r.find(".//t:StdOut", NS)
+            if out is not None and out.text and folder.name == "original":
+                print(f"::notice title=fix eval: original {key} output::{out.text.strip()[:900]}", file=sys.stderr)
             msg = r.find(".//t:Message", NS)
             found[key] = (r.get("outcome") == "Passed", (msg.text or "").strip().splitlines()[0][:450] if msg is not None and msg.text else "")
     audit = (folder / "audit.txt").read_text().strip() if (folder / "audit.txt").exists() else "fail"
