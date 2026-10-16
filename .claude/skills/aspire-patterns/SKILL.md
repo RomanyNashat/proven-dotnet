@@ -8,61 +8,39 @@ version: 2.0.0
 
 ## AppHost (Orchestration)
 
+<!-- sample: tests/SkillSamples.Aspire/AppHost/Program.cs -->
 ```csharp
-// AppHost/Program.cs — defines the entire distributed application
+// AppHost/Program.cs — defines the distributed application
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Infrastructure
+// Infrastructure: containers locally, with data that survives a restart
 var postgres = builder.AddPostgres("postgres")
-    .WithPgAdmin()
     .WithDataVolume("postgres-data");
-
 var orderDb = postgres.AddDatabase("orderdb");
-var inventoryDb = postgres.AddDatabase("inventorydb");
 
 // SQL Server instead (Aspire.Hosting.SqlServer):
 // var sql = builder.AddSqlServer("sql").WithDataVolume("sql-data");
 // var orderDb = sql.AddDatabase("orderdb");
 
 var redis = builder.AddRedis("redis")
-    .WithRedisCommander()
     .WithDataVolume("redis-data");
 
-var kafka = builder.AddKafka("kafka")
-    .WithKafkaUI();
-
-var mongo = builder.AddMongoDB("mongodb")
-    .WithMongoExpress()
-    .AddDatabase("notificationdb");
-
-// Services
-var orderService = builder.AddProject<Projects.OrderService_Api>("order-service")
+// Services get their connection strings from WithReference, and start once WaitFor's resources are up
+builder.AddProject<Projects.OrderService_Api>("order-service")
     .WithReference(orderDb)
     .WithReference(redis)
-    .WithReference(kafka)
     .WaitFor(orderDb)
-    .WaitFor(redis);
-
-var inventoryService = builder.AddProject<Projects.InventoryService_Api>("inventory-service")
-    .WithReference(inventoryDb)
-    .WithReference(kafka)
-    .WaitFor(inventoryDb);
-
-var notificationService = builder.AddProject<Projects.NotificationService_Api>("notification-service")
-    .WithReference(mongo)
-    .WithReference(redis)
-    .WithReference(kafka)
-    .WaitFor(mongo);
-
-// API Gateway
-builder.AddProject<Projects.ApiGateway>("api-gateway")
-    .WithReference(orderService)
-    .WithReference(inventoryService)
-    .WithReference(notificationService)
+    .WaitFor(redis)
     .WithExternalHttpEndpoints();
 
 builder.Build().Run();
 ```
+
+The AppHost project is `<Project Sdk="Aspire.AppHost.Sdk/13.0.0">` on .NET 10, with one hosting package per
+resource (`Aspire.Hosting.PostgreSQL`, `Aspire.Hosting.Redis`); Aspire 13 needs no `Aspire.Hosting.AppHost`
+reference. Tested in CI: this AppHost starts the service and the containers, and the integration test
+below goes through the Redis it wired. Dev tools (`WithPgAdmin()`, `WithRedisCommander()`, Kafka and
+MongoDB with `AddKafka`, `AddMongoDB`) attach the same way.
 
 ## ServiceDefaults Extension
 
@@ -132,19 +110,34 @@ Three changes from the template, each tested (`Aspire/AspireTests.cs`):
   traced, `/health/live` isn't.
 
 ### Use in each service
+<!-- sample: tests/SkillSamples.Aspire/OrderService.Api/Program.cs -->
 ```csharp
-// OrderService.Api/Program.cs
+// OrderService.Api/Program.cs: the connection string for "redis" comes from the AppHost's WithReference.
 var builder = WebApplication.CreateBuilder(args);
-builder.AddServiceDefaults();  // OpenTelemetry, health checks, HTTP defaults
-
-// Aspire components — auto-configured from AppHost references
-builder.AddNpgsqlDbContext<AppDbContext>("orderdb");      // SQL Server: AddSqlServerDbContext<AppDbContext>("orderdb")
-builder.AddRedisDistributedCache("redis");
-builder.AddKafkaProducer<string, string>("kafka");
+builder.AddRedisClient("redis");
 
 var app = builder.Build();
-app.MapDefaultEndpoints();  // /health/live, /health/ready
+app.MapGet("/health/live", () => "Healthy");
+app.MapPost("/api/orders", async (OrderRequest order, IConnectionMultiplexer redis) =>
+{
+    var db = redis.GetDatabase();
+    var id = await db.StringIncrementAsync("orders:next-id");
+    await db.StringSetAsync($"orders:{id}", order.ProductId);
+    return Results.Created($"/api/orders/{id}", new { id });
+});
+app.MapGet("/api/orders/{id:long}", async (long id, IConnectionMultiplexer redis) =>
+{
+    var productId = await redis.GetDatabase().StringGetAsync($"orders:{id}");
+    return productId.IsNull ? Results.NotFound() : Results.Ok(new { id, productId = (int)productId });
+});
+app.Run();
+
+internal sealed record OrderRequest(int ProductId, int Quantity);
 ```
+
+The other client integrations follow the same shape: `builder.AddNpgsqlDbContext<AppDbContext>("orderdb")`
+(SQL Server: `AddSqlServerDbContext`), `builder.AddKafkaProducer<string, string>("kafka")`, each named after
+the AppHost resource. Add `builder.AddServiceDefaults()` and `app.MapDefaultEndpoints()` (above) to each.
 
 ## Service Discovery
 
@@ -183,66 +176,52 @@ No configuration needed — the AppHost injects OTLP exporter endpoints into all
 
 ## Integration Testing with Aspire
 
+<!-- sample: tests/SkillSamples.Aspire/Tests/OrderApiTests.cs -->
 ```csharp
 public sealed class OrderApiTests : IAsyncLifetime
 {
     private DistributedApplication _app = null!;
-    private HttpClient _httpClient = null!;
+    private HttpClient _http = null!;
+
+    private sealed record Order(long Id, int ProductId);
 
     public async Task InitializeAsync()
     {
-        var appHost = await DistributedApplicationTestingBuilder
-            .CreateAsync<Projects.AppHost>();
-
-        // Override settings for test environment
-        appHost.Services.ConfigureHttpClientDefaults(http =>
-            http.AddStandardResilienceHandler(options =>
-                options.Retry.MaxRetryAttempts = 0));  // no retries in tests
-
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.AppHost>();
         _app = await appHost.BuildAsync();
         await _app.StartAsync();
 
-        var resourceNotification = _app.Services
-            .GetRequiredService<ResourceNotificationService>();
-
-        // Wait for order-service to be running
-        await resourceNotification.WaitForResourceAsync(
-            "order-service",
-            KnownResourceStates.Running)
-            .WaitAsync(TimeSpan.FromSeconds(60));
-
-        _httpClient = _app.CreateHttpClient("order-service");
-    }
-
-    [Fact]
-    public async Task CreateOrder_ValidRequest_ReturnsCreated()
-    {
-        var request = new { Items = new[] { new { ProductId = 7, Quantity = 2 } } };
-
-        var response = await _httpClient.PostAsJsonAsync("/api/orders", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        // WaitFor in the AppHost holds the service until Postgres and Redis are up; wait for the service here.
+        await _app.ResourceNotifications.WaitForResourceHealthyAsync("order-service").WaitAsync(TimeSpan.FromMinutes(5));
+        _http = _app.CreateHttpClient("order-service");
     }
 
     public async Task DisposeAsync()
     {
+        _http.Dispose();
         await _app.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task CreateOrder_ThenReadIt_ThroughTheRedisTheAppHostWired()
+    {
+        using var created = await _http.PostAsJsonAsync("/api/orders", new { ProductId = 7, Quantity = 2 });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        var order = await _http.GetFromJsonAsync<Order>(created.Headers.Location);
+
+        Assert.Equal(7, order!.ProductId);
     }
 }
 ```
 
-## Custom Resource (external service)
+Run by CI with the real orchestrator: the test project references the AppHost, and `Projects.AppHost`
+is generated from that reference. The clients `CreateHttpClient` hands out have no retries, so there's
+nothing to turn off. (`MaxRetryAttempts = 0` isn't a way to do it: tested, it's rejected with
+`OptionsValidationException` when the client is created.)
 
-```csharp
-// Add a service that isn't a .NET project
-var legacyApi = builder.AddConnectionString("legacy-api");
+## External services and other containers
 
-// Or a container-based service
-var seq = builder.AddContainer("seq", "datalust/seq")
-    .WithHttpEndpoint(port: 5341, targetPort: 80)
-    .WithEnvironment("ACCEPT_EULA", "Y");
-
-// Wire to services
-orderService.WithReference(legacyApi);
-orderService.WithReference(seq);
-```
+A service outside the app (a legacy API) comes in as `builder.AddConnectionString("legacy-api")`, read from
+configuration; any other image as `builder.AddContainer("name", "image")` with its endpoint. Both are passed
+to projects with `WithReference`, like the resources above.

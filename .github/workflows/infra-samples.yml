@@ -1,14 +1,14 @@
 # Checks the infrastructure files the skills show (Kubernetes manifests, Bicep, Dockerfiles, compose, the
-# k6 script) with the tools that run them, so a sample can't drift into a file that doesn't apply, build
-# or start. The files live in tests/Infra; the skills mark the blocks that must match them.
+# k6 script, the Aspire AppHost) with the tools that run them, so a sample can't drift into a file that
+# doesn't apply, build or start. The skills mark the blocks that must match these files.
 name: infra-samples
 
 on:
   pull_request:
-    paths: ['tests/Infra/**', '.github/workflows/infra-samples.yml', '.claude/skills/docker-dotnet/**', '.claude/skills/kubernetes-dotnet/**', '.claude/skills/cronjob-patterns/**', '.claude/skills/azure-deployment/**', '.claude/skills/k6-load-testing/**']
+    paths: ['tests/Infra/**', 'tests/SkillSamples.Aspire/**', 'tests/Directory.Packages.props', '.claude/skills/aspire-patterns/**', '.github/workflows/infra-samples.yml', '.claude/skills/docker-dotnet/**', '.claude/skills/kubernetes-dotnet/**', '.claude/skills/cronjob-patterns/**', '.claude/skills/azure-deployment/**', '.claude/skills/k6-load-testing/**']
   push:
     branches: [main]
-    paths: ['tests/Infra/**', '.github/workflows/infra-samples.yml', '.claude/skills/docker-dotnet/**', '.claude/skills/kubernetes-dotnet/**', '.claude/skills/cronjob-patterns/**', '.claude/skills/azure-deployment/**', '.claude/skills/k6-load-testing/**']
+    paths: ['tests/Infra/**', 'tests/SkillSamples.Aspire/**', 'tests/Directory.Packages.props', '.claude/skills/aspire-patterns/**', '.github/workflows/infra-samples.yml', '.claude/skills/docker-dotnet/**', '.claude/skills/kubernetes-dotnet/**', '.claude/skills/cronjob-patterns/**', '.claude/skills/azure-deployment/**', '.claude/skills/k6-load-testing/**']
 
 permissions:
   contents: read
@@ -47,3 +47,16 @@ jobs:
           echo "K6=/tmp/k6-v1.3.0-linux-amd64/k6" >> "$GITHUB_ENV"
       - name: Build, run and check
         run: bash tests/Infra/docker/check.sh
+
+  aspire:
+    name: Aspire app host
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      # Starts the AppHost for real: DCP runs the service and the Postgres and Redis containers.
+      - name: The AppHost and its integration test
+        run: dotnet test tests/SkillSamples.Aspire/Tests -c Release --logger "console;verbosity=normal"

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OpenTelemetry.Trace;
 using SkillSamples.Production;
 using Xunit;
@@ -144,6 +145,16 @@ public sealed class AspireTests
         // Then the template sent it four times (one try, three retries); these defaults sent it once
         Assert.Equal(4, template);
         Assert.Equal(1, posts() - template);
+    }
+
+    [Fact]
+    public void ZeroRetries_IsRejected_SoATestCantTurnRetriesOffThatWay()
+    {
+        var services = new ServiceCollection();
+        services.AddHttpClient("orders").AddStandardResilienceHandler(o => o.Retry.MaxRetryAttempts = 0);
+        using var provider = services.BuildServiceProvider();
+
+        Assert.Throws<OptionsValidationException>(() => provider.GetRequiredService<IHttpClientFactory>().CreateClient("orders"));
     }
 
     [Fact]
