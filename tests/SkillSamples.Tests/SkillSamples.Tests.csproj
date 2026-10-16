@@ -40,6 +40,8 @@
     <PackageReference Include="Microsoft.Extensions.Compliance.Redaction" />
     <PackageReference Include="Microsoft.Extensions.Telemetry" />
     <PackageReference Include="Serilog.Extensions.Logging" />
+    <!-- pii-masking: UseSerilog() in a real host, to show what each order with EnableRedaction does. -->
+    <PackageReference Include="Serilog.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="StackExchange.Redis" />
     <!-- kubernetes-dotnet: the readiness check for Redis. -->

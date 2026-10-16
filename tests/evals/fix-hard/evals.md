@@ -34,17 +34,26 @@ handicap for all three; a fix that doesn't compile fails every test, as it would
 | H05 | the 9 a.m. trigger with no time zone | the cron trigger's next fire after midnight UTC is 06:00 UTC |
 | H06 | a persistent store that drops a run missed during a deploy | `ScheduleTriggerRelativeToReplacedTrigger`, or no persistent store |
 | H07 | a base address without a trailing `/` | the SMS goes to `https://sms.example.net/api/v2/messages` |
-| H08 | `UseSerilog()` bypasses the redactor | the "sent" line is logged, and the mobile appears nowhere in Serilog's output or the logger factory's |
+| H08 | `UseSerilog()` and `EnableRedaction()` together | the "sent" line reaches Serilog's sink; if its template still names `{Mobile}`, the field is there, redacted; the number appears nowhere |
 | H09 | keyset paging on `CreatedAt` alone | paging through 25 reminders created in one instant returns all 25 |
 | H10 | `EnsureCreatedAsync()` at startup | starting the service leaves an empty database empty |
 | H11 | a transitive vulnerable package (Pkcs via SqlClient) | a NuGet audit of the restore (all severities, transitive) is clean |
-| H12 | the provider's exception, which echoes the number, is logged | a failed send is still logged at warning or error, without the mobile |
+| H12 | the provider's exception, which echoes the number, is logged | a failed send is still logged at warning or error, and the number appears in no log line, whoever wrote it |
 | H13 | the SMS is sent before the save | a crash on the first write after the send, then a second run: one SMS |
 | H14 | `PatientId` from the body | patient 1 posting for patient 2 leaves no reminder for patient 2 |
 
 Regressions, which pass on the original and must still pass: R1 a patient schedules and lists their
 reminder; R2 a due reminder sends one SMS with 09:30 and the mobile; R3 a later appointment isn't sent;
 R4 `/health` is open; R5 `/reminders` needs a signed-in user.
+
+H08 turned out different from what the hard fixture said. There, `UseSerilog()` comes first and
+`EnableRedaction()` a line later, and in a real host the second puts its own logger factory back over
+Serilog's: the line is redacted, but it reaches no Serilog sink at all, so the service's logs stop
+arriving. (In the other order Serilog's factory wins and the classified field vanishes.) Either way the
+fix is the same, Serilog as a provider; the test checks the line arrives at Serilog, redacted.
+`SerilogOrderTests` in the skill samples shows both orders.
+
+H12 has a second writer the hard fixture didn't plant: `IHttpClientFactory`'s own logging writes "HTTP request failed" with the exception, message and all. The reference fix found it in CI and removes that client's loggers (`pii-masking` 1.5.0 now has the test).
 
 `fix-evals.yml` fails if the original passes any finding test or the reference fails any test, so a test
 that can't tell a fix from no fix is caught before it scores a run.

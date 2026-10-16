@@ -64,6 +64,7 @@
     <PackageVersion Include="Serilog" Version="4.2.0" />
     <PackageVersion Include="Serilog.Enrichers.Sensitive" Version="2.1.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="9.*" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.*" />
     <!-- 2.9 is the floor Aspire.Hosting.Redis 13 asks for; transitive pinning would otherwise downgrade it. -->
     <PackageVersion Include="StackExchange.Redis" Version="2.9.*" />
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.*" />

@@ -105,6 +105,8 @@ public sealed class FindingTests(Xunit.Abstractions.ITestOutputHelper output)
             && !l.Contains("Executed DbCommand", StringComparison.Ordinal)).ToList();
         Assert.True(sent.Count > 0, "no line says the reminder was sent");
         sent.ForEach(output.WriteLine);
+        // Serilog's sink is the way to the log store: the line has to arrive there, not only at a provider.
+        Assert.True(sent.Any(l => l.StartsWith('{')), "the sent line never reached Serilog");
         // A template that still names {Mobile} must carry the field, redacted (a string, empty when erased).
         // Serilog as the logger factory never runs the redactor: the classified field comes out null.
         // Leaving the number out of the line is a fix too.
