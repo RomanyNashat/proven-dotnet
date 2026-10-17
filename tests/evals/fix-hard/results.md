@@ -78,9 +78,50 @@ Two came out wrong and were fixed, each from the original or the reference, befo
 the H06 bug was found from the runs' results. No test was changed to move a run's score in either
 direction: H08 changed because of the original, and H06 now does what `evals.md` said it does.
 
+## 2026-10-17 — round two: builds allowed
+
+Same fixture, same task, except each run could `dotnet build` (NuGet reachable) and write and run unit
+tests; still no SQL Server or Docker. With proven ran on **0.2.16**, from a checkout of that commit, so
+H08 and H12 stayed held out: 0.2.17's `pii-masking` and `known-traps` were written from round one. A second
+reference fix on the in-memory Quartz store (`reference-memory/`) now checks H06's other accepted form;
+both references pass everything and the original fails every finding.
+
+| | With proven 0.2.16 | Rules only | No rules |
+|---|---|---|---|
+| **Findings fixed, round two** | **13 / 14** | **14 / 14** | **6 / 14** |
+| Round one, for comparison | 13 / 14 | 12 / 14 | 10 / 14 |
+| Regressions kept | 5 / 5 | 5 / 5 | 5 / 5 |
+| Failed | H12 | none | H02, H03, H08, H10, H11, H12, H13, H14 |
+| Its own unit tests | 61, all pass | 42, all pass | 3, all pass |
+| Work | about 620k tokens: 3 reviewers, fixer; 24 min | about 185k; 14 min | about 430k with cache reads; 3 min |
+
+**What it means**
+
+- **One run per arm is noise.** No rules went from 10 to 6 with a compiler in hand, rules only from 12 to
+  14. The same fixture and task, one run each, swings by four findings. The two rounds together don't
+  show that the skills fix more than the rules alone; they show both are far above no rules, most of the
+  time, and that the next eval needs several runs per arm before a one-point gap means anything.
+- **With proven was the steady one: 13 both times, the same miss.** The scan put the Pkcs pin, invariant
+  mode, the singleton and the Quartz setting in front of the fixer every time, and those never slipped.
+  What varies between runs is what a model happens to notice; what a scan names doesn't vary.
+- **Rules only's H12 pass wasn't aimed at H12.** Its `appsettings.json` keeps
+  `System.Net.Http.HttpClient` at `Warning` in Serilog's overrides, a common way to cut noise, and the
+  factory's "request failed" line is `Information`, so the exception text never reached a sink. The
+  hidden test grades behavior, so it counts, but its report says nothing about exception text. It did
+  find, with a throwaway project, that `EnableRedaction()` replaced Serilog's factory, which is the
+  0.2.17 `pii-masking` finding reached on its own.
+- **No rules, with the compiler, saw more and fixed less.** It saw the Pkcs advisory, tried 10.0.0,
+  found that flagged too and left it ("look at it when a patched version ships"; 10.0.13 is the fix). It
+  noted that invariant mode breaks Arabic and kept it. It saved after each send instead of claiming
+  first, so a crash after the send sent again (H13).
+- **H12 is still the one the skills at 0.2.16 don't teach.** With proven took the exception out of its
+  own log line both times; the factory's logging kept writing it. 0.2.17 covers it; the next round on
+  0.2.17 will show whether it holds, but it won't be held out.
+
 ## Next
 
-- Give the reference a second form for H06 and H13 (an in-memory store; an outbox), so a test that can't
-  accept a correct fix is caught before a run meets it.
-- Run it again with the builds allowed: the gap a compiler closes is probably larger than the gap between
-  the three runs here.
+- ~~A second reference form for H06~~ (done in round two, `reference-memory/`). Still to do: one for H13
+  (an outbox or a status column instead of a claim timestamp).
+- ~~Run it with the builds allowed~~ (round two).
+- **Three runs per arm**, on a fixture the skills haven't learned from, before reading a gap of one or two
+  findings as a difference.
