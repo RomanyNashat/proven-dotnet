@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <!-- zero-vulns: direct and transitive packages are audited, and a known vulnerability fails the restore. -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
+  </PropertyGroup>
+</Project>
