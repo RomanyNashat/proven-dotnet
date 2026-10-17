@@ -29,7 +29,7 @@ def outcomes(folder):
 def main(root):
     root = pathlib.Path(root)
     copies = sorted(p for p in root.iterdir() if p.is_dir())
-    order = sorted(copies, key=lambda p: (p.name != "original", p.name != "reference", p.name))
+    order = sorted(copies, key=lambda p: (p.name != "original", not p.name.startswith("reference"), p.name))
     rows, problems = [], []
     table = {}
     for c in order:
@@ -58,7 +58,8 @@ def main(root):
                 print(f"- {name} {key}: {msg}")
     print("\n</details>")
 
-    for name, want_findings, want_regressions in (("original", False, True), ("reference", True, True)):
+    expected = [("original", False, True)] + [(n, True, True) for n in table if n.startswith("reference")]
+    for name, want_findings, want_regressions in expected:
         if name not in table:
             continue
         built, o = table[name]
@@ -74,7 +75,9 @@ def main(root):
     for name, (built, o) in table.items():
         score = sum(o.get(k, (False,))[0] for k in FINDINGS)
         kept = sum(o.get(k, (False,))[0] for k in REGRESSIONS)
-        print(f"::notice title=fix eval: {name}::findings fixed {score}/{len(FINDINGS)}, regressions kept {kept}/{len(REGRESSIONS)}, builds: {'yes' if built else 'no'}", file=sys.stderr)
+        missed = [k for k in FINDINGS + REGRESSIONS if not o.get(k, (False,))[0]]
+        # GitHub keeps only ten warnings per step, so the misses go in the copy's own notice too.
+        print(f"::notice title=fix eval: {name}::findings fixed {score}/{len(FINDINGS)}, regressions kept {kept}/{len(REGRESSIONS)}, builds: {'yes' if built else 'no'}; failed: {', '.join(missed) or 'none'}", file=sys.stderr)
         if name == "original":
             continue
         for k in FINDINGS + REGRESSIONS:

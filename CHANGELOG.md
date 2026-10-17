@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.18 — the fix eval, round two
+- `tests/evals/fix-hard/results.md`: the same three runs with builds allowed, with proven held at 0.2.16
+  so the round-one findings stay held out. With proven 13/14 again (the same miss), rules only 14/14,
+  no rules 6/14 (10 in round one). One run per arm swings by four findings: the next eval runs each arm
+  several times.
+- A second reference fix on the in-memory Quartz store, so a correct H06 that drops the persistent store
+  is checked before a run meets it. Each copy's CI notice now names its failed tests (GitHub keeps only
+  ten warnings per step).
+
 ## 0.2.17 — does the fix work?
 - `tests/evals/fix-hard/`: an eval that grades fixes, not findings. A run reviews and fixes a service with
   14 planted findings; hidden tests decide, by behavior, whether each is fixed and whether five things that

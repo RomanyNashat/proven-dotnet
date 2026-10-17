@@ -55,7 +55,8 @@ fix is the same, Serilog as a provider; the test checks the line arrives at Seri
 
 H12 has a second writer the hard fixture didn't plant: `IHttpClientFactory`'s own logging writes "HTTP request failed" with the exception, message and all. The reference fix found it in CI and removes that client's loggers (`pii-masking` 1.5.0 now has the test).
 
-`fix-evals.yml` fails if the original passes any finding test or the reference fails any test, so a test
+`fix-evals.yml` fails if the original passes any finding test or either reference (`reference/`, and
+`reference-memory/` on the in-memory store) fails any test, so a test
 that can't tell a fix from no fix is caught before it scores a run.
 
 ## Runs
