@@ -75,7 +75,9 @@ def main(root):
     for name, (built, o) in table.items():
         score = sum(o.get(k, (False,))[0] for k in FINDINGS)
         kept = sum(o.get(k, (False,))[0] for k in REGRESSIONS)
-        print(f"::notice title=fix eval: {name}::findings fixed {score}/{len(FINDINGS)}, regressions kept {kept}/{len(REGRESSIONS)}, builds: {'yes' if built else 'no'}", file=sys.stderr)
+        missed = [k for k in FINDINGS + REGRESSIONS if not o.get(k, (False,))[0]]
+        # GitHub keeps only ten warnings per step, so the misses go in the copy's own notice too.
+        print(f"::notice title=fix eval: {name}::findings fixed {score}/{len(FINDINGS)}, regressions kept {kept}/{len(REGRESSIONS)}, builds: {'yes' if built else 'no'}; failed: {', '.join(missed) or 'none'}", file=sys.stderr)
         if name == "original":
             continue
         for k in FINDINGS + REGRESSIONS:
