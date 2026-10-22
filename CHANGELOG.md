@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.20 — review the change, not the repo
+- `/full-review --diff [base]`: a merge request is reviewed for what it brings. A finding needs the change
+  to take part in it: the change wrote the flawed line, reaches an old flaw (a new caller, a removed
+  guard), or breaks a caller. Each finding says which; everything else is one count at the end. Coverage
+  is the change's lines (`changed_uncovered.py`), and a vulnerable package the change didn't touch is
+  named once as already failing the build. The three reviewers carry the rule too.
+- `known-traps` 1.3.0: `--diff` marks each finding `changed` or `touched` and counts the rest, and
+  `--fail-on` ignores what's outside the change. Reads a diff written by git or by Windows PowerShell's
+  `>` (UTF-16). Tested with a merge request diffed from the repo root.
+- The skill routing check takes `--skills`, `--requests` and `--allowed` more than once, so a team layer
+  ranks its skills against the core's in one list. `api-design` 3.2.1 says "REST" and "OpenAPI", which
+  it covers: with a team's OpenAPI skill beside it, it fell out of the top 3 for a versioning question.
+
 ## 0.2.19 — checks for what a model gets wrong quietly
 - `zero-vulns` 1.1.0: `scripts/first_fixed.py` names the lowest version no advisory covers, on the same
   line and on any line, from the feed's own vulnerability data. In round two of the fix eval a run tried

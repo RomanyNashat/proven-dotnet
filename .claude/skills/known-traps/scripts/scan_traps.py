@@ -2,6 +2,13 @@
 """Scans a .NET service for the traps this harness's own tests found in real libraries.
 
     python scan_traps.py <service folder> [<more folders>] [--json] [--fail-on critical|warning]
+    git diff -U0 origin/main...HEAD --output=change.diff
+    python scan_traps.py <service folder> --diff change.diff      # reviewing a change, not the repo
+
+With --diff, each finding is placed against the change: `changed` (its line is one the change adds or
+edits), `touched` (in a file the change edits, on a line it doesn't: read it to see whether the change
+takes part), or outside the change, which is counted and not listed. --fail-on then counts changed and
+touched findings only.
 
 Read-only. Each finding names the file and line, why it bites in production, the fix, and the skill whose
 test proves it. A text scan points at where to look; it can't prove a bug the way a test does, so a finding
@@ -31,6 +38,7 @@ class Finding:
     title: str
     fix: str
     skill: str
+    change: str = ""
 
 
 def check(check_id, severity, title, fix, skill):
@@ -480,13 +488,58 @@ def scan(root):
     return sorted(findings, key=lambda f: (SEVERITIES.index(f.severity), f.path, f.line))
 
 
-def report(root, findings):
-    lines = [f"## {pathlib.Path(root).resolve().name}: {len(findings)} finding(s)", ""]
-    if not findings:
-        return "\n".join(lines + ["No known traps found.", ""])
-    lines += ["| Severity | Where | What | Fix | Proven in |", "|---|---|---|---|---|"]
+HUNK = re.compile(r"^@@ -\S+ \+(?P<start>\d+)(?:,(?P<count>\d+))? @@")
+
+
+def changed_lines(diff_text):
+    """{path in the diff: set of new-side line numbers the change adds or edits}."""
+    changed, path = {}, None
+    for line in diff_text.splitlines():
+        if line.startswith("+++ "):
+            target = line[4:].strip()
+            path = None if target == "/dev/null" else re.sub(r"^b/", "", target)
+            if path:
+                changed.setdefault(path, set())
+            continue
+        match = HUNK.match(line)
+        if match and path:
+            start, count = int(match["start"]), int(match["count"] or 1)
+            changed[path].update(range(start, start + count))
+    return changed
+
+
+def read_diff(path):
+    """A diff as git wrote it, or as Windows PowerShell's `>` wrote it (UTF-16 with a byte-order mark)."""
+    data = pathlib.Path(path).read_bytes()
+    if data[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return data.decode("utf-16")
+    return data.decode("utf-8-sig", errors="replace")
+
+
+def place(findings, changed):
+    """Mark each finding changed, touched or outside. Diff paths are from the repo root and finding paths
+    from the scanned folder, so a diff path matches when it is the finding's path or ends with it."""
     for f in findings:
-        lines.append(f"| {f.severity} | `{f.path}:{f.line}` | {f.title} | {f.fix} | `{f.skill}` |")
+        lines = next((v for k, v in changed.items() if k == f.path or k.endswith("/" + f.path)), None)
+        f.change = "outside" if lines is None else "changed" if f.line in lines else "touched"
+    return findings
+
+
+def report(root, findings):
+    shown = [f for f in findings if f.change != "outside"]
+    outside = len(findings) - len(shown)
+    diff = any(f.change for f in findings)
+    lines = [f"## {pathlib.Path(root).resolve().name}: {len(shown)} finding(s)"
+             + (f" in the change, {outside} outside it (not listed)" if diff else ""), ""]
+    if not shown:
+        return "\n".join(lines + ["No known traps found" + (" in the change." if diff else "."), ""])
+    if diff:
+        lines += ["| Severity | Change | Where | What | Fix | Proven in |", "|---|---|---|---|---|---|"]
+    else:
+        lines += ["| Severity | Where | What | Fix | Proven in |", "|---|---|---|---|---|"]
+    for f in shown:
+        where = f"| {f.change} " if diff else ""
+        lines.append(f"| {f.severity} {where}| `{f.path}:{f.line}` | {f.title} | {f.fix} | `{f.skill}` |")
     return "\n".join(lines + [""])
 
 
@@ -495,15 +548,20 @@ def main(argv=None):
     parser.add_argument("roots", nargs="+")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--fail-on", choices=SEVERITIES[:2])
+    parser.add_argument("--diff", type=pathlib.Path, help="a unified diff: place findings against the change")
     args = parser.parse_args(argv)
     results = {root: scan(root) for root in args.roots}
+    if args.diff:
+        changed = changed_lines(read_diff(args.diff))
+        results = {root: place(fs, changed) for root, fs in results.items()}
     if args.json:
         print(json.dumps({root: [asdict(f) for f in fs] for root, fs in results.items()}, indent=2))
     else:
         print("\n".join(report(root, fs) for root, fs in results.items()))
     if args.fail_on:
         worst = SEVERITIES.index(args.fail_on)
-        return int(any(SEVERITIES.index(f.severity) <= worst for fs in results.values() for f in fs))
+        return int(any(SEVERITIES.index(f.severity) <= worst and f.change != "outside"
+                       for fs in results.values() for f in fs))
     return 0
 
 

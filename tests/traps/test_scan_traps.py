@@ -55,6 +55,41 @@ class ScanTrapsTests(unittest.TestCase):
         self.assertEqual({("src/Clinic.Api/Program.cs", "critical"),
                           ("tests/Clinic.Tests/DatabaseFixture.cs", "warning")}, found)
 
+    def test_story_reviewing_a_change_lists_what_it_adds_and_counts_the_rest(self):
+        # Given a merge request that adds CORS to Program.cs (line 7) in a service with many old traps,
+        # its diff written from the repo root, where the service is one folder among others
+        diff = """diff --git a/services/clinic/src/Clinic.Api/Program.cs b/services/clinic/src/Clinic.Api/Program.cs
+--- a/services/clinic/src/Clinic.Api/Program.cs
++++ b/services/clinic/src/Clinic.Api/Program.cs
+@@ -6,0 +7 @@ var builder = WebApplication.CreateBuilder(args);
++builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.SetIsOriginAllowed(_ => true)));
+"""
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "change.diff"
+            path.write_text(diff, encoding="utf-16")   # as Windows PowerShell's `>` writes it
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = scan_traps.main([str(BAD), "--diff", str(path), "--json", "--fail-on", "critical"])
+            findings = list(json.loads(out.getvalue()).values())[0]
+        # Then the CORS finding is the change's, the rest of Program.cs is touched, everything else outside
+        self.assertEqual(["cors-any-origin"], [f["check"] for f in findings if f["change"] == "changed"])
+        touched = {f["path"] for f in findings if f["change"] == "touched"}
+        self.assertEqual({"src/Clinic.Api/Program.cs"}, touched)
+        self.assertTrue(any(f["change"] == "outside" for f in findings))
+        # and --fail-on judges the change: the critical traps elsewhere in the file are touched, not outside
+        self.assertEqual(1, code)
+
+    def test_a_change_outside_every_finding_fails_nothing(self):
+        diff = "+++ b/README.md\n@@ -1,0 +1 @@\n+a line\n"
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "change.diff"
+            path.write_text(diff, encoding="utf-8")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = scan_traps.main([str(BAD), "--diff", str(path), "--fail-on", "warning"])
+        self.assertEqual(0, code)
+        self.assertIn("0 finding(s) in the change", out.getvalue())
+
     def test_fail_on_sets_the_exit_code(self):
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(1, scan_traps.main([str(BAD), "--fail-on", "critical"]))
