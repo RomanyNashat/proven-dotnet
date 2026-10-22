@@ -11,10 +11,17 @@ descriptions grow so alike that either could be picked. This checks both, offlin
      tests/routing/overlap-allowed.tsv lists the pair with the reason they're meant to sit close.
 
 This is a lexical stand-in for the model's choice, not the model: a pass means no description has
-lost its words, not that routing is perfect. Every core skill needs at least one request.
+lost its words, not that routing is perfect. Every skill needs at least one request.
 
     python tools/ci/check-skill-routing.py [--verbose]
+
+A team layer checks its skills against the core's, in one ranking, with its own files beside ours:
+
+    python check-skill-routing.py --skills <core>/.claude/skills --skills .claude/skills \
+        --requests <core>/tests/routing/requests.tsv --requests tests/routing/requests.tsv \
+        --allowed <core>/tests/routing/overlap-allowed.tsv --allowed tests/routing/overlap-allowed.tsv
 """
+import argparse
 import math
 import pathlib
 import re
@@ -49,9 +56,9 @@ def words(text):
     return [stem(w) for w in re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)*", text.lower()) if w not in STOP]
 
 
-def descriptions():
+def descriptions(folders=(SKILLS,)):
     found = {}
-    for path in sorted(SKILLS.glob("*/SKILL.md")):
+    for path in sorted(p for folder in folders for p in pathlib.Path(folder).glob("*/SKILL.md")):
         match = re.search(r"^description:\s*(.+)$", path.read_text(encoding="utf-8"), re.M)
         if match:
             name = path.parent.name
@@ -102,12 +109,18 @@ def rank(request, skill, docs, idf):
 
 
 def main(argv=None):
-    verbose = "--verbose" in (sys.argv[1:] if argv is None else argv)
-    texts = descriptions()
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--skills", action="append", type=pathlib.Path, help="a skills folder (repeatable)")
+    parser.add_argument("--requests", action="append", type=pathlib.Path, help="a requests.tsv (repeatable)")
+    parser.add_argument("--allowed", action="append", type=pathlib.Path, help="an overlap-allowed.tsv (repeatable)")
+    args = parser.parse_args(argv)
+    verbose = args.verbose
+    texts = descriptions(args.skills or [SKILLS])
     docs, idf = vectors(texts)
     problems = []
 
-    samples = read_tsv(REQUESTS)
+    samples = [row for path in (args.requests or [REQUESTS]) for row in read_tsv(path)]
     covered = set()
     first = 0
     for row in samples:
@@ -131,7 +144,7 @@ def main(argv=None):
         problems.append(f"routing: {skill} has no request in requests.tsv")
 
     allowed = {}
-    for row in read_tsv(ALLOWED):
+    for row in (row for path in (args.allowed or [ALLOWED]) for row in read_tsv(path)):
         if len(row) != 3 or not row[2]:
             problems.append(f"overlap-allowed.tsv: expected 'skill<TAB>skill<TAB>reason': {row}")
             continue

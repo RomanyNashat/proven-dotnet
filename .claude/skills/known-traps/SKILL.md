@@ -1,7 +1,7 @@
 ---
 name: known-traps
-description: Scan a .NET service, or many, for the traps this harness's own tests found in real libraries — a Quartz store that drops missed runs, SqlClient in invariant mode, a singleton holding a DbContext, ar-SA's machine-dependent calendar, OpenIddict 6 on EF Core 10 and more. One read-only command, one table with file, line, fix and the skill that proves it.
-version: 1.2.0
+description: Scan a .NET service, or many, for the traps this harness's own tests found in real libraries — a Quartz store that drops missed runs, SqlClient in invariant mode, a singleton holding a DbContext, ar-SA's machine-dependent calendar, OpenIddict 6 on EF Core 10 and more. One read-only command, one table with file, line, fix and the skill that proves it; with a diff, only what a change takes part in.
+version: 1.3.0
 ---
 
 # Known traps: one scan for what the tests found
@@ -23,6 +23,11 @@ On Windows: `py -3 "$HOME\.claude\skills\known-traps\scripts\scan_traps.py" C:\s
 - One table per service: severity, `file:line`, what, the fix, and the skill whose test proves it.
 - `--json` for a machine-readable result; `--fail-on critical` (or `warning`) sets exit code 1, so a
   pipeline can use it as a gate.
+- **Reviewing a merge request:** `git diff -U0 origin/main...HEAD --output=change.diff`, then add
+  `--diff change.diff`. Each finding is marked `changed` (on a line the change adds or edits) or
+  `touched` (in a file the change edits; read it to see whether the change takes part); findings outside
+  the change are counted, not listed, and `--fail-on` ignores them. A merge request isn't blocked by a
+  trap it didn't bring.
 - `bin`, `obj` and `.git` are skipped. Commented-out lines aren't findings. Test projects are only
   checked where it matters (the FluentAssertions licence, a test fixture that migrates).
 

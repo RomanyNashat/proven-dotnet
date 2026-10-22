@@ -1,7 +1,7 @@
 ---
 name: api-design
-description: ASP.NET Core APIs — endpoints with injected handlers and TypedResults, ownership checks on every id, ProblemDetails that leak nothing, validation, X-API-Version/path versioning, keyset paging, per-caller rate limits, health checks. Core code tested in CI.
-version: 3.2.0
+description: ASP.NET Core REST APIs — endpoints with injected handlers and TypedResults, ownership checks on every id, ProblemDetails that leak nothing, validation, X-API-Version/path versioning, the OpenAPI document, keyset paging, per-caller rate limits, health checks. Core code tested in CI.
+version: 3.2.1
 ---
 
 # API Design
