@@ -1,0 +1,37 @@
+namespace HomeReadings.Domain;
+
+/// <summary>A blood glucose reading a patient's meter sent through the app, in mmol/L.</summary>
+public sealed class Reading
+{
+    /// <summary>At or above this the care team is told (mmol/L).</summary>
+    public const decimal AlertLevel = 11.1m;
+
+    private Reading()
+    {
+    }
+
+    public Reading(int patientId, string nationalId, decimal value, string unit, DateTimeOffset collectedAt, string? notes, DateTime receivedAt)
+    {
+        PatientId = patientId;
+        NationalId = nationalId;
+        Value = value;
+        Unit = unit;
+        CollectedAt = collectedAt.ToUniversalTime();
+        Notes = notes;
+        ReceivedAt = receivedAt;
+    }
+
+    public int Id { get; private set; }
+    public int PatientId { get; private set; }
+    public string NationalId { get; private set; } = "";
+    public decimal Value { get; private set; }
+    public string Unit { get; private set; } = "";
+    public DateTimeOffset CollectedAt { get; private set; }
+    public string? Notes { get; private set; }
+    public string? PhotoPath { get; private set; }
+    public DateTime ReceivedAt { get; private set; }
+
+    public bool NeedsAlert => Value >= AlertLevel;
+
+    public void AttachPhoto(string path) => PhotoPath = path;
+}
