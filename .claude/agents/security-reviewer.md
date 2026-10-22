@@ -31,7 +31,7 @@ this file.
   the zero-vulns standard this is a **hard fail**, not a note: ANY known-vulnerable package (direct or
   transitive, any severity) must be reported as blocking, with the remediation (upgrade, or pin the
   fixed transitive version). See `skills/zero-vulns/`.
-- **Given a diff** (`/full-review --diff`): report only flaws the change wrote, reaches or breaks, and say which; count the rest in one line, unlisted.
+- **Given a diff** (`/full-review --diff`): report only flaws the change wrote, reaches or breaks, and say which on every finding; count the rest in one line, unlisted. A fix may note that it also closes an old flaw, never ask for it. Line numbers come from the file, not the diff.
 
 ## OWASP Top 10:2025 Checklist for ASP.NET Core
 

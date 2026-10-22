@@ -29,7 +29,7 @@ this file.
 - Validate Clean Architecture layer dependencies (Domain → App → Infra → API)
 - Ensure code is testable (injectable dependencies, no static state, no hidden side effects)
 - Review the tests in the change too: each one must be able to fail. Check them against the table in `testing-tdd` ("Reviewing a test"): no assertion, asserting every call, logic in the test, real clock, shared state, setups never reached, `Throws<Exception>`
-- **Given a diff** (`/full-review --diff`): report only flaws the change wrote, reaches or breaks, and say which; count the rest in one line, unlisted.
+- **Given a diff** (`/full-review --diff`): report only flaws the change wrote, reaches or breaks, and say which on every finding; count the rest in one line, unlisted. A fix may note that it also closes an old flaw, never ask for it. Line numbers come from the file, not the diff.
 
 ## Review Checklist
 

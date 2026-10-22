@@ -18,6 +18,12 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   libraries. Disclosures in `results.md`: runs resumed after the usage limit, H03 changed before
   grading, one fixer ran its own PostgreSQL.
 - One grader for both fix evals, driven by each fixture's `fixture.json`.
+- **Diff-mode review eval** (`tests/evals/diff-review/`): a merge request on round three's service with
+  three flaws of its own. Nine reports found 27/27 and listed none of the twelve old flaws as findings.
+  Two defects, fixed in `/full-review` and the reviewers: a fix asked for an old flaw's fix three times,
+  and two reports used the diff's line numbers. Results are from before the fixes.
+- **B3 (a refutation pass) not built:** the fixtures have no false positives for it to remove. It waits
+  for a fixture made from real, noisy code.
 
 ## 0.2.20 — review the change, not the repo
 - `/full-review --diff [base]`: a merge request is reviewed for what it brings. A finding needs the change

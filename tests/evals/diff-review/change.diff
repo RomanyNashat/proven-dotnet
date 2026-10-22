@@ -1,0 +1,69 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..cd42ee3
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,2 @@
++bin/
++obj/
+diff --git a/HomeReadings/Api/ReadingEndpoints.cs b/HomeReadings/Api/ReadingEndpoints.cs
+index 8efc7e0..2d5a168 100644
+--- a/HomeReadings/Api/ReadingEndpoints.cs
++++ b/HomeReadings/Api/ReadingEndpoints.cs
+@@ -25,0 +26,6 @@ public static class ReadingEndpoints
++        readings.MapGet("/export", async (DateTime from, DateTime to, ReadingExport export, CancellationToken ct) =>
++            TypedResults.Text(await export.AllAsync(from, to, ct), "text/csv"));
++
++        readings.MapGet("/{id:int}/export", async Task<IResult> (int id, ReadingExport export, CancellationToken ct) =>
++            await export.OneAsync(id, ct) is { } csv ? TypedResults.Text(csv, "text/csv") : TypedResults.NotFound());
++
+diff --git a/HomeReadings/Application/ReadingExport.cs b/HomeReadings/Application/ReadingExport.cs
+new file mode 100644
+index 0000000..a2e5036
+--- /dev/null
++++ b/HomeReadings/Application/ReadingExport.cs
+@@ -0,0 +1,38 @@
++using System.Text;
++using HomeReadings.Api;
++using HomeReadings.Infrastructure;
++using Microsoft.EntityFrameworkCore;
++
++namespace HomeReadings.Application;
++
++/// <summary>A patient's readings as CSV, to send to their doctor before a visit.</summary>
++public sealed class ReadingExport(ReadingsDbContext db, ICurrentPatient patient, ReadingQueries queries, ILogger<ReadingExport> logger)
++{
++    public async Task<string> AllAsync(DateTime from, DateTime to, CancellationToken ct)
++    {
++        var rows = await db.Readings.AsNoTracking()
++            .Where(r => r.PatientId == patient.Id && r.CollectedAt >= from && r.CollectedAt < to)
++            .OrderBy(r => r.CollectedAt)
++            .ToListAsync(ct);
++
++        var csv = new StringBuilder("collected_at,value,unit,notes\n");
++        foreach (var r in rows)
++        {
++            csv.Append(r.CollectedAt.ToString("O")).Append(',')
++               .Append(r.Value).Append(',')
++               .Append(r.Unit).Append(',')
++               .Append(r.Notes).Append('\n');
++        }
++
++        logger.LogInformation("Export for {NationalId}: {Rows} rows", rows.FirstOrDefault()?.NationalId, rows.Count);
++        return csv.ToString();
++    }
++
++    /// <summary>One reading, for the "share this reading" button.</summary>
++    public async Task<string?> OneAsync(int id, CancellationToken ct)
++    {
++        var reading = await queries.GetAsync(id, ct);
++        return reading is null ? null
++            : $"collected_at,value,unit,notes\n{reading.CollectedAt:O},{reading.Value},{reading.Unit},{reading.Notes}\n";
++    }
++}
+diff --git a/HomeReadings/Program.cs b/HomeReadings/Program.cs
+index 8e8fe18..bbdaa6e 100644
+--- a/HomeReadings/Program.cs
++++ b/HomeReadings/Program.cs
+@@ -17,0 +18 @@ builder.Services.AddScoped<ReadingQueries>();
++builder.Services.AddScoped<ReadingExport>();
