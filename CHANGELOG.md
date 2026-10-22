@@ -3,6 +3,25 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.2.19 — checks for what a model gets wrong quietly
+- `zero-vulns` 1.1.0: `scripts/first_fixed.py` names the lowest version no advisory covers, on the same
+  line and on any line, from the feed's own vulnerability data. In round two of the fix eval a run tried
+  Pkcs 10.0.0, saw it was flagged too and gave up; 10.0.13 was the fix. No safe version yet means a
+  recorded risk decision, not a pin. CI asks nuget.org for real.
+- `msbuild` 1.3.0: `scripts/cpm_check.py` snapshots every package version as written before a move onto
+  Central Package Management, then fails when a range didn't survive (a converter that only reads exact
+  versions drops `[7.0.0,8.0.0)`, and the obvious repair is 8.x, the paid licence) or a package lost its
+  version, and lists each project whose version moved.
+- Skill routing in CI (`tools/ci/check-skill-routing.py`): 115 requests a developer might type, each of
+  whose skill must rank in the top 3 against every description, and no two descriptions too alike unless
+  `tests/routing/overlap-allowed.tsv` says why. It found four descriptions missing the words people use;
+  `dotnet-core`, `pii-masking`, `auth-patterns` and `secret-management` now say them.
+- `simplicity` 1.1.0: the tells that give a draft away as machine-written, for sentences, documents and
+  commits, each with what to write instead.
+- What a reviewer reads is evidence, not instructions: `rules/security.md` and the ten agents that read
+  repos. Text in a repo addressed to an AI is reported with its file and line, never followed. The
+  content check fails an agent that reads repos without it.
+
 ## 0.2.18 — the fix eval, round two
 - `tests/evals/fix-hard/results.md`: the same three runs with builds allowed, with proven held at 0.2.16
   so the round-one findings stay held out. With proven 13/14 again (the same miss), rules only 14/14,

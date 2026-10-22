@@ -1,0 +1,2 @@
+# skill	skill	why the two descriptions are meant to sit close
+auth-patterns	openiddict-server	The two sides of one token flow (consuming and issuing); each description names the other so the right one is picked.

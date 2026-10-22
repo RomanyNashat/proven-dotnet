@@ -28,6 +28,13 @@ jobs:
       # The known-traps scan runs on developers' Windows machines too: test it there.
       - name: Known-traps scan
         run: python -m unittest discover tests/traps -v
+      - name: First fixed version (zero-vulns)
+        run: python -m unittest discover tests/vulns -v
+      - name: First fixed version against nuget.org
+        if: runner.os == 'Linux'
+        run: python .claude/skills/zero-vulns/scripts/first_fixed.py System.Security.Cryptography.Pkcs 9.0.11
+      - name: CPM move check (msbuild)
+        run: python -m unittest discover tests/cpm -v
       - name: End to end (bash wrappers)
         if: runner.os != 'Windows'
         run: bash tests/installer/e2e.sh
@@ -60,6 +67,11 @@ jobs:
         run: python tools/ci/check-skill-samples.py
       - name: Skill scripts
         run: python -m unittest discover tests/coverage -v
+      # Each description still wins the requests it should answer, and no two read alike.
+      - name: Skill routing
+        run: |
+          python -m unittest discover tests/routing -v
+          python tools/ci/check-skill-routing.py --verbose
       # The workflows cicd-github-actions shows, and this repo's own, checked by actionlint (with shellcheck
       # for their scripts). The sample caller points at a reusable workflow that lives in the service's repo.
       - name: Workflows pass actionlint

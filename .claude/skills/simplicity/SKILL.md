@@ -1,7 +1,7 @@
 ---
 name: simplicity
-description: Plain-writing rules for shareable output (story maps, docs, READMEs, emails): simple-vs-full modes, template, verb bank. Ask simple-or-full first.
-version: 1.0.0
+description: Plain-writing rules for shareable output (story maps, docs, READMEs, emails, commit messages): simple-vs-full modes, template, verb bank, the tells that make a draft read as machine-written. Ask simple-or-full first.
+version: 1.1.0
 ---
 
 # Simplicity Skill
@@ -120,7 +120,47 @@ From the rejected AI draft vs Romany's approved file. Copy the right column's ha
 
 ---
 
-## 5. Tone — what "sounds like Romany"
+## 5. Tells: what gives a draft away as machine-written
+
+A reader who spots one of these stops reading the content and starts reading the author. Check a draft
+against this list before it goes out. Each line is the tell, what it looks like, and the fix.
+
+**In a sentence**
+| Tell | Looks like | Instead |
+|------|-----------|---------|
+| Announcing the point | "It's worth noting that…", "Let's take a look at…", "Here's the thing:" | Delete the announcement. The point is the first sentence. |
+| The question-and-reveal | "The result? Builds in half the time." "Why does this matter?" | Say it: "Builds take half the time." |
+| Knocking down what nobody said | "This isn't just a cache, it's a strategy." | Say what it is: "It caches the lookups." |
+| Groups of three for rhythm | "fast, reliable and scalable", three clauses in a row | Keep the one that's true and you can measure. |
+| Inflating it | "plays a crucial role", "a key part of", "robust", "powerful", "a testament to" | Say what it does, with the number if there is one. |
+| Stacked hedges | "may potentially help to somewhat reduce" | One hedge, or the measured figure. |
+| A dash in every sentence | "The job runs nightly — and it retries — so nothing is lost." | Two sentences. A period is fine. |
+| A new name each time | "the service", then "the platform", then "the solution", for one thing | One name, used every time. |
+| Nobody in particular said it | "It's widely considered…", "Experts recommend…" | Name who said it, or drop it. |
+| Claiming what the code does without saying how | "This ensures data integrity." | "The insert and the audit row commit together." |
+
+**In a document or message**
+| Tell | Looks like | Instead |
+|------|-----------|---------|
+| A wrap-up that repeats the body | "In summary…", "Overall, this change…" | Stop when you're done. |
+| Offering more at the end | "Let me know if you'd like me to…", "Hope this helps!" | Cut it. People ask when they want more. |
+| Structure the content doesn't need | Headings and bullets on a five-line note; every bullet the same length with a bold label and a colon | Write it as a few sentences. Use a list only for things a reader scans or compares. |
+| Decoration | Emoji as bullets or headings, ✅ on every line | Plain text. A ✅/❌ table for do/don't is fine. |
+| Opening by restating the ask | "You asked about X. X is…" | Start with the answer. |
+
+**In a commit or MR**
+| Tell | Looks like | Instead |
+|------|-----------|---------|
+| Narrating the commit | "This commit adds…", "In this PR we…" | The subject is the change: "add retry to the SMS client". |
+| A benefit instead of the change | "refactor to improve maintainability" | Name the change: "split OrderService into reader and writer". |
+| A body that lists the files | "Updated X.cs, Y.cs and Z.cs" | Say why. The diff already lists the files. |
+
+**The last check:** read it as if a colleague said it to you at your desk. Anything they wouldn't say
+out loud comes out.
+
+---
+
+## 6. Tone — what "sounds like Romany"
 
 - Short. One idea per line. If a sentence is doing two jobs, split or cut.
 - Lead with the verb and name the real thing (the route, the table, the status).
@@ -131,9 +171,9 @@ From the rejected AI draft vs Romany's approved file. Copy the right column's ha
 
 ---
 
-## 6. Applies beyond stories
+## 7. Applies beyond stories
 
 For documentation, READMEs, emails, and write-ups, the same rules hold: lead with the point, use
 the verb bank, keep it short, drop the padding. A README section is a few plain lines, not an
-essay. An email says the thing and stops. The template in §2 is story-shaped, but §3–§5 (verb
-bank, do/don't, tone) apply to everything shareable.
+essay. An email says the thing and stops. The template in §2 is story-shaped, but §3–§6 (verb
+bank, do/don't, tells, tone) apply to everything shareable.
