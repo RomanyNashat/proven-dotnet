@@ -1,7 +1,7 @@
 ---
 name: lessons
 description: The gotchas loop behind /lessons — capture what a session taught (corrections, taught steps, failures) as a report outside any repo, then fold each item into the harness one approved change at a time, so a mistake is made once.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Lessons — turn a session's corrections into harness changes
@@ -95,7 +95,14 @@ are attached to the chat.
 4. **Apply the approved changes** on a branch, with the usual release notes; a skill's lesson usually
    becomes one line in its `## Gotchas` section (create the section at the end of the skill if it
    doesn't exist).
-5. **Mark each item in its lessons file:** `Status: applied (vX.Y.Z)` or `Status: dropped (<reason>)`. A
+5. **Gate what the fix evals cover.** A change to a rule, an agent, or a skill a fix eval's findings cite
+   (`tests/evals/fix-*/evals.md`, "Where it's taught") is kept only if no case gets worse. Run the
+   with-proven arm again on the branch, as many runs as the baseline has, add the copies under
+   `runs/`, and commit `scores.json` from `tools/gate.py scores`. `fix-evals.yml` grades them and fails
+   the PR when any case, finding or regression, passes in fewer runs than on `main`. A plausible lesson
+   that costs another case is how a harness gets worse while every change looks right. Approval by the
+   developer is the second check, not the only one.
+6. **Mark each item in its lessons file:** `Status: applied (vX.Y.Z)` or `Status: dropped (<reason>)`. A
    file whose items are all closed is done; keep it, it's the history of why the gotcha exists.
 
 ### Gotchas sections

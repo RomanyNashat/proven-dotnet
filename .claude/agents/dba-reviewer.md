@@ -29,7 +29,7 @@ this file.
 - Evaluate query performance (missing AsNoTracking, unnecessary ToList, cartesian joins)
 - Review MongoDB aggregation pipelines and collection design
 - Validate Redis usage patterns (key naming, TTL, serialization)
-- **Given a diff** (`/full-review --diff`): report only flaws the change wrote, reaches or breaks, and say which; count the rest in one line, unlisted.
+- **Given a diff** (`/full-review --diff`): report only flaws the change wrote, reaches or breaks, and say which on every finding; count the rest in one line, unlisted. A fix may note that it also closes an old flaw, never ask for it. Line numbers come from the file, not the diff.
 
 ## EF Core Review Checklist
 - [ ] `AsNoTracking()` on read-only queries that return entities (a projection to plain values tracks nothing: not a finding; an entity inside a projection is tracked)

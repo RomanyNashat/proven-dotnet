@@ -25,14 +25,18 @@ mode:
    - **reaches it:** the change makes an existing flaw reachable or worse (a new caller of an unsafe
      method, a guard it removed, a new endpoint over old code that skips the ownership check); or
    - **breaks something:** a caller of a signature or a behavior the change altered.
-   Each finding says which of the three. A flaw the change neither wrote nor reaches is not a finding
-   here, however bad: it goes in the count below.
-5. **Coverage is the change's:** `test-coverage`'s `changed_uncovered.py` over the same diff, instead of
+   Each finding, Suggestions too, says which of the three. A flaw the change neither wrote nor reaches is
+   not a finding here, however bad: it goes in the count below. When the fix for a change finding would
+   also close an old flaw, say so in a line, but don't ask for the old fix: that's the backlog coming back
+   in through the fix.
+5. **Line numbers are the file's**, read from the file as the change leaves it. A line number from
+   `change.diff` points somewhere else.
+6. **Coverage is the change's:** `test-coverage`'s `changed_uncovered.py` over the same diff, instead of
    the service's totals.
-6. **Dependencies:** a package the change adds or moves is a finding at its severity. A vulnerable package
+7. **Dependencies:** a package the change adds or moves is a finding at its severity. A vulnerable package
    the change didn't touch still fails the build (NuGetAudit as errors), so name it once under
    Dependency Vulnerabilities as already failing, not as this change's finding.
-7. **End with one line:** "Outside this change: N findings (scan and reviewers), not reviewed here.
+8. **End with one line:** "Outside this change: N findings (scan and reviewers), not reviewed here.
    `/full-review` without `--diff` covers the whole service." No list: a merge request is judged on what
    it brings.
 

@@ -1,0 +1,6 @@
+{
+  "service": "ClinicReminders",
+  "findings": ["H01", "H02", "H03", "H04", "H05", "H06", "H07", "H08", "H09", "H10", "H11", "H12", "H13", "H14"],
+  "regressions": ["R1", "R2", "R3", "R4", "R5"],
+  "files": { "H11": "audit.txt" }
+}
