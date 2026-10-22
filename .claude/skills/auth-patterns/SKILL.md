@@ -1,7 +1,7 @@
 ---
 name: auth-patterns
-description: Resource/consumer-side auth for ASP.NET Core, for three token sources — Keycloak JWTs (roles mapped out of realm_access), JWTs from your own OpenIddict server, and its reference tokens through introspection — plus deny-by-default policies, 404 resource checks and client-credentials tokens. Tested in CI with real tokens and a real OpenIddict server. For the issuing side see openiddict-server.
-version: 2.1.1
+description: Resource/consumer-side auth for ASP.NET Core, for three token sources — Keycloak JWTs (roles mapped out of realm_access), JWTs from your own OpenIddict server, and its reference tokens through introspection — plus claim mapping (MapInboundClaims, sub), deny-by-default policies, 404 resource checks and client-credentials tokens. Tested in CI with real tokens and a real OpenIddict server. For the issuing side see openiddict-server.
+version: 2.1.2
 ---
 
 # Authentication & Authorization Patterns

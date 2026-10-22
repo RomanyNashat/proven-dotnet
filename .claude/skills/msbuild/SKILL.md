@@ -1,7 +1,7 @@
 ---
 name: msbuild
 description: Solution-wide build settings and package versions — Directory.Build.props, Central Package Management (Directory.Packages.props, transitive pinning, version ranges), moving a solution onto it, and finding out why the build or restore did what it did (-getProperty, dotnet nuget why, binary logs). Restored in CI with the real CLI.
-version: 1.2.0
+version: 1.3.0
 ---
 
 # MSBuild and package versions
@@ -151,17 +151,30 @@ internal one.
 
 One merge request, with the tests green before and after.
 
-1. **List what you have.** `dotnet list package --include-transitive --format json > before.json`.
+1. **List what you have**, twice:
+   ```
+   dotnet list package --include-transitive --format json > before.json
+   python ~/.claude/skills/msbuild/scripts/cpm_check.py snapshot . > versions-before.json
+   ```
+   The first is what restores. The second is what the files say, each version as written:
+   `dotnet list package` shows the version a range resolved to, not the range.
 2. **Pick one version per package.** Where projects disagree, take the highest and treat it as an upgrade
    of the other projects: their tests are what prove it.
 3. **Create `Directory.Packages.props`** at the solution root, with a `PackageVersion` for each package.
-   Floating versions become exact ones.
+   Floating versions become exact ones. Ranges stay exactly as written.
 4. **Remove `Version` from every `PackageReference`.** The restore reports any you missed (NU1008).
 5. **Move security pins.** A direct `PackageReference` that only existed to lift a transitive package
    becomes a `PackageVersion` under transitive pinning, with its advisory comment. Delete the direct
    references.
-6. **Compare.** Restore, build and test, then list again into `after.json`. Every difference from
-   `before.json` should be one you chose in step 2 or 5.
+6. **Compare.**
+   ```
+   python ~/.claude/skills/msbuild/scripts/cpm_check.py compare versions-before.json .
+   ```
+   It fails on a package with no central version and on a range that didn't survive as written, and
+   lists every project whose version moved. A conversion done by a tool is where this bites: one that
+   only reads exact versions drops `[7.0.0,8.0.0)`, the restore fails, and the obvious fix is the newest
+   version, 8.x, the paid licence. Then restore, build and test, list again into `after.json`, and check
+   every difference from `before.json` is one you chose in step 2 or 5.
 
 ## 4. Why did the build do that?
 

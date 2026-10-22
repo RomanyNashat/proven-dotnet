@@ -1,7 +1,7 @@
 ---
 name: pii-masking
-description: PII/PHI masking for .NET healthcare: Serilog masking (destructuring policy + pattern operators for national ID, mobile, MRN), classified logging with redaction before any provider, [Sensitive] strategies, keyed tokenization. Code tested in CI.
-version: 1.5.0
+description: PII/PHI masking for .NET healthcare: Serilog masking (destructuring policy + pattern operators for national ID, mobile/phone number, MRN), exception text that carries patient data (HttpClient logging included), classified logging with redaction before any provider, [Sensitive] strategies, keyed tokenization. Code tested in CI.
+version: 1.5.1
 ---
 
 # PII Masking Patterns

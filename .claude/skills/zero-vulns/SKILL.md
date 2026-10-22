@@ -1,6 +1,7 @@
 ---
 name: zero-vulns
-description: Zero known-vuln enforcement for .NET: a vulnerable NuGet package (direct or transitive) is a HARD FAIL — NuGetAudit-as-error + dotnet list package --vulnerable.
+description: Zero known-vuln enforcement for .NET: a vulnerable NuGet package (direct or transitive) is a HARD FAIL — NuGetAudit-as-error + dotnet list package --vulnerable, and how to find the first fixed version before pinning.
+version: 1.1.0
 ---
 
 # Zero Vulns — no known-vulnerable packages, enforced
@@ -53,6 +54,22 @@ This skill is the *enforcement* layer: the gate, the rule, and the remediation.
   **Under Central Package Management** the pin is one `PackageVersion` in `Directory.Packages.props`
   with `CentralPackageTransitivePinningEnabled`, and it applies to every project at once; no direct
   references. `dotnet nuget why <project> <package>` shows which package brought it in. See `msbuild`.
+- **Which version is "the fixed version"?** Not the newest one you remember, and not the next major: the
+  next major is often flagged by the same advisory. Ask the feed:
+  ```bash
+  python ~/.claude/skills/zero-vulns/scripts/first_fixed.py System.Security.Cryptography.Pkcs 9.0.11
+  # System.Security.Cryptography.Pkcs 9.0.11: GHSA-2fmv-rv2c-59x7; GHSA-846f-f764-76mx
+  #   same line: 9.0.21
+  #   newer:     9.0.21
+  ```
+  It reads the advisories restore audits against and the versions the feed publishes, and prints the
+  lowest safe version on the same `major.minor` (the smallest change) and the lowest safe one above the
+  current version. It exits 1 when no safe version is published yet. Standard library only. On a feed
+  that publishes no vulnerability data (a proxy may not), add `--vulnerability-feed
+  https://api.nuget.org/v3/index.json`. Then pin it and restore with the audit on: the restore is the
+  proof. Tested offline in CI, and run against nuget.org there.
+  Why it's here: a fix eval run that saw the Pkcs advisory tried `10.0.0`, found that flagged too, and
+  gave up; `10.0.13` (or `9.0.21` on the same line) was the fix.
 - If no fixed version exists yet → this is a real risk decision, not a silent pass: record it
   explicitly (a tracked suppression with an advisory link and an owner), never just ignore the warning.
 
