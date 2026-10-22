@@ -67,6 +67,8 @@ jobs:
         run: python tools/ci/check-skill-samples.py
       - name: Skill scripts
         run: python -m unittest discover tests/coverage -v
+      - name: Eval gate (its own tests)
+        run: python -m unittest discover tests/evals/tools -v
       # Each description still wins the requests it should answer, and no two read alike.
       - name: Skill routing
         run: |

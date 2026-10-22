@@ -41,10 +41,11 @@ public sealed class FindingTests
     public async Task H03_PoisonAlert()
     {
         using var app = new Readings();
-        var client = app.Start();
+        app.Start();
+        // Two patients, each with their own national ID: the care team refuses the first one's alerts.
         app.CareTeam.Respond = (body, _) => body.Contains("1000000001", StringComparison.Ordinal) ? HttpStatusCode.BadRequest : HttpStatusCode.OK;
-        await Readings.PostAsync(client, Readings.Reading(value: "13.0", nationalId: "1000000001"));
-        await Readings.PostAsync(client, Readings.Reading(value: "14.0", nationalId: "1000000002"));
+        await Readings.PostAsync(app.As(1), Readings.Reading(value: "13.0", nationalId: "1000000001"));
+        await Readings.PostAsync(app.As(2), Readings.Reading(value: "14.0", nationalId: "1000000002"));
         for (var run = 0; run < 3; run++)
         {
             await app.NotifyAsync();

@@ -76,6 +76,21 @@ jobs:
       - name: Results
         shell: bash
         run: python3 tests/evals/tools/grade.py tests/evals/fix-lab results --json scores-fix-lab.json | tee -a "$GITHUB_STEP_SUMMARY"
+      # The eval gate: the committed scores are what CI graded, and no case passes in fewer runs than on main.
+      - name: Eval gate
+        shell: bash
+        run: |
+          base=tests/evals/fix-lab
+          python3 tests/evals/tools/gate.py scores scores-fix-lab.json > graded-scores.json
+          if ! diff -u "$base/scores.json" graded-scores.json; then
+            echo "::error title=eval gate::$base/scores.json isn't what CI graded: commit the file above (gate.py scores)"
+            exit 1
+          fi
+          if git fetch -q --depth=1 origin main && git show origin/main:$base/scores.json > baseline-scores.json 2>/dev/null; then
+            python3 tests/evals/tools/gate.py check baseline-scores.json graded-scores.json | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No baseline on main yet: these scores become it." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Build and test logs
         if: always()
         uses: actions/upload-artifact@v4

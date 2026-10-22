@@ -76,6 +76,21 @@ plausible-but-wrong answer would do. Traps are the valuable half; anyone can wri
    without them misses), and two-file findings that need the Dockerfile read with the code.
    `tests/evals/full-review-hard/` is built that way.
 
+## Fix evals and the gate
+
+The evals above grade what a review says. `tests/evals/fix-*/` grade what a fix does: a run reviews and
+fixes a service with planted findings, and hidden tests decide by behavior. Each arm (with the harness,
+rules only, no rules) runs several times, because one run per arm swung by four findings.
+
+- **Score per case, never the total.** `scores.json` holds, for each arm and each test, the runs it
+  passed in. `tools/gate.py check` refuses a change when any case passes in fewer runs than on `main`,
+  even if the total went up: the case that dropped may be the one the change was about.
+- **The gate needs fresh runs.** CI can grade and compare, but it can't run a model. A harness change
+  the gate covers comes with new with-proven runs (as many as the baseline), and CI checks the
+  committed `scores.json` is what it graded.
+- **A test that refuses a reasonable fix is a test bug.** Fix it in the open (say what changed and why,
+  in `evals.md`), and make sure both reference fixes still pass.
+
 ## Reporting — the honesty rules
 
 These exist because a flattering eval is worse than no eval: it manufactures confidence.
