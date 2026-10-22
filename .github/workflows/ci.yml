@@ -33,6 +33,14 @@ jobs:
       - name: First fixed version against nuget.org
         if: runner.os == 'Linux'
         run: python .claude/skills/zero-vulns/scripts/first_fixed.py System.Security.Cryptography.Pkcs 9.0.11
+      # Exit 1 here is the expected answer today: no SqlClient release brings a fixed Pkcs yet.
+      - name: Parent fix against nuget.org
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          rc=0
+          python .claude/skills/zero-vulns/scripts/parent_fix.py Microsoft.Data.SqlClient System.Security.Cryptography.Pkcs --current 6.1.6 --framework net10.0 || rc=$?
+          [ "$rc" -le 1 ] || exit "$rc"
       - name: CPM move check (msbuild)
         run: python -m unittest discover tests/cpm -v
       - name: End to end (bash wrappers)

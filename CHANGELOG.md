@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.1 — fix the vulnerable package you own
+- `zero-vulns` 1.2.0: a vulnerable package is fixed in order. A direct one is upgraded. A transitive
+  one is traced (`dotnet nuget why`) and its parent upgraded. Only when no parent release brings a fixed
+  version is it pinned directly, with the advisory and the reason beside the pin. Pinning was the first
+  answer before; it outlives the parent's own fix and hides the parent from the next upgrade.
+- `scripts/parent_fix.py <parent> <package> --current <version>`: which version of the package each
+  release of the parent restores to on your framework, checked against the advisories, and the lowest
+  parent version at or above yours that brings a safe one. Against nuget.org it shows the case where the
+  pin is still the answer: `Microsoft.Data.SqlClient` 7.1.1, the newest, asks for
+  `System.Security.Cryptography.Pkcs` 9.0.18, which both advisories cover. Tested offline; CI asks
+  nuget.org.
+- `rules/security.md`, `dotnet-upgrade` and `/quality-gate` say the same.
+
 ## 0.3.0 — the harness checks itself
 - **The eval gate.** `tests/evals/tools/gate.py` adds up each arm's fix-eval runs per case, and
   `fix-evals.yml` fails a PR when any case, finding or regression, passes in fewer runs than on `main`,

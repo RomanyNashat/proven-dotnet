@@ -1,7 +1,7 @@
 ---
 name: zero-vulns
-description: Zero known-vuln enforcement for .NET: a vulnerable NuGet package (direct or transitive) is a HARD FAIL — NuGetAudit-as-error + dotnet list package --vulnerable, and how to find the first fixed version before pinning.
-version: 1.1.0
+description: Zero known-vuln enforcement for .NET: a vulnerable NuGet package (direct or transitive) is a HARD FAIL — NuGetAudit-as-error + dotnet list package --vulnerable, and how to fix one: upgrade the direct package or the parent that brings it, and pin only when no parent release can.
+version: 1.2.0
 ---
 
 # Zero Vulns — no known-vulnerable packages, enforced
@@ -41,19 +41,40 @@ This skill is the *enforcement* layer: the gate, the rule, and the remediation.
   unpatched CVE tomorrow.
 - This runs in: the build (NuGetAudit-as-error), `/quality-gate`, `/full-review`, and `/security-scan`.
 
-## Remediation
-- **Direct dependency vulnerable** → upgrade to the fixed version (`dotnet add package X --version …`).
-- **Transitive dependency vulnerable** (the common, annoying case — you didn't reference it directly) →
-  you can't upgrade the parent's choice, so **pin the fixed transitive version directly**:
-  ```xml
-  <!-- Force the patched version of a transitively-pulled package -->
-  <PackageReference Include="System.Vulnerable.Package" Version="8.0.2" />
-  ```
-  Adding a direct reference to the fixed version overrides the vulnerable transitive one. Document why
-  (a comment linking the advisory) so it isn't "cleaned up" later.
-  **Under Central Package Management** the pin is one `PackageVersion` in `Directory.Packages.props`
-  with `CentralPackageTransitivePinningEnabled`, and it applies to every project at once; no direct
-  references. `dotnet nuget why <project> <package>` shows which package brought it in. See `msbuild`.
+## Remediation: the smallest change that removes the vulnerable version
+
+Fix the package you own, not the one you don't. A direct reference added only to override a transitive
+version is one more package to keep current, outlives the parent's own fix, and hides the parent from
+the next upgrade. So, in order:
+
+1. **Is it a direct dependency?** `dotnet list package` (filter with `findstr <name>` on Windows,
+   `grep` elsewhere). If it's there, **upgrade it** to the fixed version. Done.
+2. **Otherwise it's transitive.** Find who brings it:
+   ```bash
+   dotnet list package --include-transitive        # it's listed, with no Requested version
+   dotnet nuget why <project.csproj> <package>     # every path from your references down to it
+   ```
+3. **Upgrade the parent** to a version that brings a fixed one. Ask the feed, rather than guessing from
+   release notes:
+   ```bash
+   python ~/.claude/skills/zero-vulns/scripts/parent_fix.py <parent> <package> --current <your parent version> --framework net10.0
+   ```
+   It reads which version of the package every release of the parent asks for on your framework (restore
+   takes the lowest the range allows, so that's what you get), checks each against the advisories, and
+   names the lowest parent version at or above yours that brings a safe one. Exit code 1 means no
+   release of the parent does yet. Tested offline, and run against nuget.org in CI.
+4. **Only when no parent release fixes it, pin the package directly**, and say why next to the pin, so
+   nobody "cleans it up" and nobody forgets to remove it once the parent catches up:
+   ```xml
+   <!-- GHSA-2fmv-rv2c-59x7, GHSA-846f-f764-76mx. Microsoft.Data.SqlClient 7.1.1, its newest, still
+        asks for 9.0.18 (parent_fix.py, 2026-10-23). Remove when a SqlClient release brings >= 9.0.21. -->
+   <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+   ```
+   That case is real: the newest `Microsoft.Data.SqlClient` asks for `System.Security.Cryptography.Pkcs
+   [9.0.18, )` on .NET 8 to 10, and both advisories cover 9.0.18, so a SQL Server service has no parent
+   to upgrade. **Under Central Package Management** the pin is one `PackageVersion` in
+   `Directory.Packages.props` with `CentralPackageTransitivePinningEnabled`, applied to every project,
+   with the same comment (see `msbuild`).
 - **Which version is "the fixed version"?** Not the newest one you remember, and not the next major: the
   next major is often flagged by the same advisory. Ask the feed:
   ```bash
@@ -66,8 +87,8 @@ This skill is the *enforcement* layer: the gate, the rule, and the remediation.
   lowest safe version on the same `major.minor` (the smallest change) and the lowest safe one above the
   current version. It exits 1 when no safe version is published yet. Standard library only. On a feed
   that publishes no vulnerability data (a proxy may not), add `--vulnerability-feed
-  https://api.nuget.org/v3/index.json`. Then pin it and restore with the audit on: the restore is the
-  proof. Tested offline in CI, and run against nuget.org there.
+  https://api.nuget.org/v3/index.json`. Then upgrade or pin, and restore with the audit on: the restore
+  is the proof. Tested offline in CI, and run against nuget.org there.
   Why it's here: a fix eval run that saw the Pkcs advisory tried `10.0.0`, found that flagged too, and
   gave up; `10.0.13` (or `9.0.21` on the same line) was the fix.
 - If no fixed version exists yet → this is a real risk decision, not a silent pass: record it
@@ -82,5 +103,6 @@ the check it enforces.
 ## Rules
 - Zero known vulns — direct and transitive, any severity. A vuln is a hard fail, not a note.
 - `NuGetAudit` + `NuGetAuditMode=all` + `NU190x`-as-error in `Directory.Build.props` is the primary gate.
-- Transitive vuln → pin the fixed version with a direct `PackageReference` (documented).
+- Transitive vuln → upgrade the parent that brings it (`dotnet nuget why`, `parent_fix.py`); pin the package
+  directly only when no parent release brings a fixed version, with the reason beside the pin.
 - No silent suppression — an un-fixable vuln is a tracked, owned decision with an advisory link.

@@ -59,8 +59,10 @@
   is a **hard fail** that blocks merge, not a note in a report. See `skills/zero-vulns/`.
 - `Directory.Build.props` enables `NuGetAudit` + `NuGetAuditMode=all` and treats `NU1901–NU1904` as
   **errors**, so the build fails on any vulnerable package (direct or transitive).
-- Transitive vuln → pin the fixed version with a direct `PackageReference` (documented with the
-  advisory link). No silent suppression — an un-fixable vuln is a tracked, owned decision.
+- Fix the smallest thing you own: a direct dependency → upgrade it; a transitive one → upgrade the
+  parent that brings it (`dotnet nuget why`). Pin the vulnerable package directly only when no parent
+  release brings a fixed version, with the advisory and the reason beside the pin. No silent
+  suppression — an un-fixable vuln is a tracked, owned decision. See `skills/zero-vulns/`.
 
 ## Banned
 - `BinaryFormatter` — insecure deserialization (remote code execution); removed from .NET 9
