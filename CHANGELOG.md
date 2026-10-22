@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.2 — file uploads
+- New skill `file-uploads` 1.0.0, tested in CI. The type comes from the file's first bytes, from a short
+  allowlist; the client's name and `Content-Type` are ignored. The server makes the name, and every path
+  is checked to stay under the storage root (`Path.Combine` alone lets `../` climb out, and a rooted name
+  replaces the root). The size is counted while copying, a file is stored whole or not at all, and it is
+  served back with the server's type and `nosniff`. The ingress, Kestrel and form limits are set in step.
+  Story tests (a traversal name, HTML sent as a JPEG) and a production test under slim-image conditions.
+- `rules/security.md`, `owasp-aspnetcore` 2.1.1 and `security-reviewer` point to it.
+
 ## 0.3.1 — fix the vulnerable package you own
 - `zero-vulns` 1.2.0: a vulnerable package is fixed in order. A direct one is upgraded. A transitive
   one is traced (`dotnet nuget why`) and its parent upgraded. Only when no parent release brings a fixed

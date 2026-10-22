@@ -1,7 +1,7 @@
 ---
 name: owasp-aspnetcore
 description: OWASP Top 10:2025 mapped to ASP.NET Core services — which skill holds the tested fix for each category, plus the ones this skill owns — security headers that survive the error path, HSTS, CORS, an SSRF guard that checks the resolved address, and JSON polymorphism by allowlist. Tested in CI.
-version: 2.1.0
+version: 2.1.1
 ---
 
 # OWASP Top 10:2025 for ASP.NET Core
@@ -23,7 +23,7 @@ in CI (`tests/SkillSamples.Tests/Owasp`); every claim marked *tested* is a test 
 | **A03** Software Supply Chain Failures | known-vulnerable packages, where packages come from, pinned CI | `zero-vulns`; §6 here |
 | **A04** Cryptographic Failures | AES-GCM at rest, keys from the vault, TLS | `encryption-patterns`, `secret-management`, `nginx` |
 | **A05** Injection | parameters, never concatenation; validation before the handler | `efcore-patterns`, `dapper-patterns`, `cqrs-eventsourcing` (validation decorator) |
-| **A06** Insecure Design | per-caller rate limits, size limits, business rules in the domain | `api-design` §6, `nginx` (body size), `ddd-patterns` |
+| **A06** Insecure Design | per-caller rate limits, size limits, business rules in the domain | `api-design` §6, `nginx` (body size), `file-uploads`, `ddd-patterns` |
 | **A07** Authentication Failures | token validation for the three token sources, service tokens | `auth-patterns` §0–2, §6 |
 | **A08** Software or Data Integrity Failures | no type names from the wire | §5 here |
 | **A09** Security Logging and Alerting Failures | log security events, never patient data or tokens | `observability`, `pii-masking` |
@@ -264,6 +264,7 @@ public sealed record InsurancePayment(string PolicyNumber) : PaymentMethod;
 - [ ] No type names from the wire: STJ polymorphism by allowlist, Newtonsoft `TypeNameHandling.None`
 - [ ] Request DTOs, never entities, bound from bodies
 - [ ] Per-caller rate limits on login, OTP and expensive endpoints (`api-design` §6)
+- [ ] Uploads: type from the bytes, server-made name kept under the root, limits in step (`file-uploads`)
 - [ ] Zero vulnerable packages; package source mapping for internal packages (`zero-vulns`)
 - [ ] Security events logged without tokens or patient data (`observability`, `pii-masking`)
 - [ ] Every failure path refuses: no `catch` that lets a request through

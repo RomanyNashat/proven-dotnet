@@ -3,114 +3,116 @@ api-contract-evolution	can I add a new value to the status enum in the response 
 api-contract-evolution	we want to remove a field from the profile response, the mobile app still reads it
 api-design	add a minimal API endpoint that returns ProblemDetails when the order isn't found
 api-design	how should I version this REST endpoint and document it in OpenAPI
-aspire-patterns	wire the orders service and redis together in the AppHost
 aspire-patterns	service discovery between two projects with ServiceDefaults
-auth-patterns	validate Keycloak JWT tokens and map the realm roles to policies
+aspire-patterns	wire the orders service and redis together in the AppHost
 auth-patterns	the sub claim is null on the user, MapInboundClaims renamed it
+auth-patterns	validate Keycloak JWT tokens and map the realm roles to policies
 azure-deployment	deploy this API to Azure Container Apps with managed identity
 azure-deployment	read the connection string from Key Vault in App Service
 caching	add HybridCache in front of the product lookup with tag invalidation
 caching	cache stampede when the entry expires and every pod reloads it
 code-health	give me a grade for this codebase, how healthy is it
 code-health	report card for the repo: complexity, duplication, dead code
-code-quality	turn on analyzers and warnings as errors for the whole solution
 code-quality	dotnet format verify in the pipeline fails, set up the quality gates
-cqrs-eventsourcing	split commands and queries without MediatR, plain handlers with decorators
+code-quality	turn on analyzers and warnings as errors for the whole solution
 cqrs-eventsourcing	event sourcing with Marten projections for the account aggregate
+cqrs-eventsourcing	split commands and queries without MediatR, plain handlers with decorators
 cronjob-patterns	a nightly console app that runs once as a Kubernetes CronJob
 cronjob-patterns	one-off data migration job run by crontab with retries
-dapper-patterns	write a Dapper query with multi-mapping and keyset paging
 dapper-patterns	pass a list of ids to a SQL query safely without string concatenation
+dapper-patterns	write a Dapper query with multi-mapping and keyset paging
 ddd-patterns	design the aggregate root and value objects for an appointment
 ddd-patterns	raise domain events from the aggregate and dispatch them after save
 design-patterns	is the strategy pattern overkill here, what does .NET already give me
 design-patterns	which GoF pattern fits replacing this big switch on payment type
 doc-review	check the generated service page against the code before I share it
 doc-review	verify every claim in the README draft traces to the source
-docker-dotnet	write a multi-stage Dockerfile with a non-root user for the API
 docker-dotnet	the image is 900 MB, make it smaller and cache the restore layer
-dotnet-core	options validation with ValidateOnStart so a bad config stops the deploy
+docker-dotnet	write a multi-stage Dockerfile with a non-root user for the API
 dotnet-core	captive dependency: a singleton injects a scoped service
-dotnet-upgrade	move this service from .NET 8 to .NET 10 and what breaks
+dotnet-core	options validation with ValidateOnStart so a bad config stops the deploy
 dotnet-upgrade	enable nullable reference types in an old project step by step
+dotnet-upgrade	move this service from .NET 8 to .NET 10 and what breaks
 efcore-patterns	EF Core query is slow, N+1 on the order lines, use split query
 efcore-patterns	generate a migration script, up and down, for the new column
 encryption-patterns	encrypt the national id column with AES-GCM and rotate keys
 encryption-patterns	envelope encryption with a data key wrapped by a key in the vault
-grpc-patterns	define a proto for the patient lookup and map errors to status codes
+file-uploads	the endpoint saves the PDF using the name the client sent, is that a path traversal risk
+file-uploads	users upload a profile photo, how do I check it's really an image and save it safely
 grpc-patterns	client deadline for a gRPC call between two services
+grpc-patterns	define a proto for the patient lookup and map errors to status codes
 handover	I'm going on vacation, write the handover for my three repos
 handover	prepare the handover document for whoever covers my services next week
-hangfire-patterns	recurring background job with Hangfire on PostgreSQL storage
 hangfire-patterns	enqueue a fire-and-forget job and retry it with Hangfire filters
+hangfire-patterns	recurring background job with Hangfire on PostgreSQL storage
 healthcare-compliance	audit trail for every change to patient data that can't be edited
 healthcare-compliance	consent check before we share a patient's records
 k6-load-testing	load test the booking endpoint with thresholds that fail the pipeline
 k6-load-testing	write a spike and soak test script for the API
 kafka-patterns	at-least-once Kafka consumer that commits after handling
 kafka-patterns	producer keyed by aggregate id with idempotence on Confluent.Kafka
-known-traps	scan our services for the known library traps before release
 known-traps	check these repos for SqlClient in invariant mode and a singleton DbContext
+known-traps	scan our services for the known library traps before release
 kubernetes-dotnet	liveness and readiness probes and graceful shutdown for the pod
 kubernetes-dotnet	set resource requests and limits for guaranteed QoS on the deployment
 lessons	capture what went wrong this session so the mistake isn't repeated
 lessons	fold the corrections from today into the harness one by one
-localization	the ar-SA culture parses 2026 as a Hijri year and fails
 localization	Arabic and English messages from the x-language header with resx
+localization	the ar-SA culture parses 2026 as a Hijri year and fails
 mongodb-patterns	MongoDB schema design and an ESR compound index for this query
 mongodb-patterns	transactions and change streams with the C# driver
 msbuild	move the solution to Central Package Management with Directory.Packages.props
 msbuild	why did restore pick this version, dotnet nuget why and a binary log
-nginx	we get a 413 from the ingress when uploading a file
 nginx	504 gateway timeout, is it the proxy or Kestrel, align the timeouts
+nginx	we get a 413 from the ingress when uploading a file
 openiddict-server	build our own OAuth2 authorization server with code flow and PKCE
 openiddict-server	reference tokens with introspection and revocation on the identity server
 outbox	publish the event only if the database write commits, the dual-write problem
 outbox	relay saved messages from a table to the broker reliably
-owasp-aspnetcore	go through the OWASP top 10 for this ASP.NET Core service
 owasp-aspnetcore	SSRF and insecure deserialization risks in our API
+owasp-aspnetcore	go through the OWASP top 10 for this ASP.NET Core service
 pii-masking	mask mobile numbers and national ids in the Serilog logs
 pii-masking	the exception message logs the patient's phone number
 polly-resilience	add retry with backoff and a circuit breaker to the HTTP client
 polly-resilience	don't retry the POST, only GETs, with the standard resilience handler
-postgresql-patterns	we're coming from SQL Server, what's different in PostgreSQL with Npgsql
 postgresql-patterns	add an index CONCURRENTLY and an upsert with ON CONFLICT
-production-diagnostics	the service is slow in production and memory keeps growing
+postgresql-patterns	we're coming from SQL Server, what's different in PostgreSQL with Npgsql
 production-diagnostics	pods restart and the thread pool is starving, how do I find out why
+production-diagnostics	the service is slow in production and memory keeps growing
 quartz-scheduling	Quartz cron trigger in a time zone with a clustered job store
 quartz-scheduling	a scheduled job missed its run during the deploy and never fired
 redis-patterns	distributed lock with StackExchange.Redis that checks its token
 redis-patterns	sliding-window rate limiter and leaderboard in Redis
-remediation-parity	prove the refactor didn't change behavior before I apply it
 remediation-parity	characterization test first, then check the cleanup is identical
+remediation-parity	prove the refactor didn't change behavior before I apply it
 retrospective	audit the harness for drift and orphan skills
 retrospective	review our own commands and agents against our rules and propose fixes
-scaffold-from-sql	generate repositories and endpoints from these stored procedures
 scaffold-from-sql	build the service layer from the existing database schema .sql file
-secret-management	there's a password in appsettings.json, where should secrets live
+scaffold-from-sql	generate repositories and endpoints from these stored procedures
 secret-management	rotate the API key without downtime and inject it from the environment
-service-documentation	write a README for this service from its code: endpoints, config, jobs
+secret-management	there's a password in appsettings.json, where should secrets live
 service-documentation	document the service for the wiki so a new developer can onboard
-simplicity	rewrite this email so it sounds plain and human, not padded
+service-documentation	write a README for this service from its code: endpoints, config, jobs
 simplicity	make the release note shorter and lead with the verb
+simplicity	rewrite this email so it sounds plain and human, not padded
+simplicity	this commit message reads like a bot wrote it, fix it
 skill-evals	benchmark a skill with and without it on test cases
 skill-evals	measure whether the skill's description triggers on the right requests
-sqlserver-patterns	read this execution plan and tune the SQL Server query
 sqlserver-patterns	deadlocks on SQL Server, read committed snapshot and UPDLOCK upsert
-story-engine	turn these requirements into epics and user stories with Gherkin
+sqlserver-patterns	read this execution plan and tune the SQL Server query
 story-engine	export the stories to a Jira CSV with sub-tasks
-story-review	score the generated story map against INVEST and fix what fails
+story-engine	turn these requirements into epics and user stories with Gherkin
 story-review	check the stories before they reach the developer
-test-coverage	what is our line and branch coverage and where are the gaps
+story-review	score the generated story map against INVEST and fix what fails
 test-coverage	raise coverage on the least covered classes with characterization tests
-testing-architecture	enforce that Domain doesn't reference Infrastructure with NetArchTest
+test-coverage	what is our line and branch coverage and where are the gaps
 testing-architecture	architecture tests for naming and layer dependencies
-testing-integration	integration tests with WebApplicationFactory and a real PostgreSQL container
+testing-architecture	enforce that Domain doesn't reference Infrastructure with NetArchTest
 testing-integration	Testcontainers SQL Server with Respawn between tests
-testing-tdd	write the failing test first for this bug, red green refactor
+testing-integration	integration tests with WebApplicationFactory and a real PostgreSQL container
 testing-tdd	unit test the handler with xUnit, Moq and AutoFixture
+testing-tdd	write the failing test first for this bug, red green refactor
 worker-patterns	BackgroundService reading a Channel queue that drains on shutdown
 worker-patterns	PeriodicTimer loop in a hosted service that doesn't overlap
-zero-vulns	the build fails with NU1903, a vulnerable transitive package
 zero-vulns	dotnet list package --vulnerable shows a CVE, which version fixes it
-simplicity	this commit message reads like a bot wrote it, fix it
+zero-vulns	the build fails with NU1903, a vulnerable transitive package

@@ -10,7 +10,8 @@
 - FluentValidation or DataAnnotations on EVERY command/request DTO — no unvalidated input reaches business logic
 - Parameterized queries ALWAYS — never concatenate user input into SQL strings
 - Use `FormattableString` with EF Core's `FromSql()` — compiler-enforced parameterization
-- Validate file uploads: size limits, content-type allowlist, no path traversal
+- Validate file uploads: the type from the file's first bytes, a server-made name under a root it can't
+  leave, size limits in step from the ingress to the copy — see `skills/file-uploads/`
 - Use `HtmlEncoder.Default.Encode()` for any user content rendered in HTML
 
 ## Authentication & Authorization
