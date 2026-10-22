@@ -43,7 +43,8 @@ dotnet restore --force-evaluate
 dotnet list package --vulnerable --include-transitive   # explicit confirmation
 ```
 Any known vulnerability (direct or transitive, any severity) fails this gate — it's zero known vulns,
-not zero-critical. Remediate per `skills/zero-vulns/` (upgrade, or pin the fixed transitive version).
+not zero-critical. Remediate per `skills/zero-vulns/`: upgrade the package or the parent that brings it; pin a transitive
+package directly only when no parent release fixes it.
 
 ### Report
 Output pass/fail status for each gate. If any gate fails, report the specific violations and reference the appropriate rule or skill for fixes.

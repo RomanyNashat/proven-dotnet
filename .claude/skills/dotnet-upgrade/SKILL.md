@@ -1,7 +1,7 @@
 ---
 name: dotnet-upgrade
 description: Moving a service from .NET 8 or 9 to .NET 10 (C# 14, EF Core 10, SDK 10) and turning on nullable reference types in an existing codebase — the order of work, the breaking changes that bite a backend service, and how to prove nothing changed. EF Core 10 parts tested in CI on PostgreSQL and SQL Server.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Upgrading to .NET 10
@@ -96,7 +96,8 @@ The first two were seen in this repo's own builds; the third is from the .NET 10
 
 - **Transitive packages are audited by default.** A vulnerable package three levels down is now an
   `NU1902`–`NU1904` warning, and an error under warnings-as-errors. Expect new ones on the first build:
-  pin the fixed version with a direct `PackageReference` and a comment naming the advisory (`zero-vulns`).
+  upgrade the parent that brings it first (`dotnet nuget why`, `parent_fix.py`), and pin the fixed version
+  directly only when no parent release brings it, with a comment naming the advisory and why (`zero-vulns`).
 - **`NU1510`: a package the framework already provides.** References such as `System.Text.Json` or
   `System.Memory` that a .NET 10 project gets from the framework are flagged. Remove them; if an old
   version was pinned for a vulnerability, the framework's copy is the newer one anyway.
