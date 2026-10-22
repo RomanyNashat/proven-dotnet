@@ -14,4 +14,5 @@ This fixture was written after the skills, so nothing in them was tuned to it.
 - `task.md`: what every run is given, word for word.
 - `runs/<arm>-<n>/HomeReadings/`: the copies the runs fixed, graded by `fix-evals.yml`.
 
-The cases and the results are in `evals.md`.
+The cases are in `evals.md`, the results in `results.md`, and the per-case counts the eval gate
+compares against in `scores.json`.

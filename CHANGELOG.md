@@ -3,6 +3,22 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.0 — the harness checks itself
+- **The eval gate.** `tests/evals/tools/gate.py` adds up each arm's fix-eval runs per case, and
+  `fix-evals.yml` fails a PR when any case, finding or regression, passes in fewer runs than on `main`,
+  or when the committed `scores.json` isn't what CI graded. The total isn't compared: a change can raise
+  it and still lose the case it was about. `lessons` 1.1.0 gates the changes it folds in with it;
+  `skill-evals` says how.
+- **Fix eval, round three** (`tests/evals/fix-lab/`): a home-readings service on PostgreSQL with 13
+  planted findings, hidden tests and two reference fixes that choose differently, three runs per arm.
+  With proven 39/39, rules only 39/39, no rules 33/39 (it missed the 30-second clock skew and the bounded
+  string columns in all three runs). Every run of an arm gave the same result. Rules only also fixed the
+  five findings only the skills teach, so this fixture can catch harm through the gate but can't show the
+  skills add anything over the rules; the next one needs what the skills' own tests found in real
+  libraries. Disclosures in `results.md`: runs resumed after the usage limit, H03 changed before
+  grading, one fixer ran its own PostgreSQL.
+- One grader for both fix evals, driven by each fixture's `fixture.json`.
+
 ## 0.2.20 — review the change, not the repo
 - `/full-review --diff [base]`: a merge request is reviewed for what it brings. A finding needs the change
   to take part in it: the change wrote the flawed line, reaches an old flaw (a new caller, a removed
