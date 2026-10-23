@@ -99,3 +99,56 @@ jobs:
           path: |
             results/
             scores-fix-lab.json
+
+  grade-sync:
+    name: Fix eval, round four (hidden tests, PostgreSQL, two pods, no tzdata)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: Start PostgreSQL
+        run: bash tools/ci/service.sh start pg
+      - name: PostgreSQL 17
+        timeout-minutes: 5
+        run: bash tools/ci/service.sh wait pg
+      - name: Grade every copy
+        run: |
+          base=tests/evals/fix-sync
+          copies="original=$base reference=$base/reference reference-alt=$base/reference-alt"
+          for d in "$base"/runs/*/; do [ -d "$d/MeterSync" ] && copies="$copies $(basename "$d")=${d%/}"; done
+          mkdir -p results
+          for c in $copies; do
+            name=${c%%=*}; src=${c#*=}
+            echo "::group::$name"
+            docker run --rm --network host -v "$PWD:/w" -w /w -e EVAL_PG \
+              mcr.microsoft.com/dotnet/sdk:10.0-noble bash "$base/tools/grade-one.sh" "$src" "$name" /w/results
+            echo "::endgroup::"
+          done
+        env:
+          EVAL_PG: "Host=localhost;Username=postgres;Password=postgres;Database=postgres"
+      - name: Results
+        shell: bash
+        run: python3 tests/evals/tools/grade.py tests/evals/fix-sync results --json scores-fix-sync.json | tee -a "$GITHUB_STEP_SUMMARY"
+      # The eval gate: the committed scores are what CI graded, and no case passes in fewer runs than on main.
+      - name: Eval gate
+        shell: bash
+        run: |
+          base=tests/evals/fix-sync
+          python3 tests/evals/tools/gate.py scores scores-fix-sync.json > graded-scores.json
+          if ! diff -u "$base/scores.json" graded-scores.json; then
+            echo "::error title=eval gate::$base/scores.json isn't what CI graded: commit the file above (gate.py scores)"
+            exit 1
+          fi
+          if git fetch -q --depth=1 origin main && git show origin/main:$base/scores.json > baseline-scores.json 2>/dev/null; then
+            python3 tests/evals/tools/gate.py check baseline-scores.json graded-scores.json | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No baseline on main yet: these scores become it." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Build and test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fix-eval-sync-results
+          path: |
+            results/
+            scores-fix-sync.json

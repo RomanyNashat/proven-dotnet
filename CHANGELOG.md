@@ -3,6 +3,20 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.3 — fix eval, round four
+- **A fourth fixture** (`tests/evals/fix-sync/`): a service that pulls glucose-meter readings from a
+  vendor and texts the patient, on PostgreSQL, with 10 planted findings. Half are what the skills' own
+  tests found in real libraries and no rule names (a base address that drops its path, no tzdata on a
+  slim image, two pods sending the same SMS, the audience unchecked, CORS for any site). The hidden tests
+  run one or two pods, and the time-zone test runs in its own step with an empty `TZDIR`. Graded in CI
+  by its own job, with the eval gate.
+- **Result:** with proven 30/30, rules only 30/30, no rules 27/30 (it missed the singleton holding a
+  `DbContext` in two runs and the tzdata fallback in one). The skills still don't separate from the rules
+  on a fixture whose task describes its own setting; the rules carry the misses. `results.md` says why.
+- **What the runs found in the harness:** `worker-patterns`' exception filter lets an `HttpClient`
+  timeout stop the host, and the known-traps scan misses `new("ar-SA")`. Both are for `/lessons`, under
+  the gate.
+
 ## 0.3.2 — file uploads
 - New skill `file-uploads` 1.0.0, tested in CI. The type comes from the file's first bytes, from a short
   allowlist; the client's name and `Content-Type` are ignored. The server makes the name, and every path
