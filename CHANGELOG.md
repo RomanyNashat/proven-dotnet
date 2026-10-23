@@ -3,6 +3,17 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.4 — what round four found in the harness
+- **A timeout no longer stops a worker.** Six tested samples caught with
+  `when (ex is not OperationCanceledException)`, which also lets an `HttpClient` timeout through (it is a
+  `TaskCanceledException`): the worker faults and, by default, the host stops. They now ask the token,
+  `when (!stoppingToken.IsCancellationRequested)`. A story test shows a periodic sync whose first call
+  times out keeps running and runs again on the next tick; it failed before the change.
+  `worker-patterns` 1.2.1, `kafka-patterns` 1.2.1, `quartz-scheduling` 2.1.1, and `outbox`.
+- **`known-traps` 1.4.0:** a new check, `worker-cancellation-by-type`, for that catch in a worker or job;
+  and `ar-sa-default-calendar` now sees the target-typed `new("ar-SA")`, which it missed on round four's
+  service. Both have tests.
+
 ## 0.3.3 — fix eval, round four
 - **A fourth fixture** (`tests/evals/fix-sync/`): a service that pulls glucose-meter readings from a
   vendor and texts the patient, on PostgreSQL, with 10 planted findings. Half are what the skills' own

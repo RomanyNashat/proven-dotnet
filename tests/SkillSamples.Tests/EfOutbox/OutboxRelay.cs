@@ -38,7 +38,7 @@ public sealed class OutboxRelay(ClinicDbContext db, IOutboxPublisher publisher, 
             {
                 await publisher.PublishAsync(message, ct);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 message.Attempts++;
                 message.LastError = ex.GetType().Name;   // the type: a message can echo patient data

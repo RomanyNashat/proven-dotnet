@@ -136,6 +136,21 @@ class ScanTrapsTests(unittest.TestCase):
                 'try { _ = CultureInfo.GetCultureInfo("ar-SA", predefinedOnly: true); } catch (CultureNotFoundException) { throw; }\n'})
             self.assertEqual([], scan_traps.scan(tmp))
 
+    def test_story_ar_sa_made_with_a_target_typed_new_is_still_seen(self):
+        # Given a service that writes `CultureInfo Arabic = new("ar-SA")`, the form C# 9 and later allow
+        with tempfile.TemporaryDirectory() as tmp:
+            write(pathlib.Path(tmp), {"AlertText.cs": 'private static readonly CultureInfo Arabic = new("ar-SA");\n'})
+            # Then the scan reports it as it does `new CultureInfo("ar-SA")`
+            self.assertEqual([("ar-sa-default-calendar", 1)], [(f.check, f.line) for f in scan_traps.scan(tmp)])
+
+    def test_a_worker_that_lets_a_timeout_through_is_seen_and_a_catch_elsewhere_is_not(self):
+        catch = "catch (Exception ex) when (ex is not OperationCanceledException) { }\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            write(pathlib.Path(tmp), {"Worker.cs": "class W : BackgroundService {\n" + catch + "}\n",
+                                      "Endpoints.cs": "static class E {\n" + catch + "}\n"})
+            self.assertEqual([("worker-cancellation-by-type", "Worker.cs", 2)],
+                             [(f.check, f.path, f.line) for f in scan_traps.scan(tmp)])
+
     def test_commented_out_code_is_not_a_finding(self):
         with tempfile.TemporaryDirectory() as tmp:
             write(pathlib.Path(tmp), {"Program.cs": "// p.SetIsOriginAllowed(_ => true)\n/* old:\n * ValidateAudience = false\n */\n"})

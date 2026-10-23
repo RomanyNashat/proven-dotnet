@@ -1,7 +1,7 @@
 ---
 name: worker-patterns
 description: Background workers for .NET: BackgroundService vs IHostedService, Channel<T> queues that drain on shutdown, PeriodicTimer with TimeProvider, worker health checks, graceful shutdown. Code tested in CI.
-version: 1.2.0
+version: 1.2.1
 ---
 
 # Worker & Background Service Patterns
@@ -58,7 +58,7 @@ public sealed class OrderProcessingWorker(IServiceScopeFactory scopeFactory, Tim
                     await Task.Delay(TimeSpan.FromSeconds(2), time, stoppingToken);   // nothing to do: wait
                 }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
                 logger.LogError(ex, "Batch failed; retrying in 5 s");
                 await Task.Delay(TimeSpan.FromSeconds(5), time, stoppingToken);
@@ -144,7 +144,7 @@ public sealed class PeriodicSyncWorker(ISyncJob job, TimeProvider time, ILogger<
             {
                 await job.RunAsync(stoppingToken);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
                 logger.LogError(ex, "Sync failed; next run in {Interval}", Interval);
             }
@@ -193,7 +193,7 @@ public sealed class NotificationDispatchWorker(
                 await using var scope = scopeFactory.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendAsync(message, stoppingToken);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
                 logger.LogError(ex, "Failed to dispatch notification {Id}", message.Id);
             }
@@ -275,7 +275,9 @@ checks runs on the ASP.NET Core runtime, not the plain .NET runtime.
 ## Anti-patterns
 - `Thread.Sleep()`. Use `await Task.Delay(..., timeProvider, ct)` or `PeriodicTimer`.
 - `Task.Run()` around synchronous work inside `ExecuteAsync`.
-- Swallowing `OperationCanceledException` in a loop: catch with `when (ex is not OperationCanceledException)`.
+- Catching by exception type to let shutdown through: `when (ex is not OperationCanceledException)` also lets an
+  `HttpClient` timeout through (a `TaskCanceledException`), and the worker stops, then the host. Ask the
+  token instead: `when (!stoppingToken.IsCancellationRequested)` (tested).
 - Injecting scoped services into a worker (it's a singleton). Use `IServiceScopeFactory`.
 - `base.StopAsync()` before the queue is empty.
 - Injecting a worker registered only with `AddHostedService<T>()`: it can't be resolved as `T`.

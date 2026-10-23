@@ -54,6 +54,40 @@ public sealed class CountingJob : ISyncJob
     }
 }
 
+// A sync whose HTTP call times out once: HttpClient reports a timeout as TaskCanceledException, an
+// OperationCanceledException, though nobody asked the worker to stop.
+public sealed class TimingOutJob : ISyncJob
+{
+    public int Runs;
+    public readonly SemaphoreSlim Ran = new(0);
+
+    public async Task RunAsync(CancellationToken ct)
+    {
+        var run = Interlocked.Increment(ref Runs);
+        try
+        {
+            if (run == 1)
+            {
+                using var http = new HttpClient(new HangingHandler()) { Timeout = TimeSpan.FromMilliseconds(50) };
+                await http.GetAsync("https://vendor.example.net/readings", ct);
+            }
+        }
+        finally
+        {
+            Ran.Release();
+        }
+    }
+
+    private sealed class HangingHandler : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            await Task.Delay(Timeout.Infinite, ct);
+            return new HttpResponseMessage();
+        }
+    }
+}
+
 public sealed class FailingWorker : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -231,6 +265,35 @@ public sealed class WorkerTests
 
         await host.StopAsync();
         Assert.Equal(3, job.Runs);
+    }
+
+    [Fact]
+    [Trait(ProductionConditions.Trait, ProductionConditions.Story)]
+    public async Task Story_TheVendorTimesOut_TheWorkerLogsIt_AndTheNextTickRuns()
+    {
+        // Given a periodic sync whose first HTTP call times out (a cancellation exception nobody asked for)
+        var time = new FakeTimeProvider();
+        var job = new TimingOutJob();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.Services.Configure<HostOptions>(o => o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
+        builder.Services.AddSingleton<ISyncJob>(job);
+        builder.Services.AddSingleton<TimeProvider>(time);
+        builder.Services.AddHostedService<PeriodicSyncWorker>();
+        using var host = builder.Build();
+        await host.StartAsync();
+        var worker = host.Services.GetServices<IHostedService>().OfType<PeriodicSyncWorker>().Single();
+
+        // When the first run times out and the interval passes
+        Assert.True(await job.Ran.WaitAsync(TimeSpan.FromSeconds(10)), "run 1");
+        await Task.Delay(100);
+        Assert.False(worker.ExecuteTask!.IsCompleted, "the timeout ended the worker");
+        time.Advance(PeriodicSyncWorker.Interval);
+
+        // Then the worker is still running and the next run happens
+        Assert.True(await job.Ran.WaitAsync(TimeSpan.FromSeconds(10)), "run 2");
+        await host.StopAsync();
+        Assert.Equal(2, job.Runs);
     }
 
     [Fact]
