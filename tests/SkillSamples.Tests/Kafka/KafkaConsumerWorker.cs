@@ -73,13 +73,13 @@ public sealed class KafkaConsumerWorker(
                 await scope.ServiceProvider.GetRequiredService<IKafkaMessageHandler>().HandleAsync(result, ct);
                 return;
             }
-            catch (Exception ex) when (ex is not OperationCanceledException && attempt < options.MaxAttempts)
+            catch (Exception ex) when (!ct.IsCancellationRequested && attempt < options.MaxAttempts)
             {
                 logger.LogWarning("Attempt {Attempt} failed for {Topic}[{Partition}]@{Offset}: {Error}",
                     attempt, result.Topic, result.Partition.Value, result.Offset.Value, ex.GetType().Name);
                 await Task.Delay(options.RetryDelay * attempt, ct);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 // Out of attempts: park it and move on, so one bad message doesn't stop the partition.
                 // If this write fails it throws, the offset isn't stored, and the message comes back.

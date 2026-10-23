@@ -32,7 +32,7 @@ public sealed class OutboxRelay(IMongoDatabase db, IOutboxPublisher publisher, T
             {
                 await publisher.PublishAsync(message, ct);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 await _outbox.UpdateOneAsync(m => m.Id == message.Id,
                     Builders<OutboxMessage>.Update.Inc(m => m.Attempts, 1).Set(m => m.LastError, ex.GetType().Name),
