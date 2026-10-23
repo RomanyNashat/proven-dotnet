@@ -71,6 +71,7 @@ with the tested fix, and its §8 is the detailed checklist.
 ### A06: Insecure Design
 - [ ] Per-caller rate limiting on authentication, OTP and resource-intensive endpoints
 - [ ] Input size limits (file uploads, request body, query parameters)
+- [ ] File uploads: type from the bytes, server-made name, path kept under the root, served with `nosniff` (`file-uploads` checklist)
 - [ ] Business logic validates invariants (not just input format)
 
 ### A07: Authentication Failures
