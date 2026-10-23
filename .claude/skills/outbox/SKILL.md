@@ -217,7 +217,7 @@ public sealed class OutboxRelay(ClinicDbContext db, IOutboxPublisher publisher, 
             {
                 await publisher.PublishAsync(message, ct);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 message.Attempts++;
                 message.LastError = ex.GetType().Name;   // the type: a message can echo patient data
@@ -298,6 +298,16 @@ public sealed class OutboxMessage
     public DateTime? PublishedAt { get; set; }
     public int Attempts { get; set; }
     public string? LastError { get; set; }
+
+    public static OutboxMessage For<TEvent>(TEvent @event, string aggregateId, DateTime occurredAt)
+        where TEvent : notnull => new()
+        {
+            Type = typeof(TEvent).Name,
+            AggregateId = aggregateId,
+            Payload = JsonSerializer.Serialize(@event),
+            OccurredAt = occurredAt,
+        };
+}
 ```
 
 **Writing it, in the same transaction as the data** (the callback API retries transient errors, so the
@@ -314,6 +324,10 @@ callback can run more than once; nothing inside it may call the broker):
                 cancellationToken: token);
             return true;   // no broker call in here: the callback can run more than once
         }, cancellationToken: ct);
+
+        return appointment;
+    }
+}
 ```
 Tested: when the callback throws after both inserts, neither document is saved.
 
@@ -335,13 +349,25 @@ the relay never skips past a message it failed to publish:
             {
                 await publisher.PublishAsync(message, ct);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 await _outbox.UpdateOneAsync(m => m.Id == message.Id,
                     Builders<OutboxMessage>.Update.Inc(m => m.Attempts, 1).Set(m => m.LastError, ex.GetType().Name),
                     cancellationToken: ct);
                 break;   // keep the order: retry this one first on the next run
             }
+
+            await _outbox.UpdateOneAsync(m => m.Id == message.Id,
+                Builders<OutboxMessage>.Update
+                    .Set(m => m.Status, OutboxStatus.Published)
+                    .Set(m => m.PublishedAt, time.GetUtcNow().UtcDateTime),
+                cancellationToken: ct);
+            published++;
+        }
+
+        return published;
+    }
+}
 ```
 After publishing, the message is marked `Published` with `PublishedAt`. A crash between the two
 publishes it again, which is why consumers dedupe on the message `Id` (below). Store the exception
@@ -370,6 +396,8 @@ another pod takes over when the lease expires:
         {
             return false;   // someone else holds a live lease: the upsert hit the existing _id
         }
+    }
+}
 ```
 Run it from a `BackgroundService` on a `PeriodicTimer` (see `worker-patterns`): acquire or renew the
 lease, then `PublishPendingAsync`. Keep the lease a few times longer than one run.

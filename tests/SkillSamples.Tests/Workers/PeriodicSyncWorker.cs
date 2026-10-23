@@ -23,7 +23,7 @@ public sealed class PeriodicSyncWorker(ISyncJob job, TimeProvider time, ILogger<
             {
                 await job.RunAsync(stoppingToken);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
                 logger.LogError(ex, "Sync failed; next run in {Interval}", Interval);
             }

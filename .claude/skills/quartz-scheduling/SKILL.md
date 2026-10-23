@@ -1,7 +1,7 @@
 ---
 name: quartz-scheduling
 description: Quartz.NET in-process scheduling on PostgreSQL — clustered persistent store with the schema applied by the pipeline, cron in a real time zone, misfires, no overlapping runs, a health check and admin endpoints. Tested in CI against PostgreSQL.
-version: 2.1.0
+version: 2.1.1
 ---
 
 # Quartz.NET Scheduling Patterns
@@ -120,7 +120,7 @@ public sealed class DailyReportJob(IDailyReportBuilder reports, ILogger<DailyRep
         {
             await reports.BuildAsync(scheduledFor, context.CancellationToken);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!context.CancellationToken.IsCancellationRequested)
         {
             logger.LogError(ex, "Daily report for {ScheduledFor} failed", scheduledFor);
             throw new JobExecutionException(ex, refireImmediately: false);

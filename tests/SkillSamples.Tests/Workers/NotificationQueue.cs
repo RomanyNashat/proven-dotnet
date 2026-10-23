@@ -40,7 +40,7 @@ public sealed class NotificationDispatchWorker(
                 await using var scope = scopeFactory.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendAsync(message, stoppingToken);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
                 logger.LogError(ex, "Failed to dispatch notification {Id}", message.Id);
             }

@@ -21,7 +21,7 @@ public sealed class DailyReportJob(IDailyReportBuilder reports, ILogger<DailyRep
         {
             await reports.BuildAsync(scheduledFor, context.CancellationToken);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!context.CancellationToken.IsCancellationRequested)
         {
             logger.LogError(ex, "Daily report for {ScheduledFor} failed", scheduledFor);
             throw new JobExecutionException(ex, refireImmediately: false);

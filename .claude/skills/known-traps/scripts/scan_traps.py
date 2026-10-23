@@ -265,11 +265,22 @@ def ar_sa(repo):
     for rel, text in repo.of(".cs"):
         if re.search(r"Calendar\s*=", text):
             continue
-        for line, match in matches(text, r"(new\s+CultureInfo|GetCultureInfo|CreateSpecificCulture)\(\s*\"ar-SA\""):
+        for line, match in matches(text, r"(new\s+CultureInfo|\bnew|GetCultureInfo|CreateSpecificCulture)\s*\(\s*\"ar-SA\""):
             # A start-up check that the culture exists formats nothing: `_ = GetCultureInfo("ar-SA", predefinedOnly: true)`.
             before = text[text.rfind("\n", 0, match.start()) + 1:match.start()]
             if re.search(r"\b_\s*=\s*$", before) or "predefinedOnly" in call_text(text, match.start()):
                 continue
+            yield rel, line, None
+
+
+@check("worker-cancellation-by-type", "warning", "A worker's catch lets every cancellation through",
+       "An HttpClient timeout is a TaskCanceledException too: it escapes the loop, the worker stops, then the "
+       "host. Catch when (!stoppingToken.IsCancellationRequested) instead.", "worker-patterns")
+def worker_cancellation(repo):
+    for rel, text in repo.of(".cs"):
+        if not re.search(r":\s*(BackgroundService|IHostedService)\b|\bIJob\b", text):
+            continue
+        for line, _ in matches(text, r"when\s*\(\s*ex\s+is\s+not\s+(System\.)?OperationCanceledException\s*\)"):
             yield rel, line, None
 
 
