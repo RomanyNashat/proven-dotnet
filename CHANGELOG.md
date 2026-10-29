@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.5 — fix eval, round five
+- **A fifth fixture** (`tests/evals/fix-labs/`): clinicians record lab results and the patient gets an
+  SMS, on PostgreSQL with Keycloak tokens, with 8 planted findings. Six are what the skills' own tests
+  found in real libraries (Keycloak roles, paging ties, HttpClient logging the URI, Arabic-Indic digits
+  in the mask, SMS lost on shutdown, the audit user in a pooled context), and the task says nothing
+  about the setting. Two are the rules', as a control. Graded in CI by its own job, with the eval gate.
+- **Result:** with proven 24/24, rules only 20/24, no rules 10/24. The skills separated from the rules
+  on one finding: every proven run kept the texts queued at shutdown, and no other run did. That rests
+  on K05 as changed after the first grading (it told texts apart by their text, and its clock tripped a
+  correct sender's timeout); `results.md` shows both gradings.
+- **How the runs ran:** each step was its own `claude -p` with a home folder holding only that arm's
+  part of the harness, not a subagent, because the session's fresh container had no agents registered.
+
 ## 0.3.4 — what round four found in the harness
 - **A timeout no longer stops a worker.** Six tested samples caught with
   `when (ex is not OperationCanceledException)`, which also lets an `HttpClient` timeout through (it is a
