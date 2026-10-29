@@ -8,7 +8,7 @@
 | K02 | keyset paging on `ReceivedAt` alone: results saved in the same instant are skipped | five results with one timestamp all come back, two per page | `efcore-patterns`, `api-design` |
 | K03 | HttpClient's own logging writes the request URI, and the lab's URI carries the national ID | a lookup logs no national ID | `pii-masking` |
 | K04 | the national-ID mask matches `[0-9]`, so an ID typed in Arabic-Indic digits is logged whole | an Arabic-Indic national ID isn't in the logs, in either digits (a 400 is fine) | `pii-masking` |
-| K05 | the SMS queue is in memory and its loop stops on the shutdown token: a deploy drops what's queued | four texts queued when the pod stops are all sent (by it, or by the next pod) | `worker-patterns` |
+| K05 | the SMS queue is in memory and its loop stops on the shutdown token: a deploy drops what's queued | four texts queued when the pod stops are all sent (by it, or by the next pod), told apart by recipient | `worker-patterns` |
 | K06 | the audit interceptor sits in a pooled context's options with a user read once: every row gets one user | each result's `recordedBy` is the clinician who recorded it | `efcore-patterns` |
 | K07 | `Notes` has no length, so it's `text` | every string property has a max length of at most 4000 | rules (`efcore-rules.md`) |
 | K08 | the default 5-minute clock skew | a token that expired two minutes ago gets 401 | rules (`security.md`) |
@@ -21,7 +21,8 @@ lookup returns the lab's orders, calling `https://labs.example.net/api/patients/
 The tokens the tests sign carry the roles both as Keycloak does (inside `realm_access`) and as a plain
 `realm_access.roles` claim, so only K01 depends on how the service reads Keycloak's roles. While a test
 waits for an SMS the tests' clock moves on, so a worker that polls on the injected `TimeProvider` gets its
-ticks. K06 reads each clinician's result from that clinician's own list, so a list scoped to its caller
+ticks. K05, where the gateway takes 300 ms, moves it in 200 ms steps, so a sender with an attempt
+timeout doesn't time out only in the test. K06 reads each clinician's result from that clinician's own list, so a list scoped to its caller
 passes too.
 
 `fix-evals.yml` fails if the original passes any finding test or either reference fails any test.
@@ -37,3 +38,6 @@ there is no PostgreSQL or Docker for the runs.
 - **No rules:** `claude -p` from the copy's folder with an empty home folder.
 
 Three runs per arm, `runs/<arm>-<n>/`. Scored per finding: how many of the three runs fixed it.
+
+The 2026-10-29 runs ran each of these steps as its own `claude -p`, with the agents' `--agent` and a home
+folder holding only that arm's part of the harness, not as subagents; `results.md` says why.

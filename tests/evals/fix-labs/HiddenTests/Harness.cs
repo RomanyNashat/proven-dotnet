@@ -173,8 +173,9 @@ public sealed class Pod : WebApplicationFactory<Program>
         return client;
     }
 
-    public static object Result(string test = "HbA1c", decimal value = 6.1m, string nationalId = NationalId, string? notes = null) =>
-        new { patientId = 7, nationalId, phone = Phone, test, value, unit = "%", notes };
+    public static object Result(string test = "HbA1c", decimal value = 6.1m, string nationalId = NationalId, string? notes = null,
+        string phone = Phone) =>
+        new { patientId = 7, nationalId, phone, test, value, unit = "%", notes };
 
     public static async Task<int> RecordAsync(HttpClient client, object result)
     {
@@ -217,6 +218,18 @@ public sealed class Pod : WebApplicationFactory<Program>
         {
             await Task.Delay(50);
             Time.Advance(TimeSpan.FromSeconds(1));
+        }
+    }
+
+    /// <summary>The same hundred seconds of our clock, in 200 ms steps. Used where the gateway is slow
+    /// (K05): at a second per 50 ms, a 300 ms call reads as six seconds on the injected clock, past a
+    /// resilience handler's attempt timeout, and a correct sender times out only in the test.</summary>
+    public async Task WaitForSlowSmsAsync(int count)
+    {
+        for (var i = 0; i < 500 && Outside.Sms.Count < count; i++)
+        {
+            await Task.Delay(50);
+            Time.Advance(TimeSpan.FromMilliseconds(200));
         }
     }
 

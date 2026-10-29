@@ -60,21 +60,23 @@ public sealed class FindingTests
         var first = new Pod(sameDatabaseAs: database).Start();
         first.Outside.SmsDelay = TimeSpan.FromMilliseconds(300);
         var client = first.As("dr-a");
+        // One patient phone per result: the texts are told apart by who gets them, since a correct text
+        // can leave the test's name out (it is health data) and be the same for all four.
         for (var i = 0; i < 4; i++)
         {
-            await Pod.RecordAsync(client, Pod.Result(test: "T" + i));
+            await Pod.RecordAsync(client, Pod.Result(test: "T" + i, phone: "+96650000002" + i));
         }
 
         // A deploy: the pod stops with texts still waiting. If they were kept, the next pod may send them.
         await first.DisposeAsync();
         using var next = new Pod(sameDatabaseAs: database);
         next.Start();
-        await next.WaitForSmsAsync(4);
+        await next.WaitForSlowSmsAsync(4);
         await Task.Delay(500);
 
-        var texts = next.Outside.Sms.Select(s => s.Text).ToList();
-        Assert.Equal(4, texts.Count);
-        Assert.Equal(4, texts.Distinct().Count());
+        var recipients = next.Outside.Sms.Select(s => s.To).ToList();
+        Assert.Equal(4, recipients.Count);
+        Assert.Equal(4, recipients.Distinct().Count());
     }
 
     [Fact(DisplayName = "K06 each result records the clinician who recorded it")]
