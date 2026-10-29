@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.6 — two checks that need no model
+- **What no fix eval has measured yet:** a CI job lists the skills, rules, agents and commands under
+  `.claude/` that changed since the last commit that changed a fix eval's `scores.json`, in the job
+  summary under "Changed since the last fix eval". It only reports and never fails the PR
+  (`tools/ci/changed-since-eval.py`, with its tests).
+- **The known-traps scan keeps finding what it finds in the fixtures:** a test runs `scan_traps.py` on the
+  originals of `fix-hard`, `fix-lab`, `fix-sync` and `fix-labs` and fails if a check it finds there today
+  goes missing. The expected checks are written in the test (`tests/traps/test_fixture_originals.py`).
+
 ## 0.3.5 — fix eval, round five
 - **A fifth fixture** (`tests/evals/fix-labs/`): clinicians record lab results and the patient gets an
   SMS, on PostgreSQL with Keycloak tokens, with 8 planted findings. Six are what the skills' own tests
