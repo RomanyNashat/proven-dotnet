@@ -107,6 +107,19 @@ jobs:
           left="$(find "$sb" -type f -not -path '*/.layers/*' | wc -l)"
           [ "$left" -le 1 ] || { find "$sb" -type f; exit 1; }   # at most the settings.json it created
 
+  # What no fix eval has measured yet: the harness files changed since the last commit that changed a fix
+  # eval's scores.json. It only reports, in the job summary; it never fails the PR.
+  eval-drift:
+    name: Changed since the last fix eval
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: List the harness files changed since the last fix eval
+        run: python3 tools/ci/changed-since-eval.py | tee -a "$GITHUB_STEP_SUMMARY"
+
   hooks:
     name: Hooks
     runs-on: ubuntu-26.04
