@@ -151,6 +151,26 @@ class ScanTrapsTests(unittest.TestCase):
             self.assertEqual([("worker-cancellation-by-type", "Worker.cs", 2)],
                              [(f.check, f.path, f.line) for f in scan_traps.scan(tmp)])
 
+    def test_a_pooled_context_reading_configuration_is_not_a_finding_a_scoped_interceptor_is(self):
+        # Given pooled options that read the connection string from IConfiguration and add a scoped interceptor
+        program = ('services.AddScoped<AuditInterceptor>();\n'
+                   'services.AddPooledDbContextFactory<LabDb>((sp, o) => o\n'
+                   '    .UseNpgsql(sp.GetRequiredService<IConfiguration>().GetConnectionString("Lab"))\n'
+                   '    .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));\n')
+        with tempfile.TemporaryDirectory() as tmp:
+            write(pathlib.Path(tmp), {"Program.cs": program})
+            # Then only the interceptor's line is a place to read: configuration is the host's own singleton
+            self.assertEqual([("pooled-context-resolves-service", 4)], [(f.check, f.line) for f in scan_traps.scan(tmp)])
+
+    def test_a_mask_that_turns_digits_western_first_and_a_call_to_a_mask_are_not_findings(self):
+        normalised = ('static partial class Masking {\n'
+                      '    static string Western(string v) => new(v.Select(c => char.IsDigit(c) ? (char)(\'0\' + (int)char.GetNumericValue(c)) : c).ToArray());\n'
+                      '    [GeneratedRegex("[0-9]{10}")] private static partial Regex TenDigits();\n}\n')
+        caller = 'static class Endpoints {\n    static bool Valid(string id) => Regex.IsMatch(id, "^[0-9]{10}$") && Masking.NationalId(id) != "";\n}\n'
+        with tempfile.TemporaryDirectory() as tmp:
+            write(pathlib.Path(tmp), {"Masking.cs": normalised, "Endpoints.cs": caller})
+            self.assertEqual([], [f.check for f in scan_traps.scan(tmp) if f.check == "mask-misses-arabic-digits"])
+
     def test_commented_out_code_is_not_a_finding(self):
         with tempfile.TemporaryDirectory() as tmp:
             write(pathlib.Path(tmp), {"Program.cs": "// p.SetIsOriginAllowed(_ => true)\n/* old:\n * ValidateAudience = false\n */\n"})

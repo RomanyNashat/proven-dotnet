@@ -1,7 +1,7 @@
 ---
 name: postgresql-patterns
 description: PostgreSQL for .NET with Npgsql/EF Core: column rules, SQL Server→PG gotchas, pooling, safe migrations (what rewrites a table, CONCURRENTLY), JSONB, full-text, upserts, COPY, partitions, advisory locks. Claims tested in CI against PostgreSQL 17.
-version: 2.2.0
+version: 2.3.0
 ---
 
 # PostgreSQL Patterns
@@ -53,6 +53,7 @@ key as an `ALWAYS` identity; the enum is stored as its name.
 |------------------|---------------|---------|
 | Comparisons are case-insensitive | **Case-sensitive by default.** `WHERE email = @e` misses `Ali@x.com` | Store a normalized (lower-case) column with a unique index, or use an ICU non-deterministic collation. `EF.Functions.ILike` for search (`=` misses, `ILIKE` finds: tested). (`citext` has no length — it breaks the bounded-string rule) |
 | Any `DateTime` goes in | Through EF (or a parameter typed `timestamptz`) Npgsql **throws** for a `DateTime` whose `Kind` isn't `Utc`, and for a `DateTimeOffset` whose offset isn't 0. **Through a plain Dapper parameter it doesn't throw:** the value goes as `timestamp` and the server reads it in the session's time zone, so noon `Unspecified` under `Asia/Riyadh` is stored as 09:00 UTC (all tested) | Take time from `TimeProvider.GetUtcNow()` (already our rule). `DateTime.Parse` gives `Unspecified`: convert before saving. On a pod in UTC, `DateTime.Now` has the right clock reading but `Kind=Local`, and is refused all the same (tested on a slim image) |
+| `datetime2(7)` keeps the 100 ns ticks | **`timestamptz` keeps microseconds**, and Npgsql truncates the last tick digit on the way in. A time from `GetUtcNow()` comes back different, so the time a `POST` returned isn't the one a `GET` reads, and an equality check on it fails (tested) | Truncate before saving and before returning it: `t.AddTicks(-(t.Ticks % TimeSpan.TicksPerMicrosecond))` |
 | `PascalCase` names | Unquoted names fold to lower case; mixed case needs quotes everywhere | `snake_case`: `UseSnakeCaseNamingConvention()` (EFCore.NamingConventions) or explicit `ToTable`/`HasColumnName` |
 | `WITH (NOLOCK)` | Not needed — MVCC: readers never block writers | Remove it; don't look for an equivalent |
 | An error inside a transaction, carry on | **One error aborts the whole transaction** ("current transaction is aborted", `25P02`, tested) | Roll back and retry the unit; use `SAVEPOINT` only when you truly need partial recovery |

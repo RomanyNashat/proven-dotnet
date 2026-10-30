@@ -1,7 +1,7 @@
 ---
 name: known-traps
 description: Scan a .NET service, or many, for the traps this harness's own tests found in real libraries — a Quartz store that drops missed runs, SqlClient in invariant mode, a singleton holding a DbContext, ar-SA's machine-dependent calendar, OpenIddict 6 on EF Core 10 and more. One read-only command, one table with file, line, fix and the skill that proves it; with a diff, only what a change takes part in.
-version: 1.4.0
+version: 1.5.0
 ---
 
 # Known traps: one scan for what the tests found
@@ -46,14 +46,17 @@ that the service is right. For "who calls this" and "is this still used", use `p
 | `online-index-op` | info | `ONLINE = ON`: Enterprise only | `sqlserver-patterns` |
 | `arabic-text-not-unicode` | warning | an Arabic (`…Ar`, `…_ar`) column mapped to `varchar` | `localization` |
 | `singleton-holds-dbcontext` | critical | a singleton whose constructor takes a `DbContext` | `dotnet-core` |
+| `pooled-context-resolves-service` | warning | a service resolved in a pooled context's options (`AddDbContextPool`, `AddPooledDbContextFactory`): built once, shared by every request, so an interceptor that keeps the current user stamps every row with the first caller. Fine if it reads the caller on each call | `efcore-patterns` |
 | `scopes-not-validated` | info | no `ValidateScopes` for every environment | `dotnet-core` |
 | `options-not-validated-on-start` | info | `AddOptions<T>()` without `ValidateOnStart()` | `dotnet-core` |
 | `base-address-loses-path` | warning | a base address with a path and no trailing `/` (code or appsettings) | `dotnet-core` |
 | `serilog-factory-with-redaction` | warning | `UseSerilog()` or `Services.AddSerilog()` in a service that calls `EnableRedaction()` | `pii-masking` |
+| `mask-misses-arabic-digits` | warning | a masking pattern with `[0-9]`: an ID in Arabic-Indic digits is logged whole (`\d` matches them in .NET) | `pii-masking` |
 | `ar-sa-default-calendar` | warning | `ar-SA` used without setting its calendar | `localization` |
 | `timezone-without-fallback` | warning | `FindSystemTimeZoneById` with no fallback for an image without tzdata | `localization` |
 | `windows-timezone-id` | warning | a Windows time-zone id (`"Arab Standard Time"`): it needs ICU on Linux | `localization` |
 | `worker-cancellation-by-type` | warning | a worker's `catch ... when (ex is not OperationCanceledException)`: an `HttpClient` timeout gets through and stops the host | `worker-patterns` |
+| `channel-queue-dropped-on-stop` | warning | a worker reading a queue with `ReadAllAsync(stoppingToken)` and no `StopAsync` that drains it: a deploy drops what's queued | `worker-patterns` |
 | `quartz-missed-run-dropped` | critical | a persistent store without `ScheduleTriggerRelativeToReplacedTrigger = true` | `quartz-scheduling` |
 | `quartz-cron-in-utc` | warning | a cron trigger without `InTimeZone` | `quartz-scheduling` |
 | `quartz-script-drops-tables` | critical | Quartz's schema script with `DropDb` still 1 | `quartz-scheduling` |

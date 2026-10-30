@@ -224,11 +224,14 @@ public sealed class LocalizationStoryTests
         Assert.Equal("موعدك APT-20261004-1234 يوم 2026-10-04.", text);
         Assert.Equal("1,234.50", 1234.5m.ToString("N2", CultureInfo.CurrentCulture));   // the invariant culture
 
-        // What needs ICU fails loudly: the resx guard with its message, Arabic dates on first use, and even
-        // en-US, so the resx pattern's culture options can't be built on this image either.
+        // What needs ICU fails loudly and says why: the resx guard, Arabic dates on first use (an error that
+        // names ICU, not a TypeInitializationException that breaks the class for good), and even en-US, so
+        // the resx pattern's culture options can't be built on this image either.
         var guard = Assert.Throws<InvalidOperationException>(GlobalizationGuard.RequireArabicCulture);
         Assert.Contains("Add ICU to the runtime image", guard.Message, StringComparison.Ordinal);
-        Assert.Throws<TypeInitializationException>(() => Cultures.ArabicGregorian);
+        var dates = Assert.Throws<InvalidOperationException>(() => Cultures.ArabicGregorian);
+        Assert.Contains("Add ICU to the runtime image", dates.Message, StringComparison.Ordinal);
+        Assert.Throws<InvalidOperationException>(() => Cultures.ArabicHijri);
         Assert.Throws<CultureNotFoundException>(() => new CultureInfo("en-US"));
     }
 }
