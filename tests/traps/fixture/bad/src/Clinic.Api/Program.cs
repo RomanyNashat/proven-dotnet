@@ -26,6 +26,8 @@ builder.Services.AddGrpcClient<Greeter.GreeterClient>(o => o.Address = new Uri("
     .AddStandardResilienceHandler();
 builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
 builder.Logging.EnableRedaction();
+builder.Services.AddScoped<AuditInterceptor>();
+builder.Services.AddDbContextPool<VisitsDbContext>((sp, o) => o.AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
 
 var app = builder.Build();
 app.UseHangfireDashboard();

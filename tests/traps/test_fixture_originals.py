@@ -12,7 +12,7 @@ import scan_traps  # noqa: E402
 
 EVALS = ROOT / "tests" / "evals"
 
-# What the scan finds in each original today (known-traps 1.4.0, 2026-10-29).
+# What the scan finds in each original today (known-traps 1.5.0, 2026-10-31).
 EXPECTED = {
     "fix-hard/ClinicReminders": {
         "app-changes-schema",
@@ -42,7 +42,10 @@ EXPECTED = {
         "worker-cancellation-by-type",
     },
     "fix-labs/LabResults": {
+        "channel-queue-dropped-on-stop",
         "keycloak-roles-unmapped",
+        "mask-misses-arabic-digits",
+        "pooled-context-resolves-service",
         "scopes-not-validated",
     },
 }

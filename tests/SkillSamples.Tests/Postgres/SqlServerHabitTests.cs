@@ -73,6 +73,26 @@ public sealed class SqlServerHabitTests(PgDatabase db) : IClassFixture<PgDatabas
     }
 
     [Fact]
+    public async Task Timestamptz_KeepsMicroseconds_NpgsqlDropsTheLastTickDigit()
+    {
+        // datetime2(7) keeps .NET's 100 ns ticks; timestamptz keeps microseconds, and Npgsql truncates (not
+        // rounds) on the way in. So a time from GetUtcNow() comes back different: the value a POST returned
+        // isn't the one a GET reads. Truncating to microseconds before saving makes the two agree.
+        await using var connection = await db.DataSource.OpenConnectionAsync();
+        var now = new DateTimeOffset(2026, 10, 9, 9, 0, 0, TimeSpan.Zero).AddTicks(1_234_567);   // .1234567
+
+        await connection.ExecuteAsync($"UPDATE {_people} SET seen_at = @at WHERE id = 1", new { at = now });
+        var stored = await connection.ExecuteScalarAsync<DateTime>($"SELECT seen_at FROM {_people} WHERE id = 1");   // Kind=Utc
+
+        Assert.NotEqual(now.UtcDateTime, stored);
+        Assert.Equal(now.UtcDateTime.AddTicks(-7), stored);                                       // .1234560
+
+        var truncated = now.AddTicks(-(now.Ticks % TimeSpan.TicksPerMicrosecond));
+        await connection.ExecuteAsync($"UPDATE {_people} SET seen_at = @at WHERE id = 1", new { at = truncated });
+        Assert.Equal(truncated.UtcDateTime, await connection.ExecuteScalarAsync<DateTime>($"SELECT seen_at FROM {_people} WHERE id = 1"));
+    }
+
+    [Fact]
     public async Task OneErrorInATransaction_AbortsEverythingAfterIt()
     {
         await using var connection = await db.DataSource.OpenConnectionAsync();

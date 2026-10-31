@@ -3,6 +3,28 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.7 — what round five found in the harness
+- **`known-traps` 1.5.0: three checks from round five's findings**, each with its trap in the test
+  fixture and its fix in the corrected copy:
+  - `pooled-context-resolves-service`: a service resolved in a pooled context's options is built once
+    and shared by every request, so an interceptor that keeps the current user stamps every row with the
+    first caller;
+  - `channel-queue-dropped-on-stop`: a worker reading a queue with `ReadAllAsync(stoppingToken)` and no
+    `StopAsync` that drains it loses what's queued on every deploy;
+  - `mask-misses-arabic-digits`: a masking pattern with `[0-9]` logs an ID typed in Arabic-Indic digits
+    whole.
+  On round five's runs the queue check flags exactly the six copies that failed that hidden test, and none
+  of the three that passed. The scan now points at four of the fixture's eight findings, up from one.
+- **`postgresql-patterns` 2.3.0:** `timestamptz` keeps microseconds and Npgsql truncates the last tick
+  digit, so the time a `POST` returns isn't the one a `GET` reads. Tested against PostgreSQL, with the
+  fix (truncate to microseconds before saving). A round five fixer found it.
+- **`localization`:** the `Cultures` sample no longer throws in its static initializer without ICU. That
+  gave a `TypeInitializationException` and broke the class for good; it now builds each culture on first
+  use and says ICU is missing. The no-ICU production test failed before the change.
+- **Found, not changed:** every run with the rules (six of six) was refused writing `.claude/journal.md`,
+  because Claude Code treats files under `.claude/` as sensitive; an allow rule doesn't lift it in a
+  headless run. See `ecc-next-steps.md`.
+
 ## 0.3.6 — two checks that need no model
 - **What no fix eval has measured yet:** a CI job lists the skills, rules, agents and commands under
   `.claude/` that changed since the last commit that changed a fix eval's `scores.json`, in the job

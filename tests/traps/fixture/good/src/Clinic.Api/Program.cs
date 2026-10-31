@@ -4,6 +4,9 @@ builder.Host.UseDefaultServiceProvider(o => { o.ValidateScopes = true; o.Validat
 builder.Services.AddDbContext<ClinicDbContext>();
 builder.Services.AddScoped<ReminderCache>();
 builder.Services.AddSingleton<SlotClock>();
+// Stateless: one interceptor for every pooled context, the caller read from the context it saves.
+builder.Services.AddSingleton<AuditInterceptor>();
+builder.Services.AddDbContextPool<VisitsDbContext>((sp, o) => o.AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
 builder.Services.AddOptions<SmsOptions>().BindConfiguration("Sms").ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddHttpClient<SmsClient>(c => c.BaseAddress = new Uri("https://sms.example.com/api/v2/"));
 // Never SetIsOriginAllowed(_ => true): it answers every origin with itself.

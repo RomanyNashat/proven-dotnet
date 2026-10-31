@@ -210,6 +210,25 @@ def singleton_dbcontext(repo):
                 yield rel, line, None
 
 
+@check("pooled-context-resolves-service", "warning", "A pooled DbContext's options resolve a service",
+       "A pool builds its options once, from the root provider, so what is resolved there is shared by every "
+       "request. An interceptor that keeps the current user gives every row the first caller. Fine only if it "
+       "reads the caller on each call; otherwise make it stateless and set the caller on each rented context.",
+       "efcore-patterns")
+def pooled_context_service(repo):
+    # The host's own singletons: configuration, options, logging, the clock.
+    singletons = {"IConfiguration", "IHostEnvironment", "IWebHostEnvironment", "ILoggerFactory", "TimeProvider"}
+    for _, text in repo.of(".cs"):
+        singletons.update(m[1] for m in re.finditer(r"AddSingleton<\s*(?:[\w.]+\s*,\s*)?([\w.]+)\s*>", text))
+    for rel, text in repo.of(".cs"):
+        for _, match in matches(text, r"\b(AddDbContextPool|AddPooledDbContextFactory)\s*<"):
+            call = call_text(text, match.start())
+            for resolved in re.finditer(r"\.Get(?:Required)?Service<\s*([\w.]+)\s*>", call):
+                name = resolved[1].split(".")[-1]
+                if name not in {t.split(".")[-1] for t in singletons} and not name.startswith("IOptions"):
+                    yield rel, line_of(text, match.start() + resolved.start()), None
+
+
 @check("scopes-not-validated", "info", "Scope validation isn't on in every environment",
        "Set ValidateScopes and ValidateOnBuild for all environments; Production skips them by default.",
        "dotnet-core")
@@ -281,6 +300,20 @@ def worker_cancellation(repo):
         if not re.search(r":\s*(BackgroundService|IHostedService)\b|\bIJob\b", text):
             continue
         for line, _ in matches(text, r"when\s*\(\s*ex\s+is\s+not\s+(System\.)?OperationCanceledException\s*\)"):
+            yield rel, line, None
+
+
+@check("channel-queue-dropped-on-stop", "warning", "An in-memory queue the worker drops when the pod stops",
+       "BackgroundService.StopAsync cancels stoppingToken at once, so ReadAllAsync(stoppingToken) ends with work "
+       "still queued and a deploy loses it. Complete the queue and drain it in StopAsync, or keep the work in an "
+       "outbox table.", "worker-patterns")
+def channel_dropped(repo):
+    for rel, text in repo.of(".cs"):
+        if not re.search(r":\s*BackgroundService\b", text):
+            continue
+        if re.search(r"override\s+(?:async\s+)?Task\s+StopAsync\s*\(", text):
+            continue
+        for line, _ in matches(text, r"\.(ReadAllAsync|WaitToReadAsync)\s*\(\s*stoppingToken\s*\)"):
             yield rel, line, None
 
 
@@ -459,6 +492,20 @@ def jwt_audience(repo):
 def keycloak_roles(repo):
     for rel, text in repo.of(".cs"):
         for line, _ in matches(text, r"RoleClaimType\s*=\s*\"(realm_access\.roles|roles)\""):
+            yield rel, line, None
+
+
+@check("mask-misses-arabic-digits", "warning", "A masking pattern that matches only Western digits",
+       "[0-9] misses Arabic-Indic digits, so an ID typed on an Arabic keyboard is logged whole. Use \\d (in .NET it "
+       "matches them), or turn the digits Western before masking.", "pii-masking")
+def mask_western_digits(repo):
+    for rel, text in repo.of(".cs"):
+        # Where a masking member is declared, not where one is called.
+        if not re.search(r"(?i)\b(?:class|string|Regex)\s+\w*(?:mask|redact|scrub)\w*", text):
+            continue
+        if re.search(r"GetNumericValue|CharUnicodeInfo|\\u06[6F]", text):   # turns digits Western first
+            continue
+        for line, _ in matches(text, r'\b(?:Generated)?Regex\b[^;\n]*?"[^"\n]*\[0-9\]'):
             yield rel, line, None
 
 
