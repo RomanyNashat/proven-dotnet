@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.8 — round five's disclosures, corrected
+- **The no-rules arm of round five ran on a different model.** Its runs took the CLI's default,
+  Claude Sonnet 5.5; every other step ran on Claude Opus 5.5. Found after 0.3.5 from the runs' own
+  usage records. `results.md` now says so: no rules against rules only measures the model and the rules
+  together, while with proven against rules only, where the skills separated on K05, is the same model
+  on both sides. Also disclosed: every step ran at medium effort, and the allowed-tools list each run
+  had. Not rerun: evals are paused.
+- The 0.3.7 note on `.claude/journal.md` is corrected: nothing to change in the harness.
+
 ## 0.3.7 — what round five found in the harness
 - **`known-traps` 1.5.0: three checks from round five's findings**, each with its trap in the test
   fixture and its fix in the corrected copy:
@@ -21,9 +30,9 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
 - **`localization`:** the `Cultures` sample no longer throws in its static initializer without ICU. That
   gave a `TypeInitializationException` and broke the class for good; it now builds each culture on first
   use and says ICU is missing. The no-ICU production test failed before the change.
-- **Found, not changed:** every run with the rules (six of six) was refused writing `.claude/journal.md`,
-  because Claude Code treats files under `.claude/` as sensitive; an allow rule doesn't lift it in a
-  headless run. See `ecc-next-steps.md`.
+- **Found, nothing to change:** every run with the rules (six of six) was refused writing
+  `.claude/journal.md`. That's Claude Code's protection of `.claude/`: a headless run has nobody to
+  approve the write. An interactive session writes the journal as before.
 
 ## 0.3.6 — two checks that need no model
 - **What no fix eval has measured yet:** a CI job lists the skills, rules, agents and commands under
