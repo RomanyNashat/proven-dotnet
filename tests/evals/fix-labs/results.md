@@ -32,7 +32,9 @@ the table above is the second grading, and the first is under "K05, before and a
   rules-only run, and K03 (HttpClient's own logging of the URI) by two of three. A strong model finds
   them by reading the code.
 - **The rules carried the controls, as designed.** K08 (clock skew) was fixed by every run with the
-  rules and by no run without them; K07 (unbounded `Notes`) was missed once without them.
+  rules and by no run without them; K07 (unbounded `Notes`) was missed once without them. **But the
+  no-rules arm ran on a different model** (see Disclosures), so its gap to the other two arms is not
+  the rules' alone. The comparison between with proven and rules only is like for like.
 - **One no-rules run broke the service.** no-rules-1 made `CurrentUser` throw when there is no signed-in
   user, so `LabDbContext` can't be made outside a request, and the tests create the schema that way
   (`task.md` says so). Every test failed.
@@ -60,6 +62,20 @@ texts are told apart by recipient, and K05 waits on a new `WaitForSlowSmsAsync` 
 and passed every regression, and both references passed all 14 tests.
 
 ## Disclosures
+
+- **The no-rules arm ran on Claude Sonnet 5.5; every other step ran on Claude Opus 5.5.** Found after
+  the release, from each run's own usage record (`modelUsage`). No step named a model: the no-rules runs
+  took the CLI's default in their empty home, the rules-only runs and the consolidations took Opus in
+  theirs, and the reviewers and fixers took it from their agent files (`model: opus`). So no rules
+  10/24 against rules only 20/24 measures the model and the rules together. With proven against rules
+  only (24/24 and 20/24, K05 the difference) is the same model on both sides. Not rerun: evals are
+  paused.
+- **Every step ran at medium effort**, the CLI's default, because the clean environment didn't carry
+  the session's effort setting. The same for all arms.
+- **Each run had the same short list of allowed tools** (read, edit, write, search, `dotnet`, `ls`,
+  `mkdir`, `cat`, `find`, `grep`, `rm`, `cp`, and `Skill` for the proven steps). A command outside it
+  was refused with nobody to approve it: 3 to 5 refusals per no-rules run, 4 to 7 per rules-only run,
+  up to 6 per proven fixer, mostly shell scripts and `.claude/journal.md`. Each run went on another way.
 
 - **The arms ran as one `claude -p` per step this round, not as subagents inside the session** as in
   rounds three and four. The session started in a fresh container, where the harness's agents weren't
