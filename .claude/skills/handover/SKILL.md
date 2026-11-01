@@ -1,7 +1,7 @@
 ---
 name: handover
 description: Vacation handover across repos: parallel per-repo analysis (journal, sessions, checkpoints, ADRs, git), source-labelled findings, 17-section template, Markdown/Teams/Notion output.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Handover Generation Skill
@@ -141,8 +141,9 @@ still applies to a monorepo.
 ### Source labels and precedence
 Every item carries where it came from: `[journal]`, `[session YYYY-MM-DD]`, `[checkpoint YYYY-MM-DD]`,
 `[ADR]`, `[git]`, `[context dump]`, or `[git only]` (no why known → becomes a question). Git wins on facts
-about state; the journal wins over sessions on intent. Unconfirmed items keep their label in the final
-document so the reader knows how solid each line is.
+about state; the journal wins over sessions on intent. Labels are for the developer: they stay in the
+conversation and in the private gaps file (§8.1). The shared files carry none, and an item the developer
+didn't confirm goes to the gaps file, not the shared document.
 
 ### Why sessions may be missing
 Claude Code deletes session transcripts after `cleanupPeriodDays` (default 30; the proven-dotnet settings set 120). The
@@ -526,16 +527,24 @@ pull data from for each section. A team `handover-<team>` skill, if installed, a
 
 ### 8.1 File Locations
 
-All output files are written to the current project root directory by default.
-If the developer specifies a different location during Step 0, use that instead.
+All output files are written to the folder `/handover` was run from (never inside a repo), unless the
+developer names another one in Step 0.
 
 ```
-project-root/
+<output folder>/
 ├── vacation-handover.md                  # Markdown (if selected)
 ├── vacation-handover-teams-medium.txt    # Teams medium (if Teams selected)
 ├── vacation-handover-teams-short.txt     # Teams ultra-short (if Teams selected)
-└── vacation-handover-notion.md           # Notion (if selected)
+├── vacation-handover-notion.md           # Notion (if selected)
+└── vacation-handover-gaps.md             # for the developer only: never shared
 ```
+
+The gaps file holds what the shared files leave out: empty sections, unanswered questions, unconfirmed
+items with their source labels. The developer reads it, answers what they can, and the answers go back
+into the shared files. It is not copied to the shared location.
+
+Links in the shared files point at the **shared location** asked for in Step 0 (a team folder, a wiki
+page), relative to it. A path on the developer's machine is a broken link for every reader.
 
 ### 8.2 Post-Generation Actions
 
@@ -551,3 +560,35 @@ After generation, remind the developer:
 - Schedule a 30-min sync with backup(s) to walk through it
 - Share the full Markdown doc as the source of truth; Teams messages are summaries
 - Set up OOO auto-reply, calendar blocks, and Slack/Teams status
+
+---
+
+## 9. Gotchas
+
+Each one cost a real handover time on its last day.
+
+- **Late in a handover, triage yourself.** On the last day the developer has no time to sort a long
+  evaluation. Keep what affects the release or needs an owner while they're away; drop backlog
+  hygiene, old bugs and anything the covering colleague can't act on. Apply the short list, then report
+  it as kept / dropped in a few lines. Ask only where a wrong call can't be undone.
+- **Other people's areas stay out.** Ask in Step 0 which areas belong to other people, and filter every
+  finding by it (Jira, code, risks). A finding in someone else's area is mentioned once in the
+  conversation at most, never in the documents.
+- **Ask where it will be shared before writing.** Every link is relative to that place. Before handing
+  the files over, search them for absolute local paths (`C:\Users\`, `/home/`, `/Users/`, `~/`).
+- **Leave out what you don't have.** No "not provided", "ask <name>", "TBD" or `[git only]` lines in a
+  shared file: they go to the gaps file (§8.1). Never fill a gap with a plausible value.
+- **Clean shared docs by replacing inside the line, never by dropping lines.** Deleting every line that
+  matches a keyword (a table name, a folder name) takes diagram lines and half-sentences with it, and a
+  Mermaid diagram stops rendering. Back up the files first; afterwards list every deleted line and read
+  the list before rendering.
+- **A blank line before every table.** A `|` table right after a heading or a bold line renders as
+  plain pipe text in Word and in some Markdown renderers. Check before converting to `.docx`.
+- **After copying into a synced folder (OneDrive, SharePoint), verify file by file.** Compare each file
+  with its source, look for files the source doesn't have, and search for conflict copies (names ending
+  in `-<machine name>`); an old file can win the conflict and come back. Tell the developer to wait for
+  "synced" before copying, and to copy into an empty folder.
+- **Verification uses absolute paths.** A loop that `cd`s in a subshell and compares relative paths
+  reports 0 of N matching when all N match. Write the file list first, then compare by absolute path.
+- **Show the scan before a bulk edit.** For an edit across shared docs: counts per pattern, then the
+  decisions in one question, then apply. Don't apply first and report after.

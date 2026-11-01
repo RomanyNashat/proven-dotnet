@@ -1,7 +1,7 @@
 ---
 name: simplicity
 description: Plain-writing rules for shareable output (story maps, docs, READMEs, emails, commit messages): simple-vs-full modes, template, verb bank, the tells that make a draft read as machine-written. Ask simple-or-full first.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Simplicity Skill
@@ -177,3 +177,18 @@ For documentation, READMEs, emails, and write-ups, the same rules hold: lead wit
 the verb bank, keep it short, drop the padding. A README section is a few plain lines, not an
 essay. An email says the thing and stops. The template in §2 is story-shaped, but §3–§6 (verb
 bank, do/don't, tells, tone) apply to everything shareable.
+
+---
+
+## 8. Gotchas
+
+- **No local paths in anything shared.** `C:\Users\<you>\...` or a folder only you can open is a
+  broken link for every reader. Before writing a shareable document, ask where it will be shared (a
+  team folder, a wiki, a channel) and write links relative to that place.
+- **Name a document for its reader.** A page for a manager is a "summary", never a "README". Lead it
+  with what a manager acts on: dates, contacts, owners and the few items to watch.
+- **Tightening adds nothing.** When you shorten a message, don't fill a gap with a plausible value: no
+  frequency ("weekly"), date or owner that isn't in the source. If the source says "not recorded",
+  leave the fact out or ask.
+- **Gaps stay out of shared text.** "Not provided", "ask <name>", "TBD" and source labels are notes
+  for the writer. In the shared version, leave out what you don't have; tell the author separately.

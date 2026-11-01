@@ -15,18 +15,24 @@ You are given:
 - `FORMATS` — Markdown, Teams (always medium + ultra-short), Notion
 - `TEAM_PREFILLS` — the team's `handover-<team>` skill, if one is installed (else none)
 - `VACATION` — dates, last working day, first day back
+- `SHARE_LOCATION` — where the files will be shared; every link is written relative to it
+- `OTHERS_AREAS` — areas that belong to other people; nothing from them goes in the documents
 - The merged repo summaries (one per repo, source-labelled), with the developer's confirmations and
   corrections applied
 - The context dump, non-code context, and any answers to general questions
 
 ## Rules
-- **Write only the handover files in `OUTPUT_DIR`.** Nothing else. No git, no repo files, no journals —
+- **Write only the handover files and the gaps file in `OUTPUT_DIR`.** Nothing else. No git, no repo files, no journals —
   the main conversation handles journals after asking the developer.
-- **Only what you were given.** Never invent a status, owner, date or reason. A gap stays visibly a
-  gap: "Why: not recorded — ask <name>" is better than a plausible guess.
+- **Only what you were given.** Never invent a status, owner, date, frequency or reason. A gap is left
+  out of the shared files, not filled: no "not provided", "ask <name>", "TBD" or `[git only]` line
+  reaches a reader. Each gap goes to `vacation-handover-gaps.md` instead, for the developer.
 - **No patient data, secrets or credentials** — not even if they appear in what you were given. Drop them.
-- **Keep one source label where it matters**: items the developer did not confirm keep their label
-  (e.g. `[from checkpoint, unconfirmed]`) so the reader knows how solid it is. Confirmed items need no label.
+- **No source labels in the shared files.** An item the developer did not confirm goes to the gaps
+  file with its label (e.g. `[checkpoint 2026-09-12, unconfirmed]`), not into the shared document.
+- **No local paths.** No `C:\Users\...`, `/home/...` or folder only the developer can open. Link
+  relative to `SHARE_LOCATION`; if a file isn't there, name it without a path.
+- **A blank line before every table**, in every format: without it the table renders as pipe text.
 - **One section per repo** inside "Active Tickets" (3) and "Services Owned" (4), in the order given.
   A cross-repo dependency appears in both repos, each pointing to the other.
 - **The "Before you leave" risks** (uncommitted / never-pushed work) go at the top of Known Risks (15) —
@@ -59,11 +65,15 @@ OUTPUT_DIR/
 ├── vacation-handover.md                   # Markdown — the full document
 ├── vacation-handover-teams-medium.txt     # if Teams
 ├── vacation-handover-teams-short.txt      # if Teams
-└── vacation-handover-notion.md            # if Notion
+├── vacation-handover-notion.md            # if Notion
+└── vacation-handover-gaps.md              # always: the developer's private list of what was left out
 ```
 
-Return to the main conversation: the list of files written, and any section left empty because
-nothing was provided (so it can tell the developer).
+The gaps file is short: one line per gap or unconfirmed item, grouped by section, each with what would
+fill it ("Section 5: how often does the cleanup job run?").
+
+Return to the main conversation: the list of files written, and the number of lines in the gaps file
+(so it can walk the developer through them).
 
 ## Skills to reference
 - `handover/` — template, formats, section mapping

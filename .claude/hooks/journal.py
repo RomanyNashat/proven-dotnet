@@ -19,7 +19,8 @@ Usage:
 
 Both journal files are git-ignored, and this script ENFORCES that on every write:
 the file sits in a service repo on a regulated platform, so an accidental commit
-would push conversation context into an MR.
+would push conversation context into an MR. Outside a git repo it creates nothing
+(no .claude/, no .gitignore), so session notes can't be copied into a shared folder.
 
 Masking: a prompt often carries a value pasted while debugging (a national ID, a
 mobile number, a connection string). The prompt is masked before it is written, and
@@ -140,6 +141,19 @@ def changed_files(cwd):
     return f'{shown} (+{len(files) - 8} more)' if len(files) > 8 else shown
 
 
+def in_git_repo(path):
+    """True when path is inside a git working tree. A walk up for .git (a folder, or a file in a
+    worktree): no subprocess, because this runs on every message."""
+    path = os.path.abspath(path)
+    while True:
+        if os.path.exists(os.path.join(path, '.git')):
+            return True
+        parent = os.path.dirname(path)
+        if parent == path:
+            return False
+        path = parent
+
+
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else 'prompt'
 
@@ -154,13 +168,21 @@ def main():
 
     cwd = data.get('cwd') or os.getcwd()
     claude_dir = os.path.join(cwd, '.claude')
+    # Outside a git repo (a handover output folder, a folder that gets copied to a shared drive) the
+    # hook creates nothing: a .claude/ and .gitignore made there travel with the copy, session notes
+    # included. A non-repo folder that already has a .claude/ (a parent of several repos) keeps its
+    # capture, without a .gitignore, which means nothing outside a repo.
+    repo = in_git_repo(cwd)
     if not os.path.isdir(claude_dir):
+        if not repo:
+            return
         try:
             os.makedirs(claude_dir, exist_ok=True)
         except OSError:
             return
 
-    enforce_gitignore(cwd)
+    if repo:
+        enforce_gitignore(cwd)
 
     raw_path = os.path.join(claude_dir, '.journal-raw.md')
     rotate_if_large(raw_path)
