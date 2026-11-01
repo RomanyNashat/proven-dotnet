@@ -17,13 +17,15 @@ the fold-in steps.
 
 ### `/lessons`: capture
 
-1. Go through the whole session: every correction, every step the developer taught, everything that
-   broke, and what worked.
+1. Go through the whole session: every correction, every step the developer taught, every procedure
+   the developer walked you through (written out whole: inputs, steps, the result's structure, the
+   checks), everything that broke, and what worked.
 2. Write the report in `~/.claude/lessons/` (create the folder if needed; on Windows it's
    `%USERPROFILE%\.claude\lessons\`). **Never inside a repo.**
 3. Neutral labels for services and repos, no patient data, no secrets or internal URLs.
 4. **Read-only for everything else.** Capture never edits the harness, the repo or memory.
-5. Tell the developer the file path and how many items are in each section.
+5. Tell the developer the file path and how many items are in each section, naming each procedure
+   captured, so a missing one is noticed while the session still remembers it.
 
 ### `/lessons review`: fold in
 
