@@ -105,7 +105,10 @@ is connected), then ask the developer. If none of those answer it, say so and as
 Many developers run **Windows PowerShell without Git Bash**, where a bash-only command fails, often
 silently. Avoid GNU-only tools in anything Claude is told to run (`date -d`, `sed -E` quirks, `<(...)`,
 `${VAR//x/y}`, `$'...'`); prefer portable forms like `git log --since='14 days ago'`. Config paths use
-forward slashes. A `.ps1` run from config needs `-ExecutionPolicy Bypass`.
+forward slashes. A `.ps1` run from config needs `-ExecutionPolicy Bypass`. A Windows path inside
+Python written in a heredoc or `python -c` loses its backslashes (`\r`, `\a`, `\d` become control
+characters or bad escapes): write the script to a file, or build the separator with `chr(92)`, and after
+a bulk edit scan the output for control characters (`[\x00-\x08\x0b-\x1f]`).
 
 ## Task list — keep it live on multi-step work
 

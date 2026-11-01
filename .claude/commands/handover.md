@@ -24,6 +24,8 @@ never inside a repo, so the handover can't be committed by accident.
   │    │     → table: repo · your commits · last commit · branch · uncommitted · unpushed
   │    │     → you untick any you don't want. "Another folder?" → repeat, then continue
   │    ├── team pre-fills (a handover-<team> skill, if installed) · output formats · vacation dates
+  │    ├── Where will it be shared? (a team folder, a wiki page): every link is written relative to it
+  │    ├── Which areas belong to other people? Findings in them are left out of the documents
   │    └── Context dump (optional): "tell me everything about the state of your work"
   │
   ├── 1. Analyse — one handover-repo-analyst per repo, up to 6 IN ONE MESSAGE (parallel), then the next 6
@@ -44,9 +46,11 @@ never inside a repo, so the handover can't be committed by accident.
   │
   ├── 3.5 Plan Mode only: show all 17 sections as a PREVIEW; write nothing until you say go
   │
-  ├── 4. Write — handover-agent gets the merged, confirmed data → files in this folder
+  ├── 4. Write — handover-agent gets the merged, confirmed data, the share location and the
+  │    other people's areas → the shared files, plus vacation-handover-gaps.md for you only
   │
   └── 5. After  (you)
+       ├── The gaps file: what was left out of the shared files. Answer what you can; it goes back in
        ├── Journals: "N reconstructed entries for M repos — save them?"  (list titles per repo)
        │     on yes, per repo: make sure .claude/journal.md is git-ignored
        │     (git -C <repo> check-ignore; if not ignored, add it to .git/info/exclude — local only,
@@ -71,7 +75,11 @@ never inside a repo, so the handover can't be committed by accident.
 - **Never writes inside a repo**, except the reconstructed journal entries you approve (git-ignored).
 - **No patient data or secrets** in the handover or journals — sessions are summarised, never quoted.
 - **Show what was inferred before asking.** You confirm or correct; you never start from blank.
-- **Skip = skip.** No forced completeness; an empty section says it's empty.
+- **Skip = skip.** No forced completeness. An empty section is left out of the shared files and
+  listed in the gaps file; no "not provided" or "ask <name>" lines reach a reader.
+- **Late in the handover, Claude triages.** On the last day, Claude keeps what affects the release or
+  needs an owner while you're away, applies it, and reports kept / dropped in a few lines, instead of
+  handing back a long report to sort. See the skill's Gotchas.
 - Colleague messages are generated for you to send — never sent automatically.
 
 ### The 17 sections
@@ -84,7 +92,8 @@ Template and format rules: `skills/handover/reference/template.md`, `reference/f
 
 ### Output
 `vacation-handover.md` (+ `-teams-medium.txt`, `-teams-short.txt`, `-notion.md` if chosen) in the
-folder you ran it from. Review before sharing, and book a 30-minute walkthrough with your backup.
+folder you ran it from, and `vacation-handover-gaps.md`, which stays with you. After copying the files
+to the shared location, check them there (the skill's Gotchas: synced folders make conflict copies). Review before sharing, and book a 30-minute walkthrough with your backup.
 
 Then run `/lessons` in this same session: a handover teaches more about how Claude should work than
 any other run, and the session that made the mistakes is the one that remembers them.

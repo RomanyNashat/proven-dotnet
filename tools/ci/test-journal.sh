@@ -48,4 +48,21 @@ echo "{\"cwd\": \"$t\"}" | python3 .claude/hooks/journal.py response
 grep -qx '.claude/journal.md' "$t/.gitignore" || fail "journal not git-ignored"
 grep -qx '.claude/.journal-raw.md' "$t/.gitignore" || fail "raw journal not git-ignored"
 (cd "$t" && echo 'garbage' | python3 "$OLDPWD/.claude/hooks/journal.py" prompt)   # bad input never breaks the session
+
+# Outside a git repo (an output folder, a shared folder) the hook writes nothing: no .claude/, no .gitignore.
+out="$(mktemp -d)"; trap 'rm -rf "$t" "$out"' EXIT; mkdir -p "$out/sub"
+echo "{\"cwd\": \"$out/sub\", \"prompt\": \"hello\"}" | python3 .claude/hooks/journal.py prompt
+echo "{\"cwd\": \"$out/sub\"}" | python3 .claude/hooks/journal.py response
+[ -e "$out/sub/.claude" ] && fail "created .claude outside a git repo"
+[ -e "$out/sub/.gitignore" ] && fail "created .gitignore outside a git repo"
+# A non-repo folder the developer already keeps a .claude/ in (a parent of several repos) still gets the raw
+# capture, and still no .gitignore.
+mkdir -p "$out/.claude"
+echo "{\"cwd\": \"$out\", \"prompt\": \"hello\"}" | python3 .claude/hooks/journal.py prompt
+grep -q hello "$out/.claude/.journal-raw.md" || fail "no raw capture in a folder that already has .claude/"
+[ -e "$out/.gitignore" ] && fail "created .gitignore outside a git repo"
+# A subfolder of a repo is inside it: the capture is kept as before.
+mkdir -p "$t/src"
+echo "{\"cwd\": \"$t/src\", \"prompt\": \"hello\"}" | python3 .claude/hooks/journal.py prompt
+grep -q hello "$t/src/.claude/.journal-raw.md" || fail "no raw capture in a repo subfolder"
 echo "journal: all checks passed"

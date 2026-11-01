@@ -3,6 +3,32 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.9 — what a real handover taught
+Lessons from a multi-repo vacation handover and the `/wake-up` after it, each where it would have
+stopped the mistake.
+- **The journal hook writes only inside a git repo.** Run from a handover's output folder, it created
+  `.claude/.journal-raw.md` and a `.gitignore` there, and they were copied with the files into a shared
+  team folder. Outside a repo it now creates nothing; a non-repo folder that already has a `.claude/` (a
+  parent of several repos) keeps its capture, without a `.gitignore`. `test-journal.sh` failed before the
+  change.
+- **`handover` 2.1.0:** a Gotchas section: late in a handover Claude triages and applies the short list
+  instead of handing back a long report; other people's areas stay out of the documents; links are
+  relative to where the files will be shared; shared docs are cleaned by replacing inside a line, never
+  by dropping lines on a keyword; a blank line before every table; check a synced folder file by file
+  after copying. `/handover` now asks where the files will be shared and which areas belong to others.
+- **Gaps leave the shared files.** "Not provided", "ask <name>", empty-section notes and source labels
+  no longer reach a reader; they go to `vacation-handover-gaps.md`, which stays with the developer. The
+  handover eval's writer case is updated to match; it was graded on the old lines and isn't rerun while
+  evals are paused.
+- **`simplicity` 1.2.0:** Gotchas: no local paths in shared text; a page for a manager is a summary,
+  not a README; tightening a message never adds a frequency, date or owner.
+- **`/wake-up` reads less and trusts old checkpoints less.** The journal's last 8 entries, ADRs from the
+  last 14 days, `git status --short` and five commits. A checkpoint older than 3 days is shown with its
+  age, and its tasks are listed as "still open?" instead of restored. From a folder of many repos it
+  checks only the repos the journal or checkpoint names; the full sweep ran past the command timeout.
+- **Shell portability:** a Windows path in inline Python loses its backslashes; write the script to a
+  file or use `chr(92)`, and scan for control characters after a bulk edit.
+
 ## 0.3.8 — round five's disclosures, corrected
 - **The no-rules arm of round five ran on a different model.** Its runs took the CLI's default,
   Claude Sonnet 5.5; every other step ran on Claude Opus 5.5. Found after 0.3.5 from the runs' own

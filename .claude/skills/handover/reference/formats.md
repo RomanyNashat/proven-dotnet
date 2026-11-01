@@ -8,21 +8,22 @@ time, once the content exists.
 ### 6.1 Markdown (Full Document)
 
 **Filename:** `vacation-handover.md`
-**Structure:** Full 17 sections with horizontal rules between sections.
+**Structure:** The 17 sections that have content, with horizontal rules between sections.
 
 **Formatting rules:**
 - Title: `# 🏖️ Vacation Handover Document` (add ` — <Team>` when the team is known)
 - Section headers: `## N. Section Title`
-- Tables for structured data (use `|` pipe tables)
+- Tables for structured data (use `|` pipe tables), always with a blank line before the table
 - Callout boxes with `>` blockquotes for tips and warnings
 - Emoji indicators for warnings (⚠️), tips (💡), reminders (📅)
 - Status indicators in text: In Progress, Blocked, etc.
 - Footer: `*Last updated: [date] by [name]*`
 
-**Section ordering:** Exactly as numbered 1–17. No reordering.
+**Section ordering:** In the order 1–17. No reordering.
 
-**Empty section handling:** If a section was skipped during interactive enrichment,
-include the section header with a note: `> ℹ️ This section was not populated during handover generation. Contact [developer name] for details.`
+**Empty section handling:** A section with nothing in it is left out, in every format, and listed in
+`vacation-handover-gaps.md` for the developer. The sections that remain keep their order. No "not
+populated" or "contact <name>" notes in a shared file.
 
 ### 6.2 Teams Medium
 
@@ -41,7 +42,7 @@ include the section header with a note: `> ℹ️ This section was not populated
 - Compact: omit explanatory text, keep only data
 - Link to full handover doc at top AND bottom
 
-**Section mapping — all 17 sections condensed:**
+**Section mapping — every section that has content, condensed:**
 
 | Full Section | Teams Header | Notes |
 |-------------|-------------|-------|
