@@ -3,6 +3,16 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.10 — /lessons keeps the procedures it was taught
+- **`lessons` 1.2.0: a procedure the developer walked Claude through is captured whole.** A handover
+  session where the developer showed Claude how the team's deployment document is made, and Claude made
+  it, produced a lessons report with sixteen corrections and failures and no trace of the procedure:
+  the skill said the work's content isn't a lesson, and a procedure looked like content. Now it's its
+  own item, with its inputs and where each comes from, the steps, the result's structure, the checks
+  and a worked example, and it folds in as skill content (a section or a new skill), not a gotcha. A
+  team-layer procedure may keep the team's own template and tool names. `/lessons` names every
+  procedure it captured, so a missing one is noticed while the session still remembers it.
+
 ## 0.3.9 — what a real handover taught
 Lessons from a multi-repo vacation handover and the `/wake-up` after it, each where it would have
 stopped the mistake.

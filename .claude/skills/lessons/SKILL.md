@@ -1,7 +1,7 @@
 ---
 name: lessons
-description: The gotchas loop behind /lessons — capture what a session taught (corrections, taught steps, failures) as a report outside any repo, then fold each item into the harness one approved change at a time, so a mistake is made once.
-version: 1.1.0
+description: The gotchas loop behind /lessons — capture what a session taught (corrections, taught steps, procedures the developer walked Claude through, failures) as a report outside any repo, then fold each item into the harness one approved change at a time, so a mistake is made once and a procedure is taught once.
+version: 1.2.0
 ---
 
 # Lessons — turn a session's corrections into harness changes
@@ -32,12 +32,21 @@ Go through the whole session, including anything saved to memory or notes:
 - **A correction:** Claude did X, the developer wanted Y. Quote the instruction briefly as evidence.
 - **A taught step:** the developer added something to the flow (an order, a check, a question to ask,
   a step to skip).
+- **A taught procedure:** the developer walked Claude through how to make something the team makes
+  again and again: a deployment document, a release package, a report, a migration. Capture the
+  procedure itself, whole, not the fact that it happened: what it needs and where each input comes
+  from, the steps in order, the shape of the result (sections, tables, folders, file names), the
+  checks before it goes out, and the corrections made along the way. If the developer gave Claude a
+  page, a template or an earlier example to work from, say which (by name, not by link) and what
+  Claude took from it. This is the most valuable item in a report: a correction stops one mistake, a
+  procedure saves the whole job next time.
 - **A failure:** an error, a stuck command, a misbehaving script or agent, a wrong assumption. Exact
   error text, and what fixed it (or that nothing did).
 - **What worked:** parts of a flow that did their job, so a later change doesn't break them.
 
 Not a lesson: the content of the work itself (what the feature does, what the handover said). Only how
-Claude did it.
+Claude did it, and how the developer showed it the job should be done. **A procedure is not "content"**:
+leaving one out because it looks like the work itself is the mistake this rule is most likely to cause.
 
 ### The report
 
@@ -56,6 +65,19 @@ Date: YYYY-MM-DD · Layers: <from /version> · Where: <repo label, e.g. "Service
 ## 2. Steps taught
 ### L2. …   (same fields)
 
+### L3. Procedure: <what it makes, e.g. "the deployment document">
+- **When:** <the moment it's needed, e.g. "before a release goes to production">
+- **Inputs:** <each input, and where it comes from: a branch compare, a ticket, a template, a person>
+- **Steps:** <numbered, in order, each a thing to do, with the command or check where there is one>
+- **Result:** <its structure: sections or table columns in order, folder layout, file names>
+- **Checks before it goes out:** <what was verified, and how>
+- **Corrections made on the way:** <what the developer changed, with short evidence>
+- **Worked example:** <one, with sensitive values replaced; names kept only if the layer is private>
+- **Harness change:** <usually a skill: a section in an existing one, or a new one; a company
+  procedure goes to the team layer>
+- **Priority:** must | should | nice
+- **Status:** open
+
 ## 3. What broke or got stuck
 ### L3. …   (same fields, plus **Error:** the exact text, **Fixed by:** … or "still open")
 
@@ -66,7 +88,8 @@ Date: YYYY-MM-DD · Layers: <from /version> · Where: <repo label, e.g. "Service
 - <where instructions conflicted, or Claude wasn't sure>
 ```
 
-Numbering runs through the whole file (L1, L2, L3…), so an item can be referred to by its number.
+Numbering runs through the whole file (L1, L2, L3…), so an item can be referred to by its number. A
+procedure is one item, however long; it never shrinks to a single "check first"-style line.
 
 **`Harness change` names a real file:** a command (`commands/handover.md`), an agent, a skill
 (`skills/<name>/SKILL.md`, usually its `## Gotchas` section), a rule, `CLAUDE.md`, or a script. If it's
@@ -76,7 +99,9 @@ unclear which, write the best guess and say so.
 
 - **No patient data, no secrets, credentials, tokens, connection strings or internal URLs.**
 - **Neutral labels for services and repos** (Service A, Service B) unless the name is needed to
-  understand the lesson. The file travels to the harness repo, which may be public.
+  understand the lesson. The file travels to the harness repo, which may be public. A procedure that
+  belongs to the team layer (a private repo) may keep the team's own names for its templates, folders
+  and tools; still no secrets, patient data or internal URLs.
 - One lesson per item; specific and short. Don't merge two corrections into one item.
 - Don't soften the evidence. "Claude ignored the rule twice" is more useful than "there was some
   confusion".
@@ -87,14 +112,17 @@ Run in a session on the harness repo. The lessons files come from `~/.claude/les
 are attached to the chat.
 
 1. **Read every item with `Status: open`** across the files. Group items that point at the same file.
-2. **Check again before anything enters the harness:** no service or repo names beyond neutral labels, no
-   patient data, no internal URLs, no secrets. If an item can't be written without one, rewrite it
-   generally or drop it.
+2. **Check again before anything enters the harness:** no service or repo names beyond neutral labels
+   (a private team layer may keep its own template and tool names), no patient data, no internal URLs,
+   no secrets. If an item can't be written without one, rewrite it generally or drop it.
 3. **Walk the items one at a time, highest priority first.** For each: the lesson, the evidence, the exact change to the file (as a diff), and a recommendation (apply, change it, or drop it as a
    one-off). The developer approves, edits or skips.
 4. **Apply the approved changes** on a branch, with the usual release notes; a skill's lesson usually
    becomes one line in its `## Gotchas` section (create the section at the end of the skill if it
-   doesn't exist).
+   doesn't exist). **A procedure becomes skill content**, not a gotcha: a section in the skill for that
+   job (its steps, the result's structure, the checks), or a new skill when none fits. Show the developer
+   the whole section before applying; a procedure written from the report alone misses what only the
+   original session saw, so check it against the template or example the developer used.
 5. **Gate what the fix evals cover.** A change to a rule, an agent, or a skill a fix eval's findings cite
    (`tests/evals/fix-*/evals.md`, "Where it's taught") is kept only if no case gets worse. Run the
    with-proven arm again on the branch, as many runs as the baseline has, add the copies under
