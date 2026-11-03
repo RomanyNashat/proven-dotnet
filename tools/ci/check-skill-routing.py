@@ -62,7 +62,10 @@ def descriptions(folders=(SKILLS,)):
         match = re.search(r"^description:\s*(.+)$", path.read_text(encoding="utf-8"), re.M)
         if match:
             name = path.parent.name
-            found[name] = f"{name.replace('-', ' ')} {match.group(1)}"
+            value = match.group(1).strip()
+            if value[:1] == '"' and value[-1:] == '"':
+                value = value[1:-1].replace('\\"', '"').replace("\\\\", "\\")
+            found[name] = f"{name.replace('-', ' ')} {value}"
     return found
 
 

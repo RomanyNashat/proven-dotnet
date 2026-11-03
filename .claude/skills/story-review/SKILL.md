@@ -1,6 +1,6 @@
 ---
 name: story-review
-description: The self-check gate for /stories: scores a generated map against INVEST + the story rules, auto-fixes failures, reports what it caught.
+description: "The self-check gate for /stories: scores a generated map against INVEST + the story rules, auto-fixes failures, reports what it caught."
 ---
 
 # Story Review — the self-check gate for /stories

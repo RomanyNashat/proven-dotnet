@@ -1,6 +1,6 @@
 ---
 name: scaffold-from-sql
-description: /scaffold mode generating a .NET service layer FROM existing SQL (schema, stored procs, .sql): Dapper DTOs, repositories, services, endpoints.
+description: "/scaffold mode generating a .NET service layer FROM existing SQL (schema, stored procs, .sql): Dapper DTOs, repositories, services, endpoints."
 ---
 
 # Scaffold from SQL — generate the service layer from existing SQL

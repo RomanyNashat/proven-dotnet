@@ -8,6 +8,8 @@ Fails on:
   - an agent that reads repos without the section that treats their content as evidence, not instructions;
   - session history kept for less than 120 days (/handover reads it), or a handover helper script that
     could change a repo.
+  - frontmatter that strict YAML rejects: an unquoted value with ": " or " #" in it (Claude Code reads
+    it anyway, but `claude plugin validate` and any strict parser drop the whole block).
 Also fails on any skill or command the content mentions that doesn't exist.
 """
 import pathlib
@@ -29,6 +31,20 @@ for ps1 in root.rglob("*.ps1"):
         ps1.read_bytes().decode("ascii")
     except UnicodeDecodeError:
         problems.append(f"{ps1.relative_to(root)} isn't pure ASCII")
+
+# A plain YAML scalar can't hold ": " or " #", or start with an indicator character. No PyYAML in CI,
+# so check the shapes we write: one "key: value" per line.
+for md in sorted(claude.rglob("*.md")):
+    text = md.read_text(encoding="utf-8")
+    if not text.startswith("---\n") or "\n---" not in text[3:]:
+        continue
+    for line in text[4:text.index("\n---", 3)].splitlines():
+        m = re.match(r"^([A-Za-z][\w-]*):[ ](.+)$", line)
+        if not m or m.group(2)[:1] in "\"'":
+            continue
+        value = m.group(2)
+        if ": " in value or " #" in value or value.endswith(":") or value[:1] in "[]{}&*!|>%@`,?":
+            problems.append(f"{md.relative_to(root)}: frontmatter '{m.group(1)}' needs quotes (strict YAML rejects it)")
 
 READ_ONLY_AGENTS = ["code-reviewer", "security-reviewer", "dba-reviewer", "compliance-auditor",
                     "health-analyst", "pattern-analyst", "handover-repo-analyst"]

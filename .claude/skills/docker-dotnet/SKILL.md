@@ -1,6 +1,6 @@
 ---
 name: docker-dotnet
-description: Docker for .NET: multi-stage builds, small runtime images, layer caching, non-root users.
+description: "Docker for .NET: multi-stage builds, small runtime images, layer caching, non-root users."
 version: 1.1.0
 ---
 

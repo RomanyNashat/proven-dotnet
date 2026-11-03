@@ -1,6 +1,6 @@
 ---
 name: aspire-patterns
-description: .NET Aspire: AppHost composition, service discovery, resource wiring, ServiceDefaults telemetry.
+description: ".NET Aspire: AppHost composition, service discovery, resource wiring, ServiceDefaults telemetry."
 version: 2.0.0
 ---
 

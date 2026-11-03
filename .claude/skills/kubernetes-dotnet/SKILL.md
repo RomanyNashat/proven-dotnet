@@ -1,6 +1,6 @@
 ---
 name: kubernetes-dotnet
-description: Kubernetes for .NET: health probes, resource limits/QoS, graceful shutdown, config/secrets, rolling deploys.
+description: "Kubernetes for .NET: health probes, resource limits/QoS, graceful shutdown, config/secrets, rolling deploys."
 version: 2.0.0
 ---
 

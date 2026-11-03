@@ -1,6 +1,6 @@
 ---
 name: outbox
-description: Transactional outbox for .NET: the dual-write problem. EF Core on PostgreSQL and SQL Server (interceptor, HiLo ids, single ordered relay via an advisory lock or sp_getapplock) and MongoDB (transaction, ordered relay, lease), the inbox for idempotent consumers. All tested in CI.
+description: "Transactional outbox for .NET: the dual-write problem. EF Core on PostgreSQL and SQL Server (interceptor, HiLo ids, single ordered relay via an advisory lock or sp_getapplock) and MongoDB (transaction, ordered relay, lease), the inbox for idempotent consumers. All tested in CI."
 ---
 
 # Transactional Outbox — reliable event publishing

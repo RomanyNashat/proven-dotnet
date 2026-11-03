@@ -1,6 +1,6 @@
 ---
 name: skill-evals
-description: How proven-dotnet evaluates its own generative skills: test cases beside the skill, a subagent per case, with-skill vs without-skill benchmarking, description trigger-rate tests, and honest reporting rules.
+description: "How proven-dotnet evaluates its own generative skills: test cases beside the skill, a subagent per case, with-skill vs without-skill benchmarking, description trigger-rate tests, and honest reporting rules."
 ---
 
 # Skill Evals — proving a skill actually works
