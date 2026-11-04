@@ -1,6 +1,6 @@
 ---
 name: service-documentation
-description: /document mode: write wiki/README docs for a .NET service, grounded in real code — endpoints, deps, config, jobs, gotchas. Uses the simplicity layer.
+description: "/document mode: write wiki/README docs for a .NET service, grounded in real code — endpoints, deps, config, jobs, gotchas. Uses the simplicity layer."
 ---
 
 # Service Documentation — document a service for the wiki

@@ -1,6 +1,6 @@
 ---
 name: caching
-description: Caching for .NET: HybridCache (L1+L2, stampede protection, tag invalidation), cache-aside vs write-back, TTL tiers, the multi-pod L1 gap and the Redis pub/sub eviction that closes it. Tested against real Redis.
+description: "Caching for .NET: HybridCache (L1+L2, stampede protection, tag invalidation), cache-aside vs write-back, TTL tiers, the multi-pod L1 gap and the Redis pub/sub eviction that closes it. Tested against real Redis."
 version: 2.0.0
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: encryption-patterns
-description: Encryption for .NET: AES-GCM with associated data, envelope encryption (DEK/KEK), PBKDF2, a versioned format for migrations, key rotation. Core code tested in CI.
+description: "Encryption for .NET: AES-GCM with associated data, envelope encryption (DEK/KEK), PBKDF2, a versioned format for migrations, key rotation. Core code tested in CI."
 version: 1.2.0
 ---
 

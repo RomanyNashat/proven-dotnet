@@ -1,6 +1,6 @@
 ---
 name: retrospective
-description: The self-audit behind /improve: review the harness (proven-dotnet plus any team layer) against its own rules and find drift — enforcement gaps, orphan/overlapping skills, coverage gaps. Proposes fixes one at a time.
+description: "The self-audit behind /improve: review the harness (proven-dotnet plus any team layer) against its own rules and find drift — enforcement gaps, orphan/overlapping skills, coverage gaps. Proposes fixes one at a time."
 ---
 
 # Retrospective — the harness audits itself

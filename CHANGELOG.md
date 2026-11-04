@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.11 — frontmatter that strict YAML reads
+- **30 skill descriptions are quoted.** Each had an unquoted ": " (`.NET Aspire: AppHost…`), which strict
+  YAML rejects: Claude Code reads them anyway, but `claude plugin validate` and any strict parser drop the
+  whole block. Found by `/doctor` on a laptop. Proven identical: every quoted description parses to exactly
+  the text the old line held, and no body changed.
+- **The content check now fails on frontmatter strict YAML would reject** (an unquoted value with ": " or
+  " #", or starting with an indicator character), so it can't come back. The routing check reads quoted
+  descriptions.
+
 ## 0.3.10 — /lessons keeps the procedures it was taught
 - **`lessons` 1.2.0: a procedure the developer walked Claude through is captured whole.** A handover
   session where the developer showed Claude how the team's deployment document is made, and Claude made

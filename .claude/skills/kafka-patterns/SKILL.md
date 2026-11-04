@@ -1,6 +1,6 @@
 ---
 name: kafka-patterns
-description: Kafka for .NET with Confluent.Kafka: idempotent producer keyed by aggregate, at-least-once consumer (store-after-handle, retry, dead-letter topic), routing, idempotent handling. Core code tested in CI. See outbox for reliable publishing.
+description: "Kafka for .NET with Confluent.Kafka: idempotent producer keyed by aggregate, at-least-once consumer (store-after-handle, retry, dead-letter topic), routing, idempotent handling. Core code tested in CI. See outbox for reliable publishing."
 version: 1.2.1
 ---
 

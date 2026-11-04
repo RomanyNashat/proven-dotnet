@@ -1,6 +1,6 @@
 ---
 name: azure-deployment
-description: Azure deployment for .NET: App Service/Container Apps, Key Vault, managed identity, and CI/CD to Azure.
+description: "Azure deployment for .NET: App Service/Container Apps, Key Vault, managed identity, and CI/CD to Azure."
 version: 1.1.0
 ---
 
