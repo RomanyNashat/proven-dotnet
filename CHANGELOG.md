@@ -15,6 +15,11 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   `azure/login@v3`, `aks-set-context@v5`). Of their inputs only `setup-buildx-action`'s `config`,
   `config-inline` and `install` are gone, and the skill uses none. The tested workflows changed with it
   and still pass actionlint.
+- **A fix-eval test that expired.** The first fix eval's `H05` asked when the 9 a.m. trigger next fires
+  after midnight UTC on 3 November 2026. A trigger never fires before it was built, so from 7 November
+  every run failed it, the reference fixes included. It now asks about the midnight after the trigger's
+  start. What it checks is the same: a 9 a.m. trigger with no time zone still fails it, a Riyadh one
+  passes. The committed scores don't change.
 
 ## 0.3.12 — the Roslyn installer on a company laptop
 - **`install-roslyn.ps1` finds its project again on Windows PowerShell 5.1.** Run with `-File`, as the

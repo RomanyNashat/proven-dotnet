@@ -61,8 +61,11 @@ public sealed class FindingTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         using var clinic = new Clinic();
         var cron = clinic.Services.GetRequiredService<IOptions<QuartzOptions>>().Value.Triggers.OfType<ICronTrigger>().Single();
-        var next = cron.GetFireTimeAfter(new DateTimeOffset(2026, 11, 3, 0, 0, 0, TimeSpan.Zero));
-        Assert.Equal(new DateTimeOffset(2026, 11, 3, 6, 0, 0, TimeSpan.Zero), next);
+        // A trigger never fires before its start time, which is when the app built it: a fixed date expired
+        // on 2026-11-07 and failed every run, the reference fix included. Midnight UTC after the start does not.
+        var midnight = new DateTimeOffset(cron.StartTimeUtc.UtcDateTime.Date.AddDays(1), TimeSpan.Zero);
+        var next = cron.GetFireTimeAfter(midnight);
+        Assert.Equal(midnight.AddHours(6), next);
     }
 
     [Fact]
