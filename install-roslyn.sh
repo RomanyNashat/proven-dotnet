@@ -29,9 +29,9 @@ dotnet pack -c Release -o ./nupkg
 
 cyan "Installing global tool 'proven-roslyn-mcp'"
 if dotnet tool list --global | grep -iq 'proven.roslyn.mcp'; then
-  dotnet tool update --global --add-source ./nupkg Proven.Roslyn.Mcp
+  dotnet tool update --global --add-source ./nupkg --ignore-failed-sources Proven.Roslyn.Mcp
 else
-  dotnet tool install --global --add-source ./nupkg Proven.Roslyn.Mcp
+  dotnet tool install --global --add-source ./nupkg --ignore-failed-sources Proven.Roslyn.Mcp
 fi
 green "proven-roslyn-mcp installed"
 

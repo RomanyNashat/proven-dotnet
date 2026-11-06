@@ -17,8 +17,16 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$ProjectDir = (Join-Path $PSScriptRoot 'tools\proven-roslyn-mcp')
+    [string]$ProjectDir = ''
 )
+
+# Windows PowerShell 5.1 leaves $PSScriptRoot empty in a parameter default when the script runs with
+# -File, so the default is worked out here, in the body, where it is set.
+if (-not $ProjectDir) {
+    $here = $PSScriptRoot
+    if (-not $here) { $here = Split-Path -Parent $MyInvocation.MyCommand.Path }
+    $ProjectDir = Join-Path $here 'tools\proven-roslyn-mcp'
+}
 
 $ErrorActionPreference = 'Stop'
 
@@ -80,14 +88,16 @@ if ($procs) {
     }
 }
 
+# The package is in $nupkg, but dotnet also asks every NuGet source the machine has, and one that can't be
+# reached (a company feed off the VPN) fails the whole install. The local package is all it needs.
 $installed = (dotnet tool list --global | Select-String -SimpleMatch 'proven.roslyn.mcp')
 if ($installed) {
     # Force-replace. `dotnet tool update` is a no-op when the package version is
     # unchanged, which silently keeps the OLD binary after a successful rebuild.
     dotnet tool uninstall --global Proven.Roslyn.Mcp | Out-Null
-    dotnet tool install --global --add-source $nupkg Proven.Roslyn.Mcp
+    dotnet tool install --global --add-source $nupkg --ignore-failed-sources Proven.Roslyn.Mcp
 } else {
-    dotnet tool install --global --add-source $nupkg Proven.Roslyn.Mcp
+    dotnet tool install --global --add-source $nupkg --ignore-failed-sources Proven.Roslyn.Mcp
 }
 
 Set-Location $startDir

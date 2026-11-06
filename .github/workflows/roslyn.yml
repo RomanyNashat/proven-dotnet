@@ -30,6 +30,18 @@ jobs:
       - run: dotnet build tools/proven-roslyn-mcp/ProvenRoslynMcp.csproj -c Release
       # Same packaging step install-roslyn runs, so a broken tool package fails here, not on the laptop.
       - run: dotnet pack tools/proven-roslyn-mcp/ProvenRoslynMcp.csproj -c Release -o nupkg
+      # The installer as a developer runs it: Windows PowerShell 5.1 with -File from another folder, and a
+      # NuGet source that can't be reached (a company feed off the VPN). Both once broke the install.
+      - name: install-roslyn.ps1 the laptop's way
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          dotnet nuget add source https://feed.invalid/v3/index.json -n unreachable-feed
+          Set-Location $env:RUNNER_TEMP
+          powershell -NoProfile -ExecutionPolicy Bypass -File "$env:GITHUB_WORKSPACE\install-roslyn.ps1"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          if (-not (dotnet tool list --global | Select-String -SimpleMatch 'proven.roslyn.mcp')) { Write-Error 'the tool is not installed'; exit 1 }
+          dotnet nuget remove source unreachable-feed
 
   tests:
     name: Regression tests
