@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.13 — actions on Node 24
+- **Every GitHub Action this repo's CI uses is on its current major**, all on Node 24: `checkout@v7`,
+  `setup-dotnet@v6`, `setup-python@v7`, `cache@v6`, `upload-artifact@v7`. GitHub warned on every run that
+  the Node 20 ones are being forced off. Read before the bump: the inputs CI passes are unchanged; Node
+  24 needs runner 2.327.1 or later (GitHub's hosted runners are newer); `checkout@v6` keeps the token in
+  a file under `$RUNNER_TEMP` instead of `.git/config`, and `git fetch` still works; `checkout@v7`
+  refuses fork code under `pull_request_target` and `workflow_run`, which nothing here uses.
+- **`cicd-github-actions` 1.2.1 shows the same majors**, and the Docker and Azure actions on theirs
+  (`metadata-action@v6`, `login-action@v4`, `setup-buildx-action@v4`, `build-push-action@v7`,
+  `azure/login@v3`, `aks-set-context@v5`). Of their inputs only `setup-buildx-action`'s `config`,
+  `config-inline` and `install` are gone, and the skill uses none. The tested workflows changed with it
+  and still pass actionlint.
+
 ## 0.3.12 — the Roslyn installer on a company laptop
 - **`install-roslyn.ps1` finds its project again on Windows PowerShell 5.1.** Run with `-File`, as the
   docs say, it stopped at once: `$PSScriptRoot` is empty in a parameter default there, so the default
