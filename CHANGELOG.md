@@ -3,6 +3,17 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.12 — the Roslyn installer on a company laptop
+- **`install-roslyn.ps1` finds its project again on Windows PowerShell 5.1.** Run with `-File`, as the
+  docs say, it stopped at once: `$PSScriptRoot` is empty in a parameter default there, so the default
+  path was `Join-Path` on an empty string. The default is now worked out in the script's body.
+- **The tool installs when a NuGet source can't be reached.** `dotnet tool install` asks every source the
+  machine has, and a company feed off the VPN (or `api.nuget.org` while the VPN connects) failed the
+  install although the package sat in the local `nupkg` folder. Both installers now pass
+  `--ignore-failed-sources`.
+- **CI runs `install-roslyn.ps1` the way a laptop does:** Windows PowerShell 5.1, `-File` from another
+  folder, with an unreachable NuGet source added. Found on the laptop switch.
+
 ## 0.3.11 — frontmatter that strict YAML reads
 - **30 skill descriptions are quoted.** Each had an unquoted ": " (`.NET Aspire: AppHost…`), which strict
   YAML rejects: Claude Code reads them anyway, but `claude plugin validate` and any strict parser drop the
