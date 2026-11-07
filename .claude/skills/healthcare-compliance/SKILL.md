@@ -1,6 +1,6 @@
 ---
 name: healthcare-compliance
-description: Patient-data rules in .NET code — an audit of every change to PHI that commits with the change and can't be edited, consent checked for the patient (not the user), break-the-glass access, data residency checked at start-up, safe errors. Saudi PDPL and HIPAA references kept to what's verified. Tested in CI against PostgreSQL.
+description: "Patient-data rules in .NET: an audit trail of every change that can't be edited, consent checks before sharing records, break-the-glass, data residency, PDPL, HIPAA."
 version: 2.0.0
 ---
 

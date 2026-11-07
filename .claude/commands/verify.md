@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Full verification loop — build, unit tests with coverage, architecture tests, integration tests, and vulnerability check. Run before creating a PR.
+description: "Full check before a PR: build, unit tests with coverage, architecture and integration tests, vulnerable packages."
 allowed-tools: Read, Bash, Grep, Glob
 ---
 

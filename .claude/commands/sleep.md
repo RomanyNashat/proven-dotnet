@@ -1,6 +1,7 @@
 ---
 name: sleep
 description: "End a session cleanly: flush the work journal, save state, and flag uncommitted work. Run it before closing, restarting the machine, or upgrading proven-dotnet — /wake-up reads what this writes."
+disable-model-invocation: true
 allowed-tools: Read, Write, Bash, Grep, Glob
 ---
 

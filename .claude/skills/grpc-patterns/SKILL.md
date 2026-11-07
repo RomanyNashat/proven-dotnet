@@ -1,6 +1,6 @@
 ---
 name: grpc-patterns
-description: gRPC for .NET — int ids and enums in the proto, error mapping that keeps NotFound and DeadlineExceeded, a default client deadline, retries in the service config (not the HTTP resilience handler), streaming with cancellation, money without decimal. Tested in CI over real HTTP/2.
+description: "gRPC for .NET: proto design, mapping errors to status codes, client deadlines, retries in the service config, streaming with cancellation."
 version: 2.1.0
 ---
 

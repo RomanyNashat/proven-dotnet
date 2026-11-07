@@ -1,6 +1,6 @@
 ---
 name: k6-load-testing
-description: "Load/performance testing for .NET with k6: scripts, thresholds as pass/fail gates, profiles (smoke/load/stress/spike/soak), CI integration. The script and the gate tested in CI."
+description: "Load test an API with k6: smoke, load, stress, spike and soak scripts, with thresholds that fail the pipeline."
 version: 1.1.0
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: production-diagnostics
-description: Diagnose a slow, leaking, crashing or thread-starved .NET service in production from logs and APM first — a tested runtime heartbeat log line, a symptom playbook, container GC facts, safe requests to whoever runs the cluster, no memory dumps by default.
+description: "Diagnose a slow, leaking, restarting or thread-starved .NET service in production from logs and APM: a symptom playbook, GC facts, what to ask the cluster team."
 ---
 
 # Production diagnostics

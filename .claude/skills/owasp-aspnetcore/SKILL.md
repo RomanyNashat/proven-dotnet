@@ -1,6 +1,6 @@
 ---
 name: owasp-aspnetcore
-description: OWASP Top 10:2025 mapped to ASP.NET Core services — which skill holds the tested fix for each category, plus the ones this skill owns — security headers that survive the error path, HSTS, CORS, an SSRF guard that checks the resolved address, and JSON polymorphism by allowlist. Tested in CI.
+description: "OWASP Top 10 for an ASP.NET Core service: where each category's fix lives, security headers, HSTS, CORS, an SSRF guard, safe deserialization."
 version: 2.1.1
 ---
 

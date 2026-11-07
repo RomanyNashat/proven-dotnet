@@ -1,6 +1,6 @@
 ---
 name: handover
-description: "Vacation handover across repos: parallel per-repo analysis (journal, sessions, checkpoints, ADRs, git), source-labelled findings, 17-section template, Markdown/Teams/Notion output."
+description: "Write a vacation handover across all your repos: each repo's journal, sessions, checkpoints, ADRs and git, into one document for whoever covers you."
 version: 2.1.0
 ---
 

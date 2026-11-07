@@ -1,6 +1,6 @@
 ---
 name: nginx
-description: nginx with .NET services — which layer an error came from (ingress or the service's nginx), the 413/502/504/499/client-IP/CORS/gzip/stale-cache playbook, aligning limits and timeouts with Kestrel, ForwardedHeaders, static-file services, asking SRE. Configs tested in CI.
+description: "nginx in front of .NET: a 413, 502, 504 or 499 from the ingress or proxy, timeouts and limits aligned with Kestrel, ForwardedHeaders, CORS, gzip, asking SRE."
 version: 1.1.0
 ---
 

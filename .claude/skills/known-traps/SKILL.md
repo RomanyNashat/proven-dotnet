@@ -1,6 +1,6 @@
 ---
 name: known-traps
-description: Scan a .NET service, or many, for the traps this harness's own tests found in real libraries — a Quartz store that drops missed runs, SqlClient in invariant mode, a singleton holding a DbContext, ar-SA's machine-dependent calendar, OpenIddict 6 on EF Core 10 and more. One read-only command, one table with file, line, fix and the skill that proves it; with a diff, only what a change takes part in.
+description: "Scan one or many .NET services for library traps the harness's tests proved: SqlClient in invariant mode, a singleton DbContext, Quartz missed runs, the ar-SA calendar."
 version: 1.5.0
 ---
 

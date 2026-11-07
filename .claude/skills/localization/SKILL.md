@@ -1,6 +1,6 @@
 ---
 name: localization
-description: Arabic/English localization for .NET services — x-language header, resx or JSON text (both supported), the ar-SA calendar (Hijri or Gregorian, by ICU version) and digit traps, ICU/tzdata on Alpine images, NameAr/NameEn data (nvarchar on SQL Server), Arabic search, SMS. Code tested in CI, the data part on PostgreSQL and SQL Server.
+description: "Arabic/English in .NET: x-language header, resx or JSON messages, the ar-SA Hijri calendar and digit traps, ICU on Alpine, NameAr/NameEn data, Arabic search."
 ---
 
 # Localization (Arabic / English)

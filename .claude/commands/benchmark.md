@@ -1,6 +1,6 @@
 ---
 name: benchmark
-description: Create and run BenchmarkDotNet benchmarks for performance-critical code paths. Compare EF Core vs Dapper, tracked vs untracked, different caching strategies, etc.
+description: "Write and run BenchmarkDotNet benchmarks for a hot path, such as EF Core vs Dapper or a caching choice."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

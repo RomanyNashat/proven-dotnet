@@ -1,6 +1,6 @@
 ---
 name: commit
-description: "Suggest a branch name and commit message based on your code changes. Never runs git write commands — only reads diffs and suggests text. Usage: /commit [--simple|--basic|--full]"
+description: "Suggest a branch name and commit message from the diff. Reads only; never runs a git write command."
 allowed-tools: Read, Bash, Grep, Glob
 ---
 

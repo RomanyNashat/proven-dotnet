@@ -1,6 +1,6 @@
 ---
 name: openiddict-server
-description: Provider-side auth for .NET — your own OAuth2/OIDC server with OpenIddict and ASP.NET Core Identity — code flow with PKCE, opaque reference tokens, introspection, logout that really ends the tokens, roles as rows reloaded on refresh, lockout, a schema the DBA can review. Tested in CI against SQL Server. The issuing side; auth-patterns is the consuming side.
+description: "Build your own OAuth2/OIDC authorization server with OpenIddict: code flow with PKCE, reference tokens, introspection, revocation and logout, roles, lockout."
 version: 2.0.0
 ---
 

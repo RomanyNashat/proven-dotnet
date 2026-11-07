@@ -1,6 +1,6 @@
 ---
 name: doc-review
-description: "The self-check gate for /document: verifies a generated service doc against real code before presenting — traces every claim (endpoints, deps, config, jobs) to source, finds what was missed, checks the voice, reports a pre-fix grade."
+description: "Check a generated service doc or README against the code before it's shared: trace every claim to source, find what's missing, grade it. The gate for /document."
 ---
 
 # Doc Review — the gate before a service doc is presented

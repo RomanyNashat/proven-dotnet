@@ -1,6 +1,6 @@
 ---
 name: testing-tdd
-description: TDD for .NET — red-green-refactor, xUnit + Moq + FluentAssertions 7 + AutoFixture, AAA, naming, theories at the edges, verifying the side effects that matter, a fixed clock. Test behaviour, not implementation. Tested in CI, also under slim-image conditions.
+description: "TDD for .NET: write the failing test first, red-green-refactor, unit tests with xUnit, Moq, FluentAssertions 7 and AutoFixture, test names, a fixed clock."
 version: 2.3.1
 ---
 

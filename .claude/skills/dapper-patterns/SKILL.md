@@ -1,6 +1,6 @@
 ---
 name: dapper-patterns
-description: Dapper, on PostgreSQL and SQL Server — the token reaches the database, keyset paging, allowlisted sorting, any number of ids in one parameter, many rows in one command, the dialect differences. Core code tested in CI on both engines.
+description: "Dapper on PostgreSQL and SQL Server: a list of ids as one safe parameter, multi-mapping, keyset paging, allowlisted sorting, bulk commands, dialect differences."
 version: 2.1.0
 ---
 

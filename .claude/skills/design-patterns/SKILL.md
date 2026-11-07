@@ -1,6 +1,6 @@
 ---
 name: design-patterns
-description: Design patterns in modern C#/.NET — GoF and enterprise — when each fits, when it's over-engineering, what .NET already gives you, and the misuses to flag. Used by /patterns (explain and suggest), pattern-analyst, architect, code-reviewer, refactor-cleaner.
+description: "Design patterns in C#/.NET (GoF and enterprise): when a pattern fits, when it's overkill, what .NET already gives you. Used by /patterns and the reviewers."
 version: 1.1.0
 ---
 

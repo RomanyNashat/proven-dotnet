@@ -1,6 +1,6 @@
 ---
 name: secret-management
-description: "Secret management for .NET: no hardcoded secrets, IOptions config, Key Vault / environment variable injection, key rotation without downtime."
+description: "Secrets in .NET: no password in appsettings.json, Key Vault or environment injection, rotating an API key without downtime."
 version: 1.1.1
 ---
 

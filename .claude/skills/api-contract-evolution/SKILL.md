@@ -1,6 +1,6 @@
 ---
 name: api-contract-evolution
-description: Changing an API that installed mobile apps call — what breaks an app you can't update (a new enum value, a removed field, a new required request field), expand, migrate, contract, Deprecation and Sunset headers, and oasdiff in CI set to catch what its defaults let through. Tested in CI.
+description: "Change an API that installed mobile apps call without breaking old versions: new enum values, removed or new required fields, deprecation and sunset, oasdiff in CI."
 version: 1.0.0
 ---
 

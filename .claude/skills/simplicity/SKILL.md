@@ -1,6 +1,6 @@
 ---
 name: simplicity
-description: "Plain-writing rules for shareable output (story maps, docs, READMEs, emails, commit messages): simple-vs-full modes, template, verb bank, the tells that make a draft read as machine-written. Ask simple-or-full first."
+description: "Plain writing for anything others read: docs, READMEs, emails, release notes, commit messages. Short, lead with the verb, no padding, nothing that reads like a bot."
 version: 1.2.0
 ---
 

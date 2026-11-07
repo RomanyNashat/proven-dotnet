@@ -1,6 +1,7 @@
 ---
 name: wake-up
 description: "Load context at the start of a session: the work journal, the last checkpoint, open decisions and backlog, and the current git state. Read-only — it orients you without re-reading the whole repo. Run it when picking work back up after a break, a compaction, or a lost session."
+disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, TaskCreate, TaskUpdate
 ---
 

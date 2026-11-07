@@ -1,6 +1,6 @@
 ---
 name: stories
-description: "Generate epics, user stories, and sub-tasks — from requirements, from existing code, or turn stories into code. A single direction-first wizard. Exports to Markdown and Jira CSV (with a documented path for direct Jira push later)."
+description: "Generate epics, user stories and sub-tasks from requirements or code, exported to Markdown and Jira CSV."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 ---
 

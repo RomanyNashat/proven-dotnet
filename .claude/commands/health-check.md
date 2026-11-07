@@ -1,6 +1,6 @@
 ---
 name: health-check
-description: "Grade your codebase's overall health (A–F). Collects coverage, complexity, maintainability, duplication, dead code, analyzer warnings, and security signals into a weighted report card, then shows a prioritized path to the next grade. Read-only — reports, never modifies."
+description: "Grade the codebase's health A–F with a prioritized path to the next grade. Read-only."
 allowed-tools: Read, Bash, Grep, Glob, Agent
 ---
 

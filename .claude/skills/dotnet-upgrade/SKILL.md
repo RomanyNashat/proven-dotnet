@@ -1,6 +1,6 @@
 ---
 name: dotnet-upgrade
-description: Moving a service from .NET 8 or 9 to .NET 10 (C# 14, EF Core 10, SDK 10) and turning on nullable reference types in an existing codebase — the order of work, the breaking changes that bite a backend service, and how to prove nothing changed. EF Core 10 parts tested in CI on PostgreSQL and SQL Server.
+description: "Move a service from .NET 8 or 9 to .NET 10 and turn on nullable reference types: the order of work, the breaking changes that bite, proving nothing changed."
 version: 1.0.1
 ---
 

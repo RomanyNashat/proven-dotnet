@@ -1,6 +1,6 @@
 ---
 name: zero-vulns
-description: "Zero known-vuln enforcement for .NET: a vulnerable NuGet package (direct or transitive) is a HARD FAIL — NuGetAudit-as-error + dotnet list package --vulnerable, and how to fix one: upgrade the direct package or the parent that brings it, and pin only when no parent release can."
+description: "A known-vulnerable NuGet package is a hard fail: NU1903 and dotnet list package --vulnerable, then which version fixes the CVE: upgrade the package or its parent."
 version: 1.2.0
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: coverage
-description: "Measure test coverage and optionally raise it. Reports line/branch coverage, test counts, and risk-ranked gaps, then offers a dynamic menu to raise coverage (only targets above your current level). Raises are planned in Plan Mode before any tests are written."
+description: "Measure test coverage and raise it: line and branch coverage, risk-ranked gaps, tests planned before they're written."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 ---
 
