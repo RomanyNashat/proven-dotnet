@@ -23,8 +23,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - run: dotnet build tools/proven-roslyn-mcp/ProvenRoslynMcp.csproj -c Release
@@ -48,8 +48,8 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - run: bash tools/ci/annotate.sh dotnet test tests/ProvenRoslynMcp.Tests -c Release --logger "console;verbosity=normal" --blame-hang-timeout 4m --blame-hang-dump-type none
