@@ -1,6 +1,6 @@
 ---
 name: polly-resilience
-description: "Resilience for .NET with Polly v8: the standard HTTP handler (no retries on POST), custom pipelines, strategy order, timeouts, circuit breaker, fallback. Code tested in CI."
+description: "Resilience with Polly v8: retry with backoff, circuit breaker, timeouts, and the standard HTTP handler that doesn't retry a POST."
 version: 1.2.0
 ---
 

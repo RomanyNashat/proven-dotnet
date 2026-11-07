@@ -1,6 +1,6 @@
 ---
 name: deploy-check
-description: Validate Kubernetes manifests, CI/CD pipeline configuration, and deployment readiness. Delegates to devops-engineer agent.
+description: "Check Kubernetes manifests, the CI/CD pipeline and deployment readiness."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 ---
 

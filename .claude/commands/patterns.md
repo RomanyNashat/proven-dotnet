@@ -1,6 +1,6 @@
 ---
 name: patterns
-description: "Design patterns, two ways. Explain: find the patterns in your code, show how each works here, and judge the fit (fits, over-engineered, misused, missing, built into .NET). Suggest: describe a problem and get the pattern that fits, or none, with a sketch. Read-only."
+description: "Explain the design patterns in this code and judge the fit, or suggest the pattern for a problem. Read-only."
 allowed-tools: Read, Grep, Glob, Agent, mcp__proven-roslyn__workspace_status, mcp__proven-roslyn__find_symbol, mcp__proven-roslyn__find_implementations, mcp__proven-roslyn__get_type_hierarchy, mcp__proven-roslyn__find_callers, mcp__proven-roslyn__find_references, mcp__proven-roslyn__get_public_api, mcp__proven-roslyn__get_package_api
 ---
 

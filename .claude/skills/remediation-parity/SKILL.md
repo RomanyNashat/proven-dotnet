@@ -1,6 +1,6 @@
 ---
 name: remediation-parity
-description: Safety gate for tools that edit code. Starts from a committed tree; tiered — refactors get full behavior-parity (characterization test first if none), features run-tests, trivial none; optional worktree isolation for large conversions.
+description: "Prove a refactor or cleanup didn't change behavior before it's applied: a characterization test first, then a parity check. The gate for code-editing tools."
 ---
 
 # Remediation Parity — prove an edit is safe before presenting it

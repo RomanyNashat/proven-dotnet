@@ -1,6 +1,7 @@
 ---
 name: version
 description: "Show which version of proven-dotnet (and any layer on top of it) is installed, with a quick inventory of commands, agents and skills."
+disable-model-invocation: true
 allowed-tools: Read, Bash
 ---
 

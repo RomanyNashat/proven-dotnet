@@ -3,6 +3,20 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.14 — every skill visible in the listing
+- **Every description is short, so none is dropped.** Claude Code lists each skill's and command's name and
+  description at the start of a session, in a budget of 1% of the context window that its own skills and
+  any plugin's share. On a 1M window the listing was full and about 20 of ours showed only a name
+  (`sqlserver-patterns`, `sonarqube`, `secret-management` among them), so Claude couldn't match a request
+  to them. Every description now says what it does and when, keywords first, in 180 characters at most:
+  the core's listing went from about 19,000 characters to 11,400. The routing check still passes, and
+  ranks the right skill first more often (98%, from 94%).
+- **Commands only the developer runs are out of the listing:** `/sleep`, `/wake-up`, `/checkpoint`,
+  `/version` and `/handover` carry `disable-model-invocation: true`, as `/lessons` and `/improve` already
+  did. They work the same when typed; the `handover` skill still answers a request in words.
+- **`tools/ci/check-listing-budget.py`** fails CI when a description passes 180 characters or the listing
+  passes its budget (12,000 characters for the core; a team layer checks both together).
+
 ## 0.3.13 — actions on Node 24
 - **Every GitHub Action this repo's CI uses is on its current major**, all on Node 24: `checkout@v7`,
   `setup-dotnet@v6`, `setup-python@v7`, `cache@v6`, `upload-artifact@v7`. GitHub warned on every run that

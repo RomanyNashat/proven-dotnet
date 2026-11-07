@@ -1,6 +1,6 @@
 ---
 name: build-fix
-description: Diagnose and fix build failures, compiler errors, NuGet conflicts, test failures, and runtime exceptions. Use when the build is broken.
+description: "Diagnose and fix a broken build: compiler errors, NuGet conflicts, failing tests, runtime exceptions."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

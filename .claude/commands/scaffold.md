@@ -1,6 +1,6 @@
 ---
 name: scaffold
-description: "Generate a new microservice, worker, job, or cronjob. Microservices support 3 architectures (--simple, --clean, --cqrs) × 2 API styles (--minimal-api, --controllers) on PostgreSQL or SQL Server. Asks questions if flags are missing. Usage: /scaffold microservice <Name> [--simple|--clean|--cqrs] [--minimal-api|--controllers] [--postgres|--sqlserver]"
+description: "Generate a new microservice, worker, job or cronjob: simple, clean or CQRS, minimal API or controllers, PostgreSQL or SQL Server."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

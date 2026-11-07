@@ -1,6 +1,6 @@
 ---
 name: ddd-patterns
-description: DDD — aggregates loaded whole, int ids from HiLo, value objects as records mapped to bounded columns, domain events in process after SaveChanges and across services through the outbox, repositories per aggregate. Core code tested in CI on PostgreSQL and SQL Server.
+description: "DDD in .NET: aggregate roots, value objects as records, HiLo int ids, domain events dispatched after save and across services, one repository per aggregate."
 version: 2.2.0
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: sqlserver-patterns
-description: SQL Server for .NET — column rules, registration (UseSqlServer / UseAzureSql), READ_COMMITTED_SNAPSHOT, safe upserts (UPDLOCK, HOLDLOCK), table-valued parameters, SqlBulkCopy, bounded JSON, temporal tables, row-level security with session context, indexes, Query Store. Claims tested in CI against SQL Server 2022.
+description: "SQL Server for .NET: deadlocks and read committed snapshot, UPDLOCK upserts, table-valued parameters, SqlBulkCopy, execution plans, indexes, Query Store, temporal tables."
 version: 2.1.0
 ---
 

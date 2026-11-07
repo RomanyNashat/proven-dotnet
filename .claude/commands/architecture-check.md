@@ -1,6 +1,6 @@
 ---
 name: architecture-check
-description: Run architecture tests to validate Clean Architecture layer dependencies, naming conventions, and design constraints. Uses NetArchTest.
+description: "Run the architecture tests: layer dependencies, naming and design rules with NetArchTest."
 allowed-tools: Read, Bash, Grep, Glob
 ---
 

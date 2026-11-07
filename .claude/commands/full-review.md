@@ -1,6 +1,6 @@
 ---
 name: full-review
-description: Full code review covering quality, security, and database patterns. Runs code-reviewer, security-reviewer, and dba-reviewer in parallel, plus read-only test coverage and dependency vulnerability (direct + transitive) checks. Use after implementation is complete. With --diff, reviews a change (a branch, a merge request) instead of the whole service.
+description: "Review code or a change (--diff for a branch or MR): quality, security and database reviewers in parallel, plus coverage and vulnerable packages."
 argument-hint: "[--diff [base branch]]"
 allowed-tools: Read, Grep, Glob, Bash, Agent
 ---

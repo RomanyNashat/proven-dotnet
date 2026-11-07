@@ -1,6 +1,6 @@
 ---
 name: file-uploads
-description: Accepting uploaded files (a photo, an image, a PDF) in ASP.NET Core safely — check what the file really is from its first bytes, never the name or Content-Type the client sent; save it under a name the server makes, so path traversal can't leave the folder (Path.Combine drops the root for a rooted name); count the size while copying; store it whole or not at all; serve it back with the server's type and nosniff. Tested in CI, also under slim-image conditions.
+description: "Accept uploaded files (photo, image, PDF) in ASP.NET Core safely: the real type from the first bytes, a server-made name against path traversal, size limits."
 version: 1.0.0
 ---
 

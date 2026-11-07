@@ -1,6 +1,6 @@
 ---
 name: docker-build
-description: Build, optimize, and validate a Docker image for a .NET microservice. Delegates to devops-engineer agent for Dockerfile creation or optimization.
+description: "Build, slim and check a Docker image for a .NET service."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 ---
 

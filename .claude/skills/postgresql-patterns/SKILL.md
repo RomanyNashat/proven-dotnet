@@ -1,6 +1,6 @@
 ---
 name: postgresql-patterns
-description: "PostgreSQL for .NET with Npgsql/EF Core: column rules, SQL Server→PG gotchas, pooling, safe migrations (what rewrites a table, CONCURRENTLY), JSONB, full-text, upserts, COPY, partitions, advisory locks. Claims tested in CI against PostgreSQL 17."
+description: "PostgreSQL with Npgsql and EF Core: what differs from SQL Server, safe migrations, index CONCURRENTLY, upserts with ON CONFLICT, JSONB, COPY, advisory locks."
 version: 2.3.0
 ---
 

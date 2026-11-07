@@ -1,6 +1,6 @@
 ---
 name: msbuild
-description: Solution-wide build settings and package versions — Directory.Build.props, Central Package Management (Directory.Packages.props, transitive pinning, version ranges), moving a solution onto it, and finding out why the build or restore did what it did (-getProperty, dotnet nuget why, binary logs). Restored in CI with the real CLI.
+description: "Directory.Build.props and Central Package Management (Directory.Packages.props): move a solution onto it, version ranges, why restore picked a version (nuget why, binlog)."
 version: 1.3.0
 ---
 

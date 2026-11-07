@@ -1,6 +1,6 @@
 ---
 name: redis-patterns
-description: "Redis with StackExchange.Redis: cache-aside, a token-checked lock, an atomic sliding-window rate limiter, streams with claim of abandoned entries, leaderboards. Core code tested in CI."
+description: "Redis with StackExchange.Redis: cache-aside, a distributed lock that checks its token, a sliding-window rate limiter, streams, leaderboards."
 version: 1.1.0
 ---
 

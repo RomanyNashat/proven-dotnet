@@ -1,6 +1,6 @@
 ---
 name: worker-patterns
-description: "Background workers for .NET: BackgroundService vs IHostedService, Channel<T> queues that drain on shutdown, PeriodicTimer with TimeProvider, worker health checks, graceful shutdown. Code tested in CI."
+description: "Background workers: a BackgroundService reading a Channel queue that drains on shutdown, a PeriodicTimer loop that doesn't overlap, health checks."
 version: 1.2.1
 ---
 

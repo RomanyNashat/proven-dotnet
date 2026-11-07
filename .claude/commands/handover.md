@@ -1,6 +1,7 @@
 ---
 name: handover
 description: "Generate a vacation handover across all the repos you worked in. Finds them, analyses each in parallel (journal, surviving Claude sessions, checkpoints, ADRs, git), asks you only what it can't infer, and writes Markdown/Teams/Notion files. Run from the folder that holds your repos, before any extended absence."
+disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 ---
 

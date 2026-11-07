@@ -1,6 +1,6 @@
 ---
 name: quartz-scheduling
-description: Quartz.NET in-process scheduling on PostgreSQL — clustered persistent store with the schema applied by the pipeline, cron in a real time zone, misfires, no overlapping runs, a health check and admin endpoints. Tested in CI against PostgreSQL.
+description: "Quartz.NET scheduling: cron triggers in a time zone, a clustered job store, runs missed during a deploy (misfires), no overlapping runs, health checks."
 version: 2.1.1
 ---
 

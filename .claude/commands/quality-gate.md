@@ -1,6 +1,6 @@
 ---
 name: quality-gate
-description: Run all quality checks — code coverage thresholds, Roslyn analyzer warnings, architecture tests, and format verification. Use as a pre-merge gate.
+description: "Run every quality check before merge: coverage thresholds, analyzers, architecture tests, format."
 allowed-tools: Read, Bash, Grep, Glob
 ---
 

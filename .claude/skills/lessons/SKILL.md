@@ -1,6 +1,6 @@
 ---
 name: lessons
-description: The gotchas loop behind /lessons — capture what a session taught (corrections, taught steps, procedures the developer walked Claude through, failures) as a report outside any repo, then fold each item into the harness one approved change at a time, so a mistake is made once and a procedure is taught once.
+description: "Capture what went wrong or was taught this session, then fold each correction into the harness one approved change at a time. Behind /lessons."
 version: 1.2.0
 ---
 

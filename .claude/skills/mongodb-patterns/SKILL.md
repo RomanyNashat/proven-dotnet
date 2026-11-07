@@ -1,6 +1,6 @@
 ---
 name: mongodb-patterns
-description: MongoDB for .NET (C# driver 3.x) to MongoDB's official guidance — client setup with metrics that never log documents, schema patterns, a $jsonSchema validator and ESR indexes as mongosh scripts, keyset paging, transactions, change streams that never skip an event. Tested in CI against a real replica set.
+description: "MongoDB with the C# driver: schema design, ESR compound indexes and validators as scripts, keyset paging, transactions, change streams."
 version: 3.1.0
 ---
 

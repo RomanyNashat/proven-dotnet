@@ -1,6 +1,6 @@
 ---
 name: code-health
-description: "Codebase health for .NET: weighted A–F report card from quality metrics (coverage, complexity, duplication, dead code, warnings). Used by health-analyst + /health-check."
+description: "Grade a .NET codebase's health A–F: coverage, complexity, duplication, dead code and warnings in one report card. Used by /health-check."
 version: 1.1.0
 ---
 

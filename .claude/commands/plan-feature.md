@@ -1,6 +1,6 @@
 ---
 name: plan-feature
-description: Decompose a feature or epic into ordered tasks with acceptance criteria, complexity estimates, and agent assignments. Use at the start of any new feature work.
+description: "Break a feature or epic into ordered tasks with acceptance criteria and estimates."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 ---
 

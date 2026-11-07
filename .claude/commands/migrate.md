@@ -1,6 +1,6 @@
 ---
 name: migrate
-description: "EF Core migration management. Add new migrations, generate SQL scripts (full, range, rollback), and review for safety. Usage: /migrate add <Name>, /migrate script, /migrate script <From> <To>"
+description: "EF Core migrations: add one, generate SQL scripts (full, range, rollback), and review them for safety."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 ---
 

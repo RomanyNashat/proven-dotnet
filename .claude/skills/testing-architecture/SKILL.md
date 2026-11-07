@@ -1,6 +1,6 @@
 ---
 name: testing-architecture
-description: Architecture tests for .NET with NetArchTest — layer dependencies, handlers sealed and named, entities changed through methods, and a guard so a renamed namespace can't turn a rule into one that never fails. Tested in CI against a well-layered and a deliberately broken sample.
+description: "Architecture tests with NetArchTest: layer dependencies (Domain never references Infrastructure), naming, sealed handlers, a guard against rules that never fail."
 version: 2.0.0
 ---
 

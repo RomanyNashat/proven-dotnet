@@ -1,6 +1,7 @@
 ---
 name: checkpoint
 description: "Save progress mid-session — active files, decisions, test status, current task and next steps — then optionally /compact and keep working. For ending a session use /sleep."
+disable-model-invocation: true
 allowed-tools: Read, Write, Bash, Grep, Glob
 ---
 

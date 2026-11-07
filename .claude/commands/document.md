@@ -1,6 +1,6 @@
 ---
 name: document
-description: "Write wiki/README documentation for a .NET service, grounded in its real code. Reads the service (endpoints, dependencies, config, jobs) and produces a clear page. Asks simple or full first (simplicity layer). For onboarding docs, service READMEs, and platform-wiki pages."
+description: "Write wiki or README docs for a .NET service from its real code, simple or full."
 allowed-tools: Read, Bash, Grep, Glob, Agent
 ---
 

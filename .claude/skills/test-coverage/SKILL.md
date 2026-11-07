@@ -1,6 +1,6 @@
 ---
 name: test-coverage
-description: "Test coverage for .NET: Coverlet run, Cobertura parse, raise menu, least-covered detection, characterization tests. Used by coverage-analyst + /coverage."
+description: "Measure and raise test coverage: line and branch coverage with Coverlet, the gaps and least covered classes, characterization tests. Used by /coverage."
 version: 1.2.0
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: cqrs-eventsourcing
-description: "CQRS without a mediator library: command/query split, plain handlers + decorators (validation, transaction, logging), EF write + Dapper read, domain events, Marten event sourcing. MediatR only by name."
+description: "CQRS without MediatR: commands and queries with plain handlers and decorators, EF write and Dapper read, domain events, event sourcing with Marten projections."
 version: 1.1.0
 ---
 

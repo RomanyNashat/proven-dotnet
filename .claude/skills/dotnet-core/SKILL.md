@@ -1,6 +1,6 @@
 ---
 name: dotnet-core
-description: .NET 8/9/10 fundamentals — the host and DI lifetimes checked in every environment (a singleton holding a scoped service, the captive dependency), validated options that stop a bad deploy at start-up, typed HTTP clients, keyed services, TimeProvider, and modern C# (records, required, field, extension blocks). Tested in CI, also under slim-image conditions.
+description: ".NET host and DI: lifetimes and the captive dependency (a singleton holding a scoped service), options validated at start-up, typed HTTP clients, TimeProvider, modern C#."
 version: 2.0.1
 ---
 

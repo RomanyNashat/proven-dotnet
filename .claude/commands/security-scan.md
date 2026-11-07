@@ -1,6 +1,6 @@
 ---
 name: security-scan
-description: Full security audit covering OWASP Top 10:2025 and optionally healthcare compliance (HIPAA/PDPL). Runs security-reviewer and optionally compliance-auditor.
+description: "Security audit against the OWASP Top 10, optionally with healthcare compliance (HIPAA, PDPL)."
 allowed-tools: Read, Grep, Glob, Agent
 ---
 

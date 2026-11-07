@@ -1,6 +1,6 @@
 ---
 name: efcore-patterns
-description: EF Core 10/8, on PostgreSQL and SQL Server — pooled contexts with per-request state, query filters that don't leak between callers, audit interceptors, retries with transactions, concurrency, bulk updates, reviewed migration scripts, DBA column rules. Core code tested in CI on both engines.
+description: "EF Core on PostgreSQL and SQL Server: slow queries and N+1, split queries, query filters, interceptors, concurrency, bulk updates, migration scripts up and down."
 version: 2.4.0
 ---
 

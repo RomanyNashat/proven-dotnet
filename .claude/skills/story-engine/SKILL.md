@@ -1,6 +1,6 @@
 ---
 name: story-engine
-description: "Generate epics/stories/sub-tasks from requirements or code: INVEST, Gherkin AC, Jira hierarchy, Markdown + CSV, Jira push."
+description: "Turn requirements or code into epics, user stories and sub-tasks with Gherkin acceptance criteria; export Markdown or a Jira CSV."
 version: 1.1.0
 ---
 

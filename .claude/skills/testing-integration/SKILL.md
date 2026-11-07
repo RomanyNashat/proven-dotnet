@@ -1,6 +1,6 @@
 ---
 name: testing-integration
-description: Integration testing for .NET — WebApplicationFactory against a real PostgreSQL or SQL Server in Testcontainers, schema from SQL (never Migrate), Respawn between tests, a test auth handler, ownership checks. Factory and tests run in CI on both engines.
+description: "Integration tests with WebApplicationFactory and a real PostgreSQL or SQL Server in Testcontainers, schema from SQL, Respawn between tests, a test auth handler."
 version: 2.1.0
 ---
 

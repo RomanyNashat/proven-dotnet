@@ -1,6 +1,6 @@
 ---
 name: tdd
-description: Execute TDD workflow — write failing tests first, implement minimally, refactor. Use for any new feature or bug fix implementation.
+description: "Work test-first: write the failing tests, implement the minimum, refactor."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
