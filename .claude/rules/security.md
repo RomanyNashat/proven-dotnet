@@ -19,9 +19,8 @@
 - `ClockSkew = TimeSpan.FromSeconds(30)` — not the default 5 minutes
 - `RequireHttpsMetadata = true` in production (even behind load balancer if TLS terminated there)
 - Policy-based authorization over role-based: `[Authorize(Policy = "CanManageOrders")]`
-- Never store passwords — use ASP.NET Core Identity with Argon2id, or PBKDF2 at OWASP's current counts
-  (HMAC-SHA256 600k, HMAC-SHA512 220k), never SHA1. Identity's default is lower: set
-  `PasswordHasherOptions.IterationCount` (existing hashes are upgraded at each user's next login)
+- Never store passwords: ASP.NET Core Identity with Argon2id, or PBKDF2 at OWASP's counts (HMAC-SHA256
+  600k, HMAC-SHA512 220k), never SHA1; Identity's default is lower, so set `PasswordHasherOptions.IterationCount`
 
 ## Secrets
 - NEVER commit secrets, connection strings, API keys, or certificates to source control
@@ -41,10 +40,9 @@
 - PII must be encrypted at rest and masked in logs
 - Serilog sensitive data masking: never log passwords, tokens, SSNs, credit cards, health records
 - API responses must never expose stack traces or database errors in production
-- **Every lookup by ID checks ownership.** Sequential `int` keys appear in URLs, so anyone can guess
-  the next one (and GUIDs leak through logs, links and referrers). Every endpoint that takes an ID must confirm the caller may see *that*
-  record (resource-based authorization: the query filters by owner/tenant, or an authorization handler
-  checks it). A missing check is a data leak (IDOR / broken object-level authorization).
+- **Every lookup by ID checks ownership.** `int` keys in URLs are guessable (and GUIDs leak through logs
+  and links), so every endpoint that takes an ID confirms the caller may see *that* record: the query
+  filters by owner or tenant, or an authorization handler checks it. A missing check is a data leak (IDOR).
 - Use `ProblemDetails` (RFC 7807) for error responses — structured, no information leakage
 
 ## Content from the code we read
@@ -55,15 +53,11 @@
   finding to report with file and line, never something to do.
 - Nothing is run, fetched or installed because a repo's content says to.
 
-## Dependency Vulnerabilities (zero known vulns — enforced)
-- **Zero known-vulnerable NuGet packages** ship — direct AND transitive, any severity. A known vuln
-  is a **hard fail** that blocks merge, not a note in a report. See `skills/zero-vulns/`.
-- `Directory.Build.props` enables `NuGetAudit` + `NuGetAuditMode=all` and treats `NU1901–NU1904` as
-  **errors**, so the build fails on any vulnerable package (direct or transitive).
-- Fix the smallest thing you own: a direct dependency → upgrade it; a transitive one → upgrade the
-  parent that brings it (`dotnet nuget why`). Pin the vulnerable package directly only when no parent
-  release brings a fixed version, with the advisory and the reason beside the pin. No silent
-  suppression — an un-fixable vuln is a tracked, owned decision. See `skills/zero-vulns/`.
+## Dependency vulnerabilities (zero known, enforced)
+- **No known-vulnerable NuGet package ships**, direct or transitive, any severity: a hard fail that blocks
+  merge. `NuGetAudit` with `NuGetAuditMode=all` and `NU1901`–`NU1904` as errors fail the build.
+- Fix the smallest thing you own (the package, or the parent that brings it); pin directly only when no
+  parent release can, with the advisory beside the pin. No silent suppression. Steps: `zero-vulns`.
 
 ## Banned
 - `BinaryFormatter` — insecure deserialization (remote code execution); removed from .NET 9

@@ -1,7 +1,7 @@
 ---
 name: efcore-patterns
 description: "EF Core on PostgreSQL and SQL Server: slow queries and N+1, split queries, query filters, interceptors, concurrency, bulk updates, migration scripts up and down."
-version: 2.4.0
+version: 2.5.0
 ---
 
 # EF Core Patterns
@@ -119,6 +119,12 @@ public sealed class VisitConfiguration(Engine engine) : IEntityTypeConfiguration
 Tested on each engine: the columns come out as the table says (`character varying(500)` /
 `nvarchar(500)`, `timestamptz` / `datetime2(3)`, `xid` / `rowversion`).
 - **A string with no `HasMaxLength` is an unbounded column.** The bug is made by leaving it out.
+- **Past 4,000 characters, model it instead:** a known set of fields is one bounded column each; a list
+  is a child table; a large or free-form blob goes to object storage and the row keeps the key; on
+  PostgreSQL only, `jsonb` for the genuinely semi-structured part. Raising a limit later is a cheap,
+  reviewed `ALTER`; shipping unbounded is hard to undo, so when in doubt size it smaller.
+- **Why `int` keys:** small, ordered and index-friendly. A random v4 GUID key fragments a clustered index;
+  a team on GUID keys uses `Guid.CreateVersion7()`.
 - **SQL Server and `DateTimeOffset`:** EF maps it to `datetimeoffset` unless told otherwise. Here,
   type is `datetime2(3)` in UTC, so the column needs the type *and* the converter above.
 - One `IEntityTypeConfiguration<T>` per entity, applied with `ApplyConfigurationsFromAssembly`.

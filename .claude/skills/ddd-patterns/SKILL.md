@@ -1,7 +1,7 @@
 ---
 name: ddd-patterns
 description: "DDD in .NET: aggregate roots, value objects as records, HiLo int ids, domain events dispatched after save and across services, one repository per aggregate."
-version: 2.2.0
+version: 2.3.0
 ---
 
 # DDD Patterns
@@ -12,7 +12,7 @@ and SQL Server 2022 (`tests/SkillSamples.Tests/Ddd`): the same tests run on each
 
 Related: `design-patterns` (§4: repository and Unit of Work verdicts), `efcore-patterns` (mapping, column
 rules), `outbox` (events that leave the service), `cqrs-eventsourcing` (handlers and the in-process event
-dispatcher), `rules/architecture.md` (the layers).
+dispatcher), `rules/architecture.md` (the dependency rules), §8 here (what each layer holds).
 
 ## 1. An aggregate
 
@@ -243,6 +243,10 @@ public sealed class OrderLineConfiguration(bool sqlServer) : IEntityTypeConfigur
 - The same word can mean different models (a Product in Orders isn't the Product in Inventory);
   translate at the boundary instead of sharing the class.
 
+- Inside a service: synchronous calls are gRPC (`grpc-patterns`); outside, REST through the gateway (YARP:
+  routing, auth offloading, rate limits); asynchronous ones are Kafka events. Services find each other
+  through .NET Aspire or Kubernetes DNS (`aspire-patterns`).
+
 ## 7. Review checklist
 - An aggregate method called on an aggregate loaded without its children (`FindAsync`, no `Include`).
 - A repository returning `IQueryable`, part of an aggregate, or calling `Update` on tracked entities.
@@ -250,3 +254,21 @@ public sealed class OrderLineConfiguration(bool sqlServer) : IEntityTypeConfigur
 - An id generator service or a GUID public id beside an `int` key; an event raised with id 0.
 - A domain-event handler that publishes to Kafka directly.
 - `DateTime.UtcNow`/`DateTimeOffset.UtcNow` in an event or entity; a value-object string without a length.
+
+## 8. The layers
+
+What each Clean Architecture layer holds (`rules/architecture.md` has the arrows; `testing-architecture`
+enforces them):
+- **Domain:** entities and aggregate roots that change state through methods, never public setters; value
+  objects as records (`public sealed record Money(decimal Amount, string Currency);`); domain events, raised
+  by aggregates, collected inside them and dispatched after the save (§5); repository interfaces; domain
+  services. No packages but pure abstractions.
+- **Application:** commands, queries (`ICommand<TResult>`, `IQuery<TResult>`), DTOs, validators and
+  pipeline behaviours. One sealed handler per command or query; FluentValidation runs in a behaviour
+  before the handler (`cqrs-eventsourcing`). No database access except through the Domain's interfaces.
+- **Infrastructure:** the DbContext with one `IEntityTypeConfiguration<T>` per entity, repository
+  implementations, Kafka producers and consumers, Redis, external API clients. One migration per logical
+  change, backward-compatible (`efcore-patterns`).
+- **API:** endpoints or controllers, middleware, filters, mappers. Thin: it maps HTTP to a command or
+  query and returns `TypedResults` (Minimal APIs) or `ActionResult<T>`, at most 5 to 7 endpoints per group
+  (`api-design`).

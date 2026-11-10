@@ -3,6 +3,22 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.15 — the always-loaded rules cut by a third
+- **`core.md` and `rules/` went from about 41,800 characters to 28,800** (about 10,400 tokens to 7,200),
+  which every session loads before it reads a word of the task. Every ban and one-line rule stays.
+  Reference and steps moved to the skill that does the work, which loads when the work comes up: modern
+  C# by version and hot-path advice to `dotnet-core`; what each Clean Architecture layer holds and how
+  services call each other to `ddd-patterns` §8; modelling past 4,000 characters and why keys are `int`
+  to `efcore-patterns`; the FluentAssertions licence details to `testing-tdd`; when to use `IMemoryCache`
+  to `caching`; compression and cache headers to `api-design`. The rest was the same rule said twice, or
+  history ("measured over two weeks...") cut to a clause.
+- **`tools/ci/check-rules.py`** holds it there. `tests/rules/inventory.tsv` names every rule the files
+  held before the cut and the file that holds it now (140 rules), and CI fails when one goes missing or
+  the always-loaded files pass 30,000 characters.
+- **Measured before and after with a fix eval** (round six, `fix-sync`): see `tests/evals/fix-sync/results.md`.
+- **`tests/evals/tools/run-round.sh`** runs one eval arm in a clean home folder at any git ref, with the
+  model and effort named (`claude-opus-5-5`, medium by default), so a run never takes the CLI's defaults.
+
 ## 0.3.14 — every skill visible in the listing
 - **Every description is short, so none is dropped.** Claude Code lists each skill's and command's name and
   description at the start of a session, in a budget of 1% of the context window that its own skills and

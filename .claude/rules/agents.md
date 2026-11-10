@@ -2,21 +2,10 @@
 
 ## Model selection (non-negotiable)
 
-**Any agent that transforms code, evaluates/reviews code, or diagnoses code → Opus.** Opus has the
-wider, deeper eyesight; for a harness whose purpose is senior-quality output, the review and
-transformation paths are exactly where we do NOT economize — a missed issue or a subtle bad edit
-degrades the codebase, and "AI is sloppy" is exactly the reputation this harness exists to defeat.
-
-- **Opus (default):** design, planning, requirements, code transformation (refactors, migrations,
-  mapping, scaffolding, TDD implementation), code evaluation/review (reviewers, analysts, auditors,
-  coverage, health), diagnosis (build errors), and voice-sensitive writing (stories, handover).
-- **Sonnet:** reserved for work that neither transforms nor evaluates code and is low-consequence with
-  a downstream check. **Currently no agent qualifies — all run on Opus.** `doc-updater` was the last
-  Sonnet agent and moved to Opus once it became clear it edits Swagger attributes inside .cs files and
-  verifies that code examples compile: both are code work.
-
-A new agent defaults to Opus. Only drop it to Sonnet if it clearly does not touch code quality or
-correctness. When in doubt, Opus.
+**Any agent that transforms, reviews or diagnoses code runs on Opus**: a missed issue or a subtle bad
+edit is the cost this harness exists to avoid. That covers design, planning, refactors, migrations, TDD,
+every reviewer and analyst, build errors, and voice-sensitive writing. Sonnet only for work that neither
+changes nor judges code and has a check after it; today no agent qualifies. A new agent defaults to Opus.
 
 
 ## The Standard Pipeline

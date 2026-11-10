@@ -1,58 +1,30 @@
 # Testing Requirements
 
-## TDD Mandate
-Every feature and bug fix MUST follow the Red-Green-Refactor cycle:
-1. RED — Write failing tests that define expected behavior
-2. GREEN — Write minimum code to make tests pass
-3. REFACTOR — Clean up while keeping tests green
-
-No implementation code without a failing test first. No exceptions.
+## TDD
+Every feature and bug fix goes red, green, refactor: a failing test first, the least code that passes
+it, then clean up with the tests green. No implementation code without a failing test first.
 
 ## Stack
-- **xUnit 2.x** — test framework (not NUnit, not MSTest)
-- **FluentAssertions 7.x ONLY — never 8.0 or later** — readable assertions:
-  `result.Should().Be(expected)`. **7.x is the last Apache-2.0 (fully open-source) version.** From 8.0
-  the library moved to the Xceed Community License, which requires a **paid license for commercial
-  use**. A silent `dotnet outdated`/Dependabot bump to 8.x puts a commercial project in breach, so
-  **pin the range explicitly** in every test project:
-  ```xml
-  <PackageReference Include="FluentAssertions" Version="[7.0.0,8.0.0)" />
-  ```
-  The bracketed range blocks 8.0+. NuGet restores the lowest version a range allows, so it gives 7.0.0
-  until you raise the lower bound to the 7.x fix you want. (With Central Package Management the range
-  goes on the `PackageVersion`; see `skills/msbuild/`.) Prefer this over an unpinned `Version="7.0.0"`, which NuGet may float upward.
-  If a project must move off FluentAssertions entirely, the license-safe options are the community fork
-  **AwesomeAssertions** (original Apache license) or **Shouldly**. Never upgrade to 8+ in a
-  commercial project without a purchased license.
-- **Moq 4.x or NSubstitute** — mocking. Use the one the codebase already uses, and never mix the two
-  in one test project. With no existing choice, Moq is the default here, unless your team's rules say
-  otherwise.
-- **AutoFixture** — test data generation (`AutoFixture.AutoMoq` or `AutoFixture.AutoNSubstitute`)
-- **Testcontainers** — real databases in integration tests (PostgreSQL, SQL Server, Redis, MongoDB, Kafka)
-- **Respawn** — database reset between integration tests (`TablesToIgnore: ["__EFMigrationsHistory"]`)
-- **WebApplicationFactory\<Program\>** — API integration tests (works with top-level statements in .NET 10)
-- **NetArchTest** — architecture validation (layer dependencies, naming conventions)
-- **Coverlet** — code coverage collection
-- **BenchmarkDotNet** — performance benchmarks for critical paths
+- **xUnit 2.x** (not NUnit or MSTest).
+- **FluentAssertions 7.x only, pinned `Version="[7.0.0,8.0.0)"`**: 8.0 and later need a paid licence for
+  commercial use, and an unpinned version can float up. Why and the alternatives: `testing-tdd`.
+- **Moq 4.x or NSubstitute**: the one the codebase uses, never both in one test project; Moq when there's
+  no choice yet, unless your team's rules say otherwise. **AutoFixture** for test data.
+- **Testcontainers** for real databases and brokers, **Respawn** between tests
+  (`TablesToIgnore: ["__EFMigrationsHistory"]`), **WebApplicationFactory\<Program\>** for API tests.
+- **NetArchTest** for architecture, **Coverlet** for coverage, **BenchmarkDotNet** for hot paths.
 
-## Coverage Thresholds
-- **80% line coverage** minimum — enforced in CI via Coverlet
-- **70% branch coverage** minimum
-- Zero test failures on the main branch — no exceptions, no `[Skip]` without an issue number
+## Coverage
+- At least 80% line and 70% branch coverage, enforced in CI.
+- No failing test on the main branch, and no `[Skip]` without an issue number.
 
-## Naming Convention
-`MethodName_Scenario_ExpectedBehavior`
-
-Examples:
-- `GetOrderById_OrderExists_ReturnsOrder`
-- `CreateUser_DuplicateEmail_ThrowsConflictException`
-- `ProcessPayment_InsufficientFunds_ReturnsFailureResult`
+## Naming
+`MethodName_Scenario_ExpectedBehavior`, for example `GetOrderById_OrderExists_ReturnsOrder`.
 
 ## Patterns
-- Arrange-Act-Assert structure. Clear separation between phases.
-- One assertion concept per test (multiple `Should()` calls OK if testing same concept).
-- `[Fact]` for single cases. `[Theory]` with `[InlineData]` or `[MemberData]` for parameterized.
-- No test-to-test dependencies. Every test must run in isolation and in any order.
-- Never use in-memory database providers (EF InMemory) — use Testcontainers with real engines.
-- Integration tests use `IAsyncLifetime` for setup/teardown.
-- Test doubles (Moq or NSubstitute) for unit tests. Real dependencies (via Testcontainers) for integration tests.
+- Arrange, act, assert, clearly apart; one assertion concept per test.
+- `[Fact]` for one case, `[Theory]` with `[InlineData]` or `[MemberData]` for several.
+- Every test runs alone and in any order.
+- Never the EF InMemory provider: Testcontainers with the real engine.
+- Integration tests use `IAsyncLifetime` for setup and teardown.
+- Test doubles in unit tests; real dependencies, through Testcontainers, in integration tests.
