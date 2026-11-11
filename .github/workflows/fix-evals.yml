@@ -83,7 +83,9 @@ jobs:
           base=tests/evals/fix-lab
           python3 tests/evals/tools/gate.py scores scores-fix-lab.json > graded-scores.json
           if ! diff -u "$base/scores.json" graded-scores.json; then
-            echo "::error title=eval gate::$base/scores.json isn't what CI graded: commit the file above (gate.py scores)"
+            # The log isn't readable everywhere the result is needed, and a step keeps only ten annotations:
+            # the graded scores go in this one, whole.
+            echo "::error title=eval gate::$base/scores.json isn't what CI graded: commit the file above (gate.py scores). Graded: $(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), separators=(",", ":"), sort_keys=True))' graded-scores.json)"
             exit 1
           fi
           if git fetch -q --depth=1 origin main && git show origin/main:$base/scores.json > baseline-scores.json 2>/dev/null; then
@@ -136,7 +138,9 @@ jobs:
           base=tests/evals/fix-sync
           python3 tests/evals/tools/gate.py scores scores-fix-sync.json > graded-scores.json
           if ! diff -u "$base/scores.json" graded-scores.json; then
-            echo "::error title=eval gate::$base/scores.json isn't what CI graded: commit the file above (gate.py scores)"
+            # The log isn't readable everywhere the result is needed, and a step keeps only ten annotations:
+            # the graded scores go in this one, whole.
+            echo "::error title=eval gate::$base/scores.json isn't what CI graded: commit the file above (gate.py scores). Graded: $(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), separators=(",", ":"), sort_keys=True))' graded-scores.json)"
             exit 1
           fi
           if git fetch -q --depth=1 origin main && git show origin/main:$base/scores.json > baseline-scores.json 2>/dev/null; then
@@ -189,7 +193,9 @@ jobs:
           base=tests/evals/fix-labs
           python3 tests/evals/tools/gate.py scores scores-fix-labs.json > graded-scores.json
           if ! diff -u "$base/scores.json" graded-scores.json; then
-            echo "::error title=eval gate::$base/scores.json isn't what CI graded: commit the file above (gate.py scores)"
+            # The log isn't readable everywhere the result is needed, and a step keeps only ten annotations:
+            # the graded scores go in this one, whole.
+            echo "::error title=eval gate::$base/scores.json isn't what CI graded: commit the file above (gate.py scores). Graded: $(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), separators=(",", ":"), sort_keys=True))' graded-scores.json)"
             exit 1
           fi
           if git fetch -q --depth=1 origin main && git show origin/main:$base/scores.json > baseline-scores.json 2>/dev/null; then
