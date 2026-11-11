@@ -15,7 +15,10 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
 - **`tools/ci/check-rules.py`** holds it there. `tests/rules/inventory.tsv` names every rule the files
   held before the cut and the file that holds it now (140 rules), and CI fails when one goes missing or
   the always-loaded files pass 30,000 characters.
-- **Measured before and after with a fix eval** (round six, `fix-sync`): see `tests/evals/fix-sync/results.md`.
+- **Measured before and after with a fix eval** (round six, `fix-sync`, `claude-opus-5-5` at medium, three
+  runs each): with the whole harness, 30/30 findings and 18/18 regressions both before and after the cut.
+  Rules alone, 30/30 before and 29/30 after: one run missed the tzdata fallback, which neither version's
+  rules mention (the `localization` skill teaches it). Details and disclosures in `tests/evals/fix-sync/results.md`.
 - **`tests/evals/tools/run-round.sh`** runs one eval arm in a clean home folder at any git ref, with the
   model and effort named (`claude-opus-5-5`, medium by default), so a run never takes the CLI's defaults.
 
