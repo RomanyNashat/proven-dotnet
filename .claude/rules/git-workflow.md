@@ -15,21 +15,14 @@ the team's rules win.
 **Scope**: service name or module (optional but encouraged)
 **Description**: imperative mood, lowercase, no period, max 72 chars
 
-Examples:
-- `feat(notifications): add push bulk chunking with 500-item limit`
-- `fix(orders): resolve UTC+3 off-by-one in sorted set range queries`
-- `refactor(handlers): extract decorator registration to extension method`
-- `perf(catalog-api): fix connection leak in nested Task.Run`
+Examples: `feat(notifications): add push bulk chunking with 500-item limit`,
+`fix(orders): resolve UTC+3 off-by-one in sorted set range queries`.
 
 ## Branches
 - Branch from the main branch for every change: `feat/<short-description>`, `fix/<short-description>`
   (with the issue number if there is one).
 - One change per branch, merged through a pull request (a merge request on GitLab).
 - Delete the branch after merge unless your team keeps them for traceability.
-
-**Beware re-merging reverted commits.** If a commit was reverted on a shared branch and the original
-branch is merged again, git considers it already merged and the change silently does not come back.
-When a revert is involved, re-apply the change on a new commit rather than re-merging.
 
 ## Claude and Git
 - **Claude doesn't commit or push on its own initiative.** It drafts the commit message and asks; it
@@ -42,7 +35,8 @@ When a revert is involved, re-apply the change on a new commit rather than re-me
 ## Rules
 - Every commit must build and pass tests — no broken commits on shared branches.
 - Never force-push to the main branch or any shared branch.
-- Re-apply, never re-merge, a change whose commit was reverted.
+- Re-apply, never re-merge, a change whose commit was reverted: git takes the branch as already merged,
+  and the change silently doesn't come back.
 - PR title follows the commit format: `feat(scope): description`.
 
 ## PR Process

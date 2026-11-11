@@ -1,7 +1,7 @@
 ---
 name: api-design
 description: "ASP.NET Core REST endpoints: minimal APIs and TypedResults, ProblemDetails, validation, versioning, the OpenAPI document, ownership checks, keyset paging, rate limits."
-version: 3.2.1
+version: 3.3.0
 ---
 
 # API Design
@@ -171,6 +171,9 @@ changing a response inside an existing version breaks installed apps.
 - **Keyset paging** (`WHERE id > @after ORDER BY id LIMIT @size`, return the next cursor) for anything that
   grows: appointments, visits, logs. `OFFSET` gets slower page by page (`rules/performance.md`).
 - Project to a DTO with only the fields the screen needs; a list never returns whole patient records.
+
+- **Responses:** compression with `AddResponseCompression()`, Brotli first and Gzip after;
+  `Cache-Control`, `ETag` or `Last-Modified` on what can be cached.
 
 ## 6. Rate limiting
 

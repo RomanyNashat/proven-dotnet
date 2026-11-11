@@ -70,3 +70,40 @@ These go through `/lessons`, with the gate on fix-lab, fix-hard and this fixture
   from the agent's final message. The no-rules runs' reports are their final answers.
 - **Shared scratch space.** One proven fixer noted another run's files in the session's scratch folder
   overwrote its own working folder there; both kept their service changes inside their own run folder.
+
+## Round six: the always-loaded rules cut by a third (2026-11-11)
+
+The question: does cutting `core.md` and `rules/` from about 41,800 characters to 28,800 (0.3.15) cost a
+fix? The same fixture, `task.md` word for word, `claude-opus-5-5` at medium effort, three runs per arm, on
+`main` (0.3.14, before) and on the change's branch (after). Each run ran in a clean home that held only
+that version of the harness (`tests/evals/tools/run-round.sh`), no session, Project or other layer.
+
+| Arm | Version | Findings fixed | Regressions kept | Builds |
+| --- | --- | --- | --- | --- |
+| with proven | before (main) | 30/30 | 18/18 | 3/3 |
+| with proven | after (cut) | 30/30 | 18/18 | 3/3 |
+| rules only | before (main) | 30/30 | 18/18 | 3/3 |
+| rules only | after (cut) | 29/30 | 18/18 | 3/3 |
+
+- **With proven, nothing moved:** every finding in every run, before and after. This is the arm the
+  harness is used in, and the one the decision rested on.
+- **Rules only, one miss after the cut: M02** (the tzdata fallback), in one run of three. Neither
+  version's rules mention time zones (`git grep` on both: only the `timestamptz` column rule); the fix is
+  taught by `localization`, which this arm doesn't load. The no-rules arm misses M02 in one run of three
+  too. Read as run-to-run variance, not a lost rule; a fourth run wasn't made.
+- **What it cost:** the proven runs $12–23 each by the CLI's count, about 17 minutes each; the rules-only
+  runs about $2 and 9 minutes each.
+
+### Disclosures (round six)
+
+- **Every run was stopped by the 5-hour limit and carried on from its own session.** All twelve were
+  started side by side and the limit stopped nine within minutes; a container restart then cut one resume.
+  `resume-run.sh` continued each from its session (same home, model, effort and tools), and
+  `run-queue.sh` ran the rest one at a time. One resumed proven run (after-2) launched its three reviewers
+  a second time instead of reusing the first reports.
+- **The proven route here is the harness's own, not round five's:** the prompt was `task.md` plus "Use
+  /full-review on MeterSync/ first, then have the tdd-guide agent apply its findings", in one `claude -p`
+  session that launched the agents itself. Round five drove each step from outside, so its proven scores
+  and these aren't the same measurement.
+- **Graded in CI, read from an annotation.** The cloud session can't download artifacts or logs, so the
+  gate's error annotation now carries the graded scores whole (a step keeps only ten annotations).

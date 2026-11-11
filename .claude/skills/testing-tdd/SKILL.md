@@ -1,7 +1,7 @@
 ---
 name: testing-tdd
 description: "TDD for .NET: write the failing test first, red-green-refactor, unit tests with xUnit, Moq, FluentAssertions 7 and AutoFixture, test names, a fixed clock."
-version: 2.3.1
+version: 2.4.0
 ---
 
 # TDD & Unit Testing Patterns
@@ -15,7 +15,10 @@ Where your team's own standard differs, the team's standard wins.
 - **FluentAssertions pin:** 7.x is the last Apache-2.0 version; 8.0 and later need a paid licence for
   commercial use. Pin the range in every test project so a package update can't move it:
   `<PackageReference Include="FluentAssertions" Version="[7.0.0,8.0.0)" />`. Tested as a story: the
-  samples' project resolves 7.x with that range.
+  samples' project resolves 7.x with that range. NuGet restores the lowest version a range allows, so
+  raise the lower bound to the 7.x fix you want; a bare `Version="7.0.0"` can float up. With Central
+  Package Management the range goes on the `PackageVersion` (`msbuild`). A project moving off it entirely
+  takes AwesomeAssertions (the Apache-licensed fork) or Shouldly; never 8.x without a bought licence.
 - **Red, green, refactor:** write the failing test first, make it pass with the least code, then clean up
   with the tests green.
 - **AAA** (Arrange, Act, Assert) in every test; **naming** `MethodName_Scenario_ExpectedResult`.

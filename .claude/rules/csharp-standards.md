@@ -1,64 +1,41 @@
 # C# Standards
 
-## Modern C# Features (adopt by version)
+## Language version
+- .NET 8 means C# 12 features only; .NET 10 means C# 14 in full (`field`, extension blocks,
+  null-conditional assignment). Modern C# and examples: `dotnet-core`.
 
-### C# 12+ (.NET 8+)
-- Primary constructors for DI injection in services: `public class OrderService(IOrderRepository repo, ILogger<OrderService> logger)`
-- Collection expressions: `int[] ids = [1, 2, 3];` over `new int[] { 1, 2, 3 }`
-- Required members: `public required string Name { get; init; }`
-- Raw string literals for multi-line SQL, JSON, XML
-- `nameof()` in attributes
+## Naming
+- PascalCase for types, members, constants, enums and events; camelCase for locals and parameters;
+  `_camelCase` for private fields.
+- `I` prefix on interfaces, `Async` suffix on async methods, `Base` suffix on abstract base classes.
+- No Hungarian notation, no abbreviations but the universal ones (Id, Url, Http, Dto).
 
-### C# 13+ (.NET 9+)
-- Partial properties for source-generated code
-- `params` with `ReadOnlySpan<T>` and collections
+## DI lifetimes
+- Scoped: DbContext, repositories, unit of work, current user or tenant.
+- Singleton: HTTP client factories, Redis `ConnectionMultiplexer`, `MongoClient`, `IMemoryCache`, options.
+- Transient: stateless services, validators, mappers.
+- **Never** a scoped service inside a singleton (a captive dependency): use `IServiceScopeFactory`.
 
-### C# 14+ (.NET 10+)
-- `field` keyword in property accessors — no explicit backing field needed
-- Extension blocks: `extension(string s) { public bool IsEmail => s.Contains("@"); }`
-- Null-conditional assignment: `obj?.Property ??= defaultValue;`
-- `nameof` on unbound generics: `nameof(List<>)` → `"List"`
-- Partial constructors and events
-- Lambda parameter modifiers: `(ref int x) => x++`
+## Critical rules (never violate)
+- NEVER call `.Result` or `.Wait()` on tasks: async all the way down.
+- NEVER instantiate `HttpClient` directly: `IHttpClientFactory` or typed clients.
+- NEVER use `DateTime.Now` or `DateTime.UtcNow`: inject `TimeProvider`.
+- NEVER use `BinaryFormatter`: `System.Text.Json`.
+- NEVER use `Thread.Sleep()`: `await Task.Delay()` with `TimeProvider`.
+- ALWAYS enable nullable reference types, with CS8600, CS8602 and CS8603 as errors.
+- ALWAYS use `CultureInfo.InvariantCulture` for parsing and formatting data no person reads.
+- NEVER let `ar-SA` become the formatting culture: its calendar is Hijri or Gregorian depending on the
+  machine's ICU, and its numbers can use Arabic separators. A language header sets the UI culture only;
+  a date a person reads names its calendar (`localization`).
+- ALWAYS seal classes unless they are designed for inheritance.
+- Primary keys are `int` identity (`bigint` for very large tables) unless your team's rules say
+  otherwise (`rules/efcore-rules.md`). A GUID only for an id made outside the database, and then
+  `Guid.CreateVersion7()`, never a random v4.
 
-When targeting .NET 8, limit to C# 12 features. When targeting .NET 10, use C# 14 fully.
-
-## Naming Conventions
-- **PascalCase**: classes, methods, properties, public fields, constants, enums, events
-- **camelCase**: local variables, parameters, lambda parameters
-- **_camelCase**: private fields (underscore prefix)
-- **I prefix**: interfaces (`IOrderRepository`, `INotificationService`)
-- **Async suffix**: async methods (`GetOrderAsync`, `PublishEventAsync`)
-- **Base suffix**: abstract base classes (`EntityBase`, `AggregateRootBase`)
-- No Hungarian notation. No abbreviations except universally known ones (Id, Url, Http, Dto).
-
-## DI Lifetime Rules
-- **Scoped**: DbContext, repositories, unit of work, current user/tenant services
-- **Singleton**: HttpClient factories, ConnectionMultiplexer (Redis), MongoClient, IMemoryCache, configuration objects
-- **Transient**: Stateless services, validators, mappers
-- **NEVER** inject Scoped into Singleton — causes captive dependency. Use `IServiceScopeFactory` instead.
-
-## Critical Rules (NEVER VIOLATE)
-- NEVER call `.Result` or `.Wait()` on tasks — async all the way down
-- NEVER instantiate `HttpClient` directly — use `IHttpClientFactory` or typed clients
-- NEVER use `DateTime.Now` or `DateTime.UtcNow` — inject `TimeProvider` for testability
-- NEVER use `BinaryFormatter` — use `System.Text.Json` (insecure deserialization)
-- NEVER use `Thread.Sleep()` — use `await Task.Delay()` with `TimeProvider`
-- ALWAYS enable nullable reference types — treat CS8600/CS8602/CS8603 as errors
-- ALWAYS use `CultureInfo.InvariantCulture` for parsing/formatting non-user-facing data
-- NEVER let `ar-SA` become the formatting culture: its default calendar comes from the machine's ICU,
-  Hijri on one image (`2026` then parses as a Hijri year and fails) and Gregorian on another, and its
-  numbers can use Arabic separators. A language header sets the UI culture only; a date a person reads
-  names its calendar — see `skills/localization/`.
-- ALWAYS seal classes unless explicitly designed for inheritance
-- Database primary keys are `int` identity (`bigint` for very large tables) unless your team's rules say
-  otherwise — see `rules/efcore-rules.md`. GUIDs for IDs created outside the database; then
-  `Guid.CreateVersion7()`, never random v4.
-
-## Banned Patterns
-- Service Locator — use constructor injection exclusively
-- Lazy loading in EF Core — use explicit `.Include()` or projections
-- God controllers — max 5-7 endpoints per controller or endpoint group
-- Anemic domain models — entities must have behavior, not just properties
-- Throwing exceptions for control flow — use Result/OneOf pattern for expected failures
-- `catch (Exception) { }` — never swallow exceptions silently
+## Banned patterns
+- Service Locator: constructor injection only.
+- Lazy loading in EF Core: explicit `.Include()` or projections.
+- God controllers: at most 5 to 7 endpoints per controller or endpoint group.
+- Anemic domain models: entities have behaviour, not just properties.
+- Exceptions for control flow: a Result or OneOf for expected failures.
+- `catch (Exception) { }`: never swallow an exception.

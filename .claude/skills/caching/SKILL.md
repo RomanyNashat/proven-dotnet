@@ -1,7 +1,7 @@
 ---
 name: caching
 description: "Caching for .NET: HybridCache with tag invalidation and stampede protection, cache-aside, TTLs, and evicting every pod's local cache through Redis."
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Caching — the discipline, not just a Redis client
@@ -113,3 +113,6 @@ public sealed class L1Eviction(IConnectionMultiplexer redis, HybridCache cache)
 - On multi-pod services, decide the L1-coherence approach explicitly (backplane or short window).
 - Don't cache writes you can't afford to lose with write-back.
 - Cache keys: stable, prefixed, versioned when the shape changes (`patient:v2:{id}`).
+- Every entry has an absolute expiration; a sliding one only where the access pattern justifies it.
+- Plain `IMemoryCache` only for one instance and small, hot data (under about 100 items and 1 MB); a
+  distributed cache (Redis) for anything shared across pods or for session data.

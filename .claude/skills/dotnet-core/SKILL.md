@@ -1,7 +1,7 @@
 ---
 name: dotnet-core
 description: ".NET host and DI: lifetimes and the captive dependency (a singleton holding a scoped service), options validated at start-up, typed HTTP clients, TimeProvider, modern C#."
-version: 2.0.1
+version: 2.1.0
 ---
 
 # .NET Core & Modern C# Patterns
@@ -298,6 +298,10 @@ public static string Describe(OrderStatus status) => status switch
 customer?.Address ??= Address.Unknown;
 ```
 
+Also by version: `nameof()` in attributes (C# 12); partial properties for source generators and
+`params ReadOnlySpan<T>` (C# 13, .NET 9); `nameof(List<>)` on an unbound generic, partial constructors
+and events, and lambda parameter modifiers such as `(ref int x) => x++` (C# 14). On .NET 8, stay at C# 12.
+
 ### GUIDs: `Guid.CreateVersion7()`, and only where a GUID is really needed
 
 Database keys are `int` identity (`rules/efcore-rules.md`). When an ID must be created outside the
@@ -310,6 +314,18 @@ public sealed record OrderPlaced(int OrderId, DateTimeOffset OccurredAt)
     public Guid MessageId { get; init; } = Guid.CreateVersion7();   // not a database key
 }
 ```
+
+## Hot paths
+
+Only after measuring (BenchmarkDotNet with `[MemoryDiagnoser]`); everywhere else, clear code wins.
+- `Span<T>` and `ReadOnlySpan<T>` for parsing and slicing; `ArrayPool<T>.Shared` or `MemoryPool<T>` for
+  temporary buffers; `stackalloc` for small fixed buffers (under 256 bytes).
+- `StringBuilder` for concatenation in a loop, `string.Create()` to build a string without copies,
+  `StringComparison.OrdinalIgnoreCase` instead of `ToLower()`/`ToUpper()` to compare.
+- No boxing of value types through `object`; a `for` loop over LINQ in a tight loop.
+- `ValueTask<T>` where a call usually completes synchronously (a cache hit); `ConfigureAwait(false)` in
+  library code (not needed in ASP.NET Core app code); `Channel<T>` for producer-consumer, not
+  `BlockingCollection<T>`.
 
 ## Anti-patterns
 
