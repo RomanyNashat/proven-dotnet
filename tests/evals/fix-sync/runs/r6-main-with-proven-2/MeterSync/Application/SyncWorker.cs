@@ -1,0 +1,35 @@
+namespace MeterSync.Application;
+
+/// <summary>Every minute: pull new readings, then text the patients whose readings are out of range.</summary>
+public sealed class SyncWorker(IServiceScopeFactory scopes, TimeProvider time, ILogger<SyncWorker> logger)
+    : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1), time);
+        do
+        {
+            // Separate try blocks: a failed sync must not stop alerts for readings already stored.
+            try
+            {
+                await using var scope = scopes.CreateAsyncScope();
+                await scope.ServiceProvider.GetRequiredService<MeterSyncService>().SyncOnceAsync(stoppingToken);
+            }
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+            {
+                logger.LogError(ex, "Meter sync failed");
+            }
+
+            try
+            {
+                await using var scope = scopes.CreateAsyncScope();
+                await scope.ServiceProvider.GetRequiredService<AlertSweeper>().RunOnceAsync(stoppingToken);
+            }
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+            {
+                logger.LogError(ex, "Alert sweep failed");
+            }
+        }
+        while (await timer.WaitForNextTickAsync(stoppingToken));
+    }
+}
