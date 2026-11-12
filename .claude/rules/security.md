@@ -25,6 +25,8 @@
 ## Secrets
 - NEVER commit secrets, connection strings, API keys, or certificates to source control
 - Use `dotnet user-secrets` for local development
+- Settings keep Claude's file tools off `.env` files and the user-secrets folder (a guard against slips: a
+  shell process can still read them, so secrets stay out of the repo all the same)
 - Use Azure Key Vault or HashiCorp Vault for production
 - Environment variables for container deployments (injected via K8s Secrets or Vault Agent)
 - Rotate secrets on a schedule. Support zero-downtime rotation in code.
