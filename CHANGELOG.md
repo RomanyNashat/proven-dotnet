@@ -18,6 +18,16 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   pin is still flagged.
 - `zero-vulns` explains the case as it stands today.
 
+## 0.3.16 — Claude's file tools stay off the files that hold local secrets
+- **`settings.json` denies `Read` on `.env`, `.env.*` and the dotnet user-secrets folder**
+  (`~/AppData/Roaming/Microsoft/UserSecrets/**` on Windows, `~/.microsoft/usersecrets/**` elsewhere). A
+  `Read` deny also covers Grep, Glob, Edit and Write on those paths. It's a guard against a slip, not a lock:
+  a shell process can still read the files, so secrets stay out of the repo all the same. `.env.example`
+  is covered by `.env.*` too: describe its keys in the README. `appsettings.Development.json` stays
+  readable, since it's committed and should hold no secret.
+- `tests/rules/test_secret_reads.py` holds the rules there, with a story: a token in `.env`, and Claude
+  reading through the config.
+
 ## 0.3.15 — the always-loaded rules cut by a third
 - **`core.md` and `rules/` went from about 41,800 characters to 28,800** (about 10,400 tokens to 7,200),
   which every session loads before it reads a word of the task. Every ban and one-line rule stays.

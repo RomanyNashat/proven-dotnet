@@ -140,3 +140,4 @@ rules/coding-style.md	Max file length: 300 lines
 rules/coding-style.md	TODO comments must include an issue number
 rules/aspnetcore-rules.md	Middleware Order
 rules/aspnetcore-rules.md	No `IActionResult` in Minimal APIs
+rules/security.md	keep Claude's file tools off `.env` files and the user-secrets folder

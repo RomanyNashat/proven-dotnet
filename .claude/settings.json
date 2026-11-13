@@ -113,7 +113,11 @@
       "Bash(mkfs*)",
       "Bash(dd if=*)",
       "Bash(> /dev/sd*)",
-      "Bash(chmod 777*)"
+      "Bash(chmod 777*)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(~/AppData/Roaming/Microsoft/UserSecrets/**)",
+      "Read(~/.microsoft/usersecrets/**)"
     ]
   },
   "worktree": {
