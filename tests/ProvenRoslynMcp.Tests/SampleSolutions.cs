@@ -65,6 +65,9 @@ public sealed class SampleSolutions : IDisposable
     private static void Dotnet(string dir, params string[] args)
     {
         var psi = new ProcessStartInfo("dotnet") { WorkingDirectory = dir, RedirectStandardOutput = true, RedirectStandardError = true };
+        // A reused MSBuild node outlives `dotnet restore` and inherits its output pipe, so ReadToEnd never
+        // returns and the whole test run hangs before a single test starts.
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
         foreach (var a in args)
         {
             psi.ArgumentList.Add(a);
