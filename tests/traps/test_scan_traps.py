@@ -119,6 +119,25 @@ class ScanTrapsTests(unittest.TestCase):
             # When the fleet is scanned, then the central pin counts and the service is clean
             self.assertEqual([], scan_traps.scan(folder))
 
+    def test_story_parent_release_that_brings_a_fixed_pkcs_needs_no_pin(self):
+        # Given services with no Pkcs pin: EF Core 10.0.15 (it asks for Pkcs 10.0.13 itself), SqlClient 6.1.8
+        # (9.0.21), a 9.0.21 pin, and SqlClient 7.1.1, whose newest release still asks for 9.0.18
+        cases = {
+            "ef-10.0.15": ('<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />', []),
+            "sqlclient-6.1.8": ('<PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.8" />', []),
+            "pin-9.0.21": ('<PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />'
+                           '<PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />', []),
+            "sqlclient-7.1.1": ('<PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />',
+                                ["sqlclient-pkcs-unpinned"]),
+            "ef-10.0.14": ('<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.14" />',
+                           ["sqlclient-pkcs-unpinned"]),
+        }
+        for name, (refs, expected) in cases.items():
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                write(pathlib.Path(tmp), {"src/Api/Api.csproj": f"<Project><ItemGroup>{refs}</ItemGroup></Project>"})
+                # When the service is scanned, then only the ones still bringing a vulnerable Pkcs are flagged
+                self.assertEqual(expected, [f.check for f in scan_traps.scan(tmp)])
+
     def test_story_file_saved_by_a_windows_editor_with_a_bom_is_still_read(self):
         # Given a Program.cs saved with a UTF-8 byte-order mark, as Visual Studio writes it
         with tempfile.TemporaryDirectory() as tmp:

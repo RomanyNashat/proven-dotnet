@@ -3,6 +3,21 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.17 — a parent release now fixes the Pkcs advisory, and the tools say so
+- **SqlClient 6.1.8 and EF Core SqlServer 10.0.15 bring a fixed `System.Security.Cryptography.Pkcs`**
+  (9.0.21 and 10.0.13), so a SQL Server service on either upgrades the parent and needs no direct pin. A
+  service on SqlClient 7.x still pins: 7.1.1, the newest, asks for 9.0.18. Found by a fix eval run that
+  upgraded EF Core and came out clean without the pin.
+- **`parent_fix.py` counts a later patch on your own line.** It only looked past the last vulnerable
+  release overall, so with 7.1.1 vulnerable it told a service on 6.1.7 to pin when 6.1.8 fixes it. With
+  `--current`, it now names the lowest safe release at or above yours, unless a later patch on that same
+  line brings a vulnerable version again. Without `--current` it stays as it was, so it never suggests an
+  older line.
+- **`known-traps` stops flagging a service whose parent already fixes it** (`sqlclient-pkcs-unpinned`):
+  EF Core SqlServer 10.0.15+ or SqlClient 6.1.8+ on the 6.1 line, or a 9.0.21+ pin, is clean. 7.x without a
+  pin is still flagged.
+- `zero-vulns` explains the case as it stands today.
+
 ## 0.3.15 — the always-loaded rules cut by a third
 - **`core.md` and `rules/` went from about 41,800 characters to 28,800** (about 10,400 tokens to 7,200),
   which every session loads before it reads a word of the task. Every ban and one-line rule stays.

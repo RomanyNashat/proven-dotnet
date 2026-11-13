@@ -81,10 +81,21 @@ def report(entries, package, advisories, target, prerelease=False, current=None)
         rows.append({"parent": version, "brings": child,
                      "advisories": ff.advisories_for(child, advisories) if child else []})
     rows.sort(key=lambda r: ff.parse_version(r["parent"]))
-    last_bad = max((i for i, r in enumerate(rows) if r["advisories"]), default=-1)
-    floor = ff.parse_version(current) if current else None
-    safe = next((r for r in rows[last_bad + 1:]
-                 if r["brings"] and (floor is None or ff.parse_version(r["parent"]) >= floor)), None)
+    if current is None:
+        # Without your version, only a release after the last vulnerable one is safe to name: an older line's
+        # patch could be a downgrade for you.
+        last_bad = max((i for i, r in enumerate(rows) if r["advisories"]), default=-1)
+        return (rows[-1] if rows else None), next((r for r in rows[last_bad + 1:] if r["brings"]), None), rows
+    # With it, a later patch on an older line counts (SqlClient 6.1.8 fixed Pkcs while 7.1.1 didn't), as long
+    # as nothing after it on its own major.minor brings a vulnerable version again.
+    floor = ff.parse_version(current)
+
+    def line(row):
+        return ff.parse_version(row["parent"])[0][:2]
+
+    safe = next((r for i, r in enumerate(rows)
+                 if r["brings"] and not r["advisories"] and ff.parse_version(r["parent"]) >= floor
+                 and not any(later["advisories"] for later in rows[i + 1:] if line(later) == line(r))), None)
     return (rows[-1] if rows else None), safe, rows
 
 

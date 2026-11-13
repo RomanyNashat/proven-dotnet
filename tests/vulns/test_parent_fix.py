@@ -44,6 +44,21 @@ class ParentFixTests(unittest.TestCase):
         _, safe, _ = parent_fix.report(entries, "System.Security.Cryptography.Pkcs", PKCS, "net10.0", current="7.1.1")
         self.assertEqual("7.2.0", safe["parent"])
 
+    def test_story_a_patch_on_your_own_line_fixes_it_though_the_newest_line_does_not(self):
+        # Given SqlClient as published: 7.1.1 is the newest and asks for 9.0.18, but 6.1.8, a later patch on
+        # the 6.1 line, asks for 9.0.21
+        entries = [version("6.1.7", {"net9.0": "[9.0.11, )"}), version("7.1.1", {"net9.0": "[9.0.18, )"}),
+                   version("6.1.8", {"net9.0": "[9.0.21, )"})]
+        # When a service on 6.1.7 asks, then the upgrade is 6.1.8, on its own line
+        _, safe, _ = parent_fix.report(entries, "System.Security.Cryptography.Pkcs", PKCS, "net10.0", current="6.1.7")
+        self.assertEqual(("6.1.8", "9.0.21"), (safe["parent"], safe["brings"]))
+        # And a service already on 7.x still has nothing to upgrade to, so it pins
+        self.assertIsNone(parent_fix.report(entries, "System.Security.Cryptography.Pkcs", PKCS, "net10.0", current="7.0.3")[1])
+
+    def test_a_later_vulnerable_patch_on_the_same_line_rules_the_earlier_one_out(self):
+        entries = [version("6.1.8", {"net9.0": "[9.0.21, )"}), version("6.1.9", {"net9.0": "[9.0.11, )"})]
+        self.assertIsNone(parent_fix.report(entries, "System.Security.Cryptography.Pkcs", PKCS, "net10.0", current="6.1.7")[1])
+
     def test_prereleases_are_left_out_unless_asked_for(self):
         entries = [version("7.1.1", {"net9.0": "[9.0.18, )"}), version("7.2.0-preview1", {"net9.0": "[9.0.21, )"})]
         self.assertIsNone(parent_fix.report(entries, "System.Security.Cryptography.Pkcs", PKCS, "net10.0")[1])
