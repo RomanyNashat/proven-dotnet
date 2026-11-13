@@ -116,6 +116,10 @@ def version(text):
     return tuple(int(n) for n in numbers[:3]) if numbers else ()
 
 
+def fixed_pkcs(v):
+    return (9, 0, 21) <= v < (10,) or v >= (10, 0, 13)
+
+
 def uses_sqlclient(repo):
     names = repo.packages()
     return any(n in names for n in ("Microsoft.Data.SqlClient", "Microsoft.EntityFrameworkCore.SqlServer"))
@@ -146,15 +150,22 @@ def sqlclient_invariant(repo):
             yield rel, line, None
 
 
-@check("sqlclient-pkcs-unpinned", "warning", "SqlClient without a direct pin of System.Security.Cryptography.Pkcs",
-       "SqlClient brings in Pkcs 9.0.x (CVE-2026-70162, CVE-2026-84008). Confirm with "
-       "`dotnet list package --vulnerable --include-transitive` and pin 10.0.13 or later directly.",
+@check("sqlclient-pkcs-unpinned", "warning", "SqlClient bringing a vulnerable System.Security.Cryptography.Pkcs",
+       "SqlClient 7.x and older 6.1 releases bring Pkcs 9.0.x below 9.0.21 (CVE-2026-70162, CVE-2026-84008). Confirm "
+       "with `dotnet list package --vulnerable --include-transitive`, then upgrade the parent if one fixes it "
+       "(EF Core SqlServer 10.0.15, SqlClient 6.1.8: parent_fix.py) or pin Pkcs 10.0.13 directly.",
        "msbuild")
 def sqlclient_pkcs(repo):
     names = repo.packages()
     if not uses_sqlclient(repo):
         return
-    if any(version(v) >= (10, 0, 13) for _, v, _ in names.get("System.Security.Cryptography.Pkcs", [])):
+    if any(fixed_pkcs(version(v)) for _, v, _ in names.get("System.Security.Cryptography.Pkcs", [])):
+        return
+    # These parents ask for a fixed Pkcs themselves (checked on nuget.org, 2026-11-13), and one in the
+    # graph lifts Pkcs for all of it.
+    if any((10, 0, 15) <= version(v) for _, v, _ in names.get("Microsoft.EntityFrameworkCore.SqlServer", [])):
+        return
+    if any((6, 1, 8) <= version(v) < (7,) for _, v, _ in names.get("Microsoft.Data.SqlClient", [])):
         return
     for name in ("Microsoft.Data.SqlClient", "Microsoft.EntityFrameworkCore.SqlServer"):
         for rel, _, line in names.get(name, []):

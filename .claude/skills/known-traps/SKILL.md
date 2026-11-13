@@ -1,7 +1,7 @@
 ---
 name: known-traps
 description: "Scan one or many .NET services for library traps the harness's tests proved: SqlClient in invariant mode, a singleton DbContext, Quartz missed runs, the ar-SA calendar."
-version: 1.5.0
+version: 1.5.1
 ---
 
 # Known traps: one scan for what the tests found
@@ -41,7 +41,7 @@ that the service is right. For "who calls this" and "is this still used", use `p
 |---|---|---|---|
 | `app-changes-schema` | critical (warning in tests) | `Database.Migrate()`, `MigrateAsync()`, `EnsureCreated()` | `efcore-patterns` |
 | `sqlclient-invariant-mode` | critical | invariant globalization on a service that uses SqlClient: it can't connect | `sqlserver-patterns` |
-| `sqlclient-pkcs-unpinned` | warning | SqlClient without a direct `System.Security.Cryptography.Pkcs` 10.0.13+ | `msbuild` |
+| `sqlclient-pkcs-unpinned` | warning | SqlClient that brings a vulnerable `System.Security.Cryptography.Pkcs`: no fixed pin, and no EF Core SqlServer 10.0.15+ or SqlClient 6.1.8+ (6.1 line) to bring one | `msbuild` |
 | `merge-without-holdlock` | warning | a `MERGE` that races without `HOLDLOCK` | `dapper-patterns` |
 | `online-index-op` | info | `ONLINE = ON`: Enterprise only | `sqlserver-patterns` |
 | `arabic-text-not-unicode` | warning | an Arabic (`…Ar`, `…_ar`) column mapped to `varchar` | `localization` |

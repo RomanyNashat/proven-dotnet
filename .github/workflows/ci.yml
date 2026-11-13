@@ -33,7 +33,8 @@ jobs:
       - name: First fixed version against nuget.org
         if: runner.os == 'Linux'
         run: python .claude/skills/zero-vulns/scripts/first_fixed.py System.Security.Cryptography.Pkcs 9.0.11
-      # Exit 1 here is the expected answer today: no SqlClient release brings a fixed Pkcs yet.
+      # Exit 0 is the answer today (6.1.8 brings a fixed Pkcs; a 7.x service would still get exit 1). Both are
+      # accepted: only an error fails the step.
       - name: Parent fix against nuget.org
         if: runner.os == 'Linux'
         shell: bash

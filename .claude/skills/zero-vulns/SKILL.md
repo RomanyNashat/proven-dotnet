@@ -1,7 +1,7 @@
 ---
 name: zero-vulns
 description: "A known-vulnerable NuGet package is a hard fail: NU1903 and dotnet list package --vulnerable, then which version fixes the CVE: upgrade the package or its parent."
-version: 1.2.0
+version: 1.2.1
 ---
 
 # Zero Vulns — no known-vulnerable packages, enforced
@@ -61,18 +61,23 @@ the next upgrade. So, in order:
    ```
    It reads which version of the package every release of the parent asks for on your framework (restore
    takes the lowest the range allows, so that's what you get), checks each against the advisories, and
-   names the lowest parent version at or above yours that brings a safe one. Exit code 1 means no
-   release of the parent does yet. Tested offline, and run against nuget.org in CI.
+   names the lowest parent version at or above yours that brings a safe one. A later patch on your own
+   line counts even when the newest line is still vulnerable (SqlClient 6.1.8 brings a fixed Pkcs; 7.1.1,
+   the newest, doesn't), unless a later patch on that line brings a vulnerable one again. Exit code 1
+   means no release of the parent does yet. Tested offline, and run against nuget.org in CI.
 4. **Only when no parent release fixes it, pin the package directly**, and say why next to the pin, so
    nobody "cleans it up" and nobody forgets to remove it once the parent catches up:
    ```xml
    <!-- GHSA-2fmv-rv2c-59x7, GHSA-846f-f764-76mx. Microsoft.Data.SqlClient 7.1.1, its newest, still
-        asks for 9.0.18 (parent_fix.py, 2026-10-23). Remove when a SqlClient release brings >= 9.0.21. -->
+        asks for 9.0.18 (parent_fix.py, 2026-11-13). Remove when a 7.x release brings >= 9.0.21. -->
    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
    ```
-   That case is real: the newest `Microsoft.Data.SqlClient` asks for `System.Security.Cryptography.Pkcs
-   [9.0.18, )` on .NET 8 to 10, and both advisories cover 9.0.18, so a SQL Server service has no parent
-   to upgrade. **Under Central Package Management** the pin is one `PackageVersion` in
+   The case, as of 2026-11-13: `Microsoft.Data.SqlClient` 7.x asks for `System.Security.Cryptography.Pkcs
+   [9.0.18, )` on .NET 8 to 10, and both advisories cover 9.0.18, so a service on SqlClient 7 has no parent
+   to upgrade and pins. A service on 6.1 upgrades SqlClient to 6.1.8 (9.0.21), and one on EF Core upgrades
+   `Microsoft.EntityFrameworkCore.SqlServer` to 10.0.15, which asks for Pkcs 10.0.13 itself: neither needs
+   the pin, and an old one comes out. Every SQL Server service pinned until those releases, so check before
+   copying one's pin into another. **Under Central Package Management** the pin is one `PackageVersion` in
    `Directory.Packages.props` with `CentralPackageTransitivePinningEnabled`, applied to every project,
    with the same comment (see `msbuild`).
 - **Which version is "the fixed version"?** Not the newest one you remember, and not the next major: the
