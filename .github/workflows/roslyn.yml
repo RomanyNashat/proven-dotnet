@@ -52,7 +52,16 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
-      - run: bash tools/ci/annotate.sh dotnet test tests/ProvenRoslynMcp.Tests -c Release --logger "console;verbosity=normal" --blame-hang-timeout 4m --blame-hang-dump-type none
+      - run: dotnet tool install -g dotnet-stack
+      # The runner image also has SDK 11, which `dotnet test` would pick while the workspace loads with
+      # SDK 10. Pin SDK 10 here and in the temp folder the sample solutions are built in.
+      - run: |
+          dotnet new globaljson --sdk-version 10.0.100 --roll-forward latestFeature --force
+          cp global.json "${TMPDIR:-/tmp}/global.json"
+          dotnet --version
+      - run: |
+          bash tools/ci/stack-on-hang.sh 150 &
+          bash tools/ci/annotate.sh dotnet test tests/ProvenRoslynMcp.Tests -c Release --logger "console;verbosity=normal" --blame-hang-timeout 4m --blame-hang-dump-type none
         env:
           ANNOTATE_TIMEOUT: '600'
           MSBUILDDISABLENODEREUSE: '1'
