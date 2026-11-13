@@ -52,7 +52,10 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
-      - run: bash tools/ci/annotate.sh dotnet test tests/ProvenRoslynMcp.Tests -c Release --logger "console;verbosity=normal" --blame-hang-timeout 4m --blame-hang-dump-type none
+      - run: dotnet tool install -g dotnet-stack
+      - run: |
+          bash tools/ci/stack-on-hang.sh 150 &
+          bash tools/ci/annotate.sh dotnet test tests/ProvenRoslynMcp.Tests -c Release --logger "console;verbosity=normal" --blame-hang-timeout 4m --blame-hang-dump-type none
         env:
           ANNOTATE_TIMEOUT: '600'
           MSBUILDDISABLENODEREUSE: '1'
