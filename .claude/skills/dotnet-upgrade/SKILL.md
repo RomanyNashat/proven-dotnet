@@ -1,7 +1,7 @@
 ---
 name: dotnet-upgrade
 description: "Move a service from .NET 8 or 9 to .NET 10 and turn on nullable reference types: the order of work, the breaking changes that bite, proving nothing changed."
-version: 1.1.0
+version: 1.1.1
 ---
 
 # Upgrading to .NET 10
