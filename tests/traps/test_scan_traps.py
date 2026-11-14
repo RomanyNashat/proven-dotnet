@@ -119,6 +119,26 @@ class ScanTrapsTests(unittest.TestCase):
             # When the fleet is scanned, then the central pin counts and the service is clean
             self.assertEqual([], scan_traps.scan(folder))
 
+    def test_story_a_service_left_on_dotnet_8_after_its_support_ended(self):
+        # Given services after 10 November 2026: one still on .NET 8, one on 9 set centrally, a library
+        # that also targets 10, one moved to 10, and a .NET Standard library
+        cases = {
+            "net8": ("src/Api/Api.csproj", "<TargetFramework>net8.0</TargetFramework>", [("framework-out-of-support", "critical")]),
+            "net9-props": ("Directory.Build.props", "<TargetFramework>net9.0</TargetFramework>",
+                           [("framework-out-of-support", "critical")]),
+            "multi": ("src/Lib/Lib.csproj", "<TargetFrameworks>net8.0;net10.0</TargetFrameworks>",
+                      [("framework-out-of-support", "info")]),
+            "net10": ("src/Api/Api.csproj", "<TargetFramework>net10.0</TargetFramework>", []),
+            "netstandard": ("src/Lib/Lib.csproj", "<TargetFramework>netstandard2.0</TargetFramework>", []),
+            "old-core": ("src/Api/Api.csproj", "<TargetFramework>netcoreapp3.1</TargetFramework>",
+                         [("framework-out-of-support", "critical")]),
+        }
+        for name, (path, tfm, expected) in cases.items():
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                write(pathlib.Path(tmp), {path: f"<Project><PropertyGroup>{tfm}</PropertyGroup></Project>"})
+                # When it is scanned, then a framework with no more security fixes is the finding
+                self.assertEqual(expected, [(f.check, f.severity) for f in scan_traps.scan(tmp)])
+
     def test_story_parent_release_that_brings_a_fixed_pkcs_needs_no_pin(self):
         # Given services with no Pkcs pin: EF Core 10.0.15 (it asks for Pkcs 10.0.13 itself), SqlClient 6.1.8
         # (9.0.21), a 9.0.21 pin, and SqlClient 7.1.1, whose newest release still asks for 9.0.18

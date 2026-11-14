@@ -1,7 +1,7 @@
 ---
 name: known-traps
 description: "Scan one or many .NET services for library traps the harness's tests proved: SqlClient in invariant mode, a singleton DbContext, Quartz missed runs, the ar-SA calendar."
-version: 1.5.1
+version: 1.6.0
 ---
 
 # Known traps: one scan for what the tests found
@@ -74,6 +74,7 @@ that the service is right. For "who calls this" and "is this still used", use `p
 | `keycloak-roles-unmapped` | warning | `RoleClaimType` pointed at Keycloak's JSON role claim | `auth-patterns` |
 | `openiddict6-on-efcore10` | critical | OpenIddict 6 with EF Core 10 and no `DisableBulkOperations()` | `openiddict-server` |
 | `fluentassertions-licence` | critical (warning if unpinned 7.x) | FluentAssertions 8+, or 7 without `[7.0.0,8.0.0)` | `testing-tdd` |
+| `framework-out-of-support` | critical (info if a current framework is targeted too) | `net5.0`–`net9.0` or `netcoreapp*`: no security fixes (.NET 8 and 9 since 10 November 2026) | `dotnet-upgrade` |
 
 Tested in CI (`tests/traps/`): every check fires on a service that has its trap and stays quiet on the
 corrected copy. Also tested: a pin moved into `Directory.Packages.props` still counts, and a file saved

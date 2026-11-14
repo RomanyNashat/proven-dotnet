@@ -1,14 +1,15 @@
 ---
 name: dotnet-upgrade
 description: "Move a service from .NET 8 or 9 to .NET 10 and turn on nullable reference types: the order of work, the breaking changes that bite, proving nothing changed."
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Upgrading to .NET 10
 
 .NET 8 and .NET 9 both leave support on **10 November 2026**. After that there are no security fixes, and
 the zero-vulns gate (`zero-vulns`) will start failing on packages that only get fixed for 10. Upgrade one
-service at a time, one merge request each, with its tests green before and after.
+service at a time, one merge request each, with its tests green before and after. To find every service
+still on 8 or 9, run `known-traps` over the folder that holds them: `framework-out-of-support` names each one.
 
 ## 1. Before you change anything
 

@@ -548,6 +548,26 @@ def fluentassertions(repo):
             yield rel, line, "warning"
 
 
+# --- The platform ------------------------------------------------------------------------------------
+
+# .NET 5 to 9 and every .NET Core: out of support (.NET 8 and 9 since 10 November 2026). .NET Standard
+# and .NET Framework follow other policies and aren't flagged.
+OUT_OF_SUPPORT = re.compile(r"^(netcoreapp\d+(\.\d+)?|net[5-9]\.0)(-[\w.]+)?$", re.IGNORECASE)
+CURRENT = re.compile(r"^net(1\d|[2-9]\d)\.0(-[\w.]+)?$", re.IGNORECASE)
+
+
+@check("framework-out-of-support", "critical", "A target framework with no more security fixes",
+       "Move to net10.0 (LTS, supported to November 2028): the order of work and the breaking changes "
+       "that bite are in the skill. A library that also targets a current framework is info.",
+       "dotnet-upgrade")
+def framework_out_of_support(repo):
+    for rel, text in repo.of(".csproj", ".props", ".targets"):
+        for line, match in matches(text, r"<TargetFrameworks?>([^<]+)</TargetFrameworks?>"):
+            names = [n.strip() for n in match[1].split(";") if n.strip()]
+            if any(OUT_OF_SUPPORT.match(n) for n in names):
+                yield rel, line, "info" if any(CURRENT.match(n) for n in names) else None
+
+
 def scan(root):
     repo = Repo(pathlib.Path(root))
     findings = []
