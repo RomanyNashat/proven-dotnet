@@ -30,6 +30,29 @@ jobs:
       - run: dotnet build tools/proven-roslyn-mcp/ProvenRoslynMcp.csproj -c Release
       # Same packaging step install-roslyn runs, so a broken tool package fails here, not on the laptop.
       - run: dotnet pack tools/proven-roslyn-mcp/ProvenRoslynMcp.csproj -c Release -o nupkg
+      # A developer machine with a newer SDK beside 10 (the runner image has SDK 11) and no global.json: the
+      # installed tool must still load a solution. The regression tests pin SDK 10, so this is the check.
+      - name: The installed tool loads a solution with SDK 11 beside 10
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          dotnet --list-sdks
+          # Say so if the image no longer has a newer SDK, or this step would pass without checking anything.
+          dotnet --list-sdks | grep -qE '^(1[1-9]|[2-9][0-9])\.' || echo "::warning title=roslyn SDK mix::no SDK newer than 10 on this runner"
+          dotnet tool install --global --add-source nupkg Proven.Roslyn.Mcp --version "$(cat VERSION)"
+          dir="$RUNNER_TEMP/sdk-mix" && mkdir -p "$dir/Lib" && cd "$dir"
+          printf '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>' > Lib/Lib.csproj
+          printf 'namespace Lib;\npublic sealed class OrderService { public int Total() => 1; }\n' > Lib/OrderService.cs
+          dotnet new sln -n Sample --format sln >/dev/null && dotnet sln Sample.sln add Lib/Lib.csproj >/dev/null && dotnet restore Sample.sln >/dev/null
+          echo "dotnet here: $(dotnet --version)"
+          set +e
+          timeout -k 10 300 proven-roslyn-mcp --diagnose > diagnose.txt 2>&1; rc=$?
+          set -e
+          cat diagnose.txt
+          if [ "$rc" -ne 0 ] || ! grep -q '^OK - 1 project' diagnose.txt; then
+            echo "::error title=roslyn with SDK 11 beside 10::exit $rc%0A$(tail -c 3000 diagnose.txt | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          fi
       # The installer as a developer runs it: Windows PowerShell 5.1 with -File from another folder, and a
       # NuGet source that can't be reached (a company feed off the VPN). Both once broke the install.
       - name: install-roslyn.ps1 the laptop's way
