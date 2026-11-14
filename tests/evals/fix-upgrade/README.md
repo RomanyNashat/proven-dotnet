@@ -42,3 +42,6 @@ The harness's preflight scan (`upgrade_preflight.py`, 0.3.19) was run on the ori
 fixture was written: it points at U02, U03, U05, U06 and U07, and misses U04, because its
 `npgsql-date-read` pattern doesn't see a cast of a value read on an earlier line. The scan is left as it
 is for the first round so the runs measure the harness as it shipped; widening that pattern comes after.
+
+Round one (2026-11-14) is in `results.md`: both arms fixed 21/21, so these seven findings don't tell the
+arms apart.
