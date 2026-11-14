@@ -157,6 +157,44 @@ jobs:
             results/
             scores-fix-sync.json
 
+  grade-upgrade:
+    name: Upgrade eval (hidden tests on .NET 10, PostgreSQL)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Start PostgreSQL
+        run: bash tools/ci/service.sh start pg
+      - name: PostgreSQL 17
+        timeout-minutes: 5
+        run: bash tools/ci/service.sh wait pg
+      - name: Grade every copy
+        run: |
+          base=tests/evals/fix-upgrade
+          copies="original=$base reference=$base/reference reference-alt=$base/reference-alt compile-only=$base/compile-only"
+          for d in "$base"/runs/*/; do [ -d "$d/ClinicQueue" ] && copies="$copies $(basename "$d")=${d%/}"; done
+          mkdir -p results
+          for c in $copies; do
+            name=${c%%=*}; src=${c#*=}
+            echo "::group::$name"
+            docker run --rm --network host -v "$PWD:/w" -w /w -e EVAL_PG \
+              mcr.microsoft.com/dotnet/sdk:10.0-noble bash "$base/tools/grade-one.sh" "$src" "$name" /w/results
+            echo "::endgroup::"
+          done
+        env:
+          EVAL_PG: "Host=localhost;Username=postgres;Password=postgres;Database=postgres"
+      - name: Results
+        shell: bash
+        run: python3 tests/evals/tools/grade.py tests/evals/fix-upgrade results --json scores-fix-upgrade.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Build and test logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fix-eval-upgrade-results
+          path: |
+            results/
+            scores-fix-upgrade.json
+
   grade-labs:
     name: Fix eval, round five (hidden tests, PostgreSQL)
     runs-on: ubuntu-26.04

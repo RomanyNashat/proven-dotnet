@@ -1,0 +1,1 @@
+Use the dotnet-upgrade skill for the move, starting with its preflight scan, then /full-review ClinicQueue/ and fix what it finds. Write your final list to report.md.

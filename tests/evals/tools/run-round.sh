@@ -36,7 +36,12 @@ git -C "$REPO" rev-parse "$REF" > "$RUN/ref.txt"
 cp -R "$SRC/$SERVICE" "$RUN/work/$SERVICE"
 cp "$SRC/task.md" "$RUN/work/task.md"
 TASK="$(cat "$SRC/task.md")"
-if [ "$ARM" = with-proven ]; then
+if [ "$ARM" = with-proven ] && [ -f "$SRC/route.txt" ]; then
+  # A fixture whose task isn't a review names the harness's route for it (fix-upgrade: the upgrade skill).
+  TASK="$TASK
+
+$(cat "$SRC/route.txt")"
+elif [ "$ARM" = with-proven ]; then
   # The harness's own route: the review command, then the TDD agent applies what it found.
   TASK="$TASK
 
