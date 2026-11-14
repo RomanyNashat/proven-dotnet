@@ -113,11 +113,73 @@ The first two were seen in this repo's own builds; the third is from the .NET 10
   package referenced as well, calls such as `ToListAsync()` on an `IAsyncEnumerable<T>` become ambiguous.
   Remove the package.
 
+### .NET 10: an exception handler that returns `true` stops the error log
+
+On 8, `UseExceptionHandler` logged the exception and then called the handler. On 10, a handler that
+returns `true` means the exception was dealt with, and the middleware writes no diagnostics for it. A
+handler written for 8 that only shapes the response leaves the error out of the logs, and so out of Kibana
+and APM. Tested as a story: with a handler that doesn't log, a failed request leaves no error in the logs;
+with `api-design`'s `UnexpectedExceptionHandler`, which logs the exception itself, the error is there with
+its exception. The fix is that handler: log in the handler, then answer.
+
+### .NET 10: a worker's set-up before its first `await` no longer runs before start-up ends
+
+On 8 the host ran `ExecuteAsync` up to its first `await` before it carried on starting, so set-up written
+there (a cache filled, a connection opened) was done before the service took traffic. On 10 all of
+`ExecuteAsync` runs as a Task: tested, a worker whose set-up blocks before its first `await` doesn't hold
+up `StartAsync`, and the set-up isn't done when the host has started. Work that has to come first moves
+to `StartAsync`, which the host awaits:
+
+<!-- sample: tests/SkillSamples.Tests/Upgrade/WarmUpWorker.cs -->
+```csharp
+/// <summary>
+/// On .NET 10 all of ExecuteAsync runs as a Task, so the code before its first await no longer runs before
+/// the host has started. Work that must be done first goes in StartAsync, which the host awaits; the loop
+/// stays in ExecuteAsync.
+/// </summary>
+public sealed class WarmUpWorker(IWarmUp warmUp) : BackgroundService
+{
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        await warmUp.RunAsync(cancellationToken);
+        await base.StartAsync(cancellationToken);
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        }
+    }
+}
+```
+
+Tested: with the set-up in `StartAsync`, it is done when the host has started.
+
+### Npgsql 10: `date` is `DateOnly`, `time` is `TimeOnly`
+
+Where nothing names the type (`ExecuteScalar`, `GetValue`, `object`), Npgsql 10 returns a `date` column as
+`DateOnly` and a `time` column as `TimeOnly`, not `DateTime` and `TimeSpan`. Tested on PostgreSQL: an
+untyped read returns `DateOnly` and `TimeOnly`; a Dapper record with `DateOnly` and `TimeOnly` properties
+reads the row; `GetFieldValue<DateTime>` still reads a date as a `DateTime`. So map `date` to `DateOnly`
+in records and DTOs, or name the type where the code reads it.
+
+### Behind nginx: forwarded headers need the proxies named
+
+`X-Forwarded-*` is applied only when the request comes from a trusted proxy, and only loopback is trusted
+by default. Behind the ingress and nginx, in another pod, the app sees the proxy as the client and `http`
+as the scheme. `KnownNetworks` and its `IPNetwork` are obsolete on 10: name the pod network in
+`KnownIPNetworks` with `System.Net.IPNetwork`. Tested in `nginx` (`ConfigureBehindNginx`): with the
+defaults the app sees the proxy and `http`; configured, it sees the client and `https`, and a client's own
+`X-Forwarded-For` isn't believed.
+
 ### What the preflight scan finds
 
 These come from Microsoft's breaking-change lists for .NET 9 and 10, ASP.NET Core 9 and 10 and EF Core 9
-and 10, and from Npgsql's release notes for 9 and 10. The sections above are tested here; these rows are
-what the lists say, read against our stack, and the scan only points at the line. Worst first:
+and 10, and from Npgsql's release notes for 9 and 10. The sections above are tested here, and the rows
+that one of them covers say "tested". The others are what the lists say, read against our stack; the scan
+only points at the line. Worst first:
 
 | Check | Severity | Since | What changed |
 |---|---|---|---|
@@ -125,18 +187,18 @@ what the lists say, read against our stack, and the scan only points at the line
 | `versionless-package` | breaks | SDK 10 | a `PackageReference` without a version is an error (outside Central Package Management) |
 | `system-linq-async` | breaks | .NET 10 | `System.Linq.Async` makes async LINQ calls ambiguous (above) |
 | `ef-hasdata-dynamic` | breaks | EF Core 9 | `HasData` with `DateTime.Now` or `Guid.NewGuid()`: the model changes on every build |
-| `forwarded-known-networks` | obsolete | ASP.NET Core 10 | `KnownNetworks` and its `IPNetwork`; use `KnownIPNetworks` with `System.Net.IPNetwork` |
+| `forwarded-known-networks` | obsolete | ASP.NET Core 10 | `KnownNetworks` and its `IPNetwork`; use `KnownIPNetworks` with `System.Net.IPNetwork` (tested, above) |
 | `with-openapi` | obsolete | ASP.NET Core 10 | `.WithOpenApi()` on an endpoint |
 | `action-context-accessor` | obsolete | ASP.NET Core 10 | `IActionContextAccessor` |
 | `webhost-builder` | obsolete | ASP.NET Core 10 | `WebHostBuilder`, `IWebHost`, `WebHost` |
 | `framework-package-reference` | obsolete | SDK 10 | `NU1510` for a package the framework provides (above) |
-| `forwarded-headers-trust` | behaviour | ASP.NET Core 9 | `X-Forwarded-*` from a proxy not named as trusted is ignored: behind nginx the client IP and scheme are lost |
-| `exception-handler-diagnostics` | behaviour | ASP.NET Core 10 | an `IExceptionHandler` returning `true` emits no exception diagnostics, so the error can drop out of logs and APM |
+| `forwarded-headers-trust` | behaviour | ASP.NET Core 9 | `X-Forwarded-*` from a proxy not named as trusted is ignored: behind nginx the client IP and scheme are lost (tested, above) |
+| `exception-handler-diagnostics` | behaviour | ASP.NET Core 10 | an `IExceptionHandler` returning `true` emits no exception diagnostics, so the error can drop out of logs and APM (tested, above) |
 | `npgsql-connection-lifetime` | behaviour | Npgsql 9 | `Connection Lifetime` defaults to an hour |
 | `sqlserver-application-name` | behaviour | EF Core 10 | EF adds an `Application Name` to a SQL Server connection string that has none |
 | `azure-sql-json` | behaviour | EF Core 10 | with `UseAzureSql`, JSON maps to the `json` type, and existing columns get an `ALTER` |
-| `background-service-start` | behaviour | .NET 10 | all of `ExecuteAsync` runs as a Task, so code before the first `await` no longer runs before the host has started |
-| `npgsql-date-read` | check | Npgsql 10 | untyped reads return `date` as `DateOnly` and `time` as `TimeOnly` |
+| `background-service-start` | behaviour | .NET 10 | all of `ExecuteAsync` runs as a Task, so code before the first `await` no longer runs before the host has started (tested, above) |
+| `npgsql-date-read` | check | Npgsql 10 | untyped reads return `date` as `DateOnly` and `time` as `TimeOnly` (tested, above) |
 | `image-tag` | check | .NET 10 | the tag moves to 10.0; the default images are Ubuntu since 10, and 9 dropped zlib |
 
 Not found by the scan, so read them in the lists when the service uses the area:

@@ -17,7 +17,15 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
 - **The skill's "read the release notes for the rest" is now a table.** Each check is listed with what
   changed and since when. The breaks the scan can't see (null configuration values, `HttpClientFactory`
   log redaction, the W3C propagator, `.slnx`) are listed by area. The rows come from Microsoft's and
-  Npgsql's lists and are not tested here yet; tested sections for the worst of them come next.
+  Npgsql's lists, and the ones a tested section covers say so.
+- **Four tested sections for the breaks that bite a backend first:**
+  - an `IExceptionHandler` that returns `true` leaves no error in the logs on 10 unless it logs the exception
+    itself (story test, in process);
+  - a worker's set-up before its first `await` is no longer done when the host has started, and
+    `StartAsync` is where it goes (story tests);
+  - Npgsql 10 returns `date` and `time` as `DateOnly` and `TimeOnly` from untyped reads (story tests on
+    PostgreSQL, with Dapper);
+  - forwarded headers behind nginx, pointing at `nginx`'s tests.
 
 ## 0.3.18 — .NET 8 and 9 are out of support, and the scan says which services still are
 - **`known-traps` flags a framework with no more security fixes** (`framework-out-of-support`, critical):
