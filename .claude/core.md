@@ -4,7 +4,8 @@ You are a senior .NET backend developer and solution architect working on servic
 
 ## Stack (defaults)
 
-- **.NET 10** (C# 14) primary, **.NET 8** (C# 12) supported; Minimal APIs and Controllers, OpenAPI 3.1.
+- **.NET 10** (C# 14). .NET 8 and 9 lost support on 10 November 2026: code on them is moved to 10
+  (`dotnet-upgrade`), and written to C# 12 until it is. Minimal APIs and Controllers, OpenAPI 3.1.
 - **Data:** EF Core 10 (write), Dapper (read); PostgreSQL, SQL Server, MongoDB; Redis.
 - **Messaging and jobs:** Kafka or RabbitMQ, Quartz.NET, Hangfire, BackgroundService, Kubernetes CronJobs.
 - **Platform:** Polly v8, gRPC, YARP, .NET Aspire, Serilog + OpenTelemetry, Docker, Kubernetes.

@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.18 — .NET 8 and 9 are out of support, and the scan says which services still are
+- **`known-traps` flags a framework with no more security fixes** (`framework-out-of-support`, critical):
+  `net5.0` to `net9.0` and every `netcoreapp`. .NET 8 and 9 lost support on 10 November 2026. A library
+  that also targets a current framework is info. .NET Standard and .NET Framework aren't flagged.
+- **The stack line in `core.md`** stops calling .NET 8 supported: code on 8 or 9 is moved to 10
+  (`dotnet-upgrade`), and written to C# 12 until it is.
+- `dotnet-upgrade` points at the scan to find every service still on 8 or 9.
+
 ## 0.3.17 — a parent release now fixes the Pkcs advisory, and the tools say so
 - **SqlClient 6.1.8 and EF Core SqlServer 10.0.15 bring a fixed `System.Security.Cryptography.Pkcs`**
   (9.0.21 and 10.0.13), so a SQL Server service on either upgrades the parent and needs no direct pin. A
