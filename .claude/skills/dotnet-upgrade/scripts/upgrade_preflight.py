@@ -272,6 +272,14 @@ def npgsql_date_read(service):
         return
     pattern = (r"<\s*(DateTime|TimeSpan)\s*>\s*\(|\(\s*(DateTime|TimeSpan)\s*\)\s*\w+(\.GetValue\(|\[|\.ExecuteScalar)")
     yield from each(service, pattern, ".cs")
+    # The value is often read on one line and cast on a later one: follow the variable within the file.
+    untyped = re.compile(r"\b(\w+)\s*=\s*(?:await\s+)?[\w.]+?(?:\.ExecuteScalar(?:Async)?\s*\(|\.GetValue\s*\(|\[)")
+    for rel, text in service.of(".cs"):
+        for name in sorted({m[1] for m in untyped.finditer(text)}):
+            used = (rf"\(\s*(DateTime|TimeSpan)\??\s*\)\s*{name}\b|\b{name}\s+is\s+(DateTime|TimeSpan)\b"
+                    rf"|Convert\.ToDateTime\(\s*{name}\b")
+            for line, _ in lines(text, used):
+                yield rel, line
 
 
 @check("image-tag", "check", ".NET 10", "A .NET 8 or 9 base image",
@@ -287,7 +295,8 @@ def scan(root):
     service = Service(pathlib.Path(root))
     findings = []
     for order, c in enumerate(CHECKS):
-        for rel, line in c.find(service) or []:
+        # Two patterns of one check can match the same line: report it once.
+        for rel, line in sorted(set(c.find(service) or [])):
             findings.append((SEVERITIES.index(c.severity), order, rel, line,
                              Finding(c.id, c.severity, c.since, rel, line, c.title, c.todo)))
     return Result(service.frameworks(), [f for *_, f in sorted(findings, key=lambda x: x[:4])])

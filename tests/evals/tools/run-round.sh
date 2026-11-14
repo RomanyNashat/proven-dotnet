@@ -47,7 +47,7 @@ else
 Write your final list to report.md."
 fi
 
-TOOLS='Read,Edit,Write,Glob,Grep,TodoWrite,Bash(dotnet *),Bash(ls *),Bash(mkdir *),Bash(cat *),Bash(find *),Bash(grep *),Bash(rm *),Bash(cp *),Bash(mv *)'
+TOOLS='Read,Edit,Write,Glob,Grep,TodoWrite,Bash(dotnet *),Bash(python3 *),Bash(ls *),Bash(mkdir *),Bash(cat *),Bash(find *),Bash(grep *),Bash(rm *),Bash(cp *),Bash(mv *)'
 [ "$ARM" = with-proven ] && TOOLS="$TOOLS,Skill,Agent,Task"
 
 cd "$RUN/work"

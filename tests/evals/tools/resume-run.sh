@@ -16,7 +16,7 @@ for line in open(sys.argv[1]):
 PY
 )"
 n=2; while [ -f "$RUN/transcript-$n.jsonl" ]; do n=$((n+1)); done
-TOOLS='Read,Edit,Write,Glob,Grep,TodoWrite,Bash(dotnet *),Bash(ls *),Bash(mkdir *),Bash(cat *),Bash(find *),Bash(grep *),Bash(rm *),Bash(cp *),Bash(mv *)'
+TOOLS='Read,Edit,Write,Glob,Grep,TodoWrite,Bash(dotnet *),Bash(python3 *),Bash(ls *),Bash(mkdir *),Bash(cat *),Bash(find *),Bash(grep *),Bash(rm *),Bash(cp *),Bash(mv *)'
 [ "$ARM" = with-proven ] && TOOLS="$TOOLS,Skill,Agent,Task"
 cd "$RUN/work"
 env -i PATH="$PATH" HOME="$RUN/home" DOTNET_CLI_HOME="$RUN/home" NUGET_PACKAGES="$RUN/home/.nuget/packages" \

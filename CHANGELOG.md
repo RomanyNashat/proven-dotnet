@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.20 — the preflight scan follows a date read to its cast
+- **`npgsql-date-read` now finds a cast on a later line.** An untyped read (`ExecuteScalar`, `GetValue`,
+  `reader[...]`) into a variable that is cast to `DateTime` or `TimeSpan`, tested with `is DateTime`, or
+  passed to `Convert.ToDateTime` further down the file is reported where the cast is. The upgrade eval's
+  `VisitReads` (read on one line, `(DateTime)value` on the next) was the case it missed.
+- **A line two patterns of one check match is reported once.**
+- **The fix-eval runner lets both arms run `python3`.** The skills' scripts (the preflight scan, the
+  known-traps scan) were refused in every run before, and the runs went through the checks by hand.
+
 ## 0.3.19 — a preflight scan before moving a service to .NET 10
 - **`dotnet-upgrade` gets `upgrade_preflight.py`.** It's read-only and uses the standard library only. Run
   it on a service before the upgrade: it prints the target frameworks and every line that a known break in
