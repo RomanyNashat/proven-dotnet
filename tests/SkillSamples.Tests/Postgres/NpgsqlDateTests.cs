@@ -5,13 +5,14 @@ using Xunit;
 namespace SkillSamples.Postgres;
 
 // Npgsql 10 maps PostgreSQL date to DateOnly and time to TimeOnly where nothing names the type.
+// xUnit makes one instance per test and one database per class, so the set-up runs once per test.
 public sealed class NpgsqlDateTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncLifetime
 {
     public sealed record VisitDay(int Id, DateOnly Day, TimeOnly StartsAt);
 
     public Task InitializeAsync() => db.ExecuteAsync("""
-        CREATE TABLE visit (id int PRIMARY KEY, day date NOT NULL, starts_at time NOT NULL);
-        INSERT INTO visit VALUES (1, '2026-11-14', '09:30');
+        CREATE TABLE IF NOT EXISTS visit (id int PRIMARY KEY, day date NOT NULL, starts_at time NOT NULL);
+        INSERT INTO visit VALUES (1, '2026-11-14', '09:30') ON CONFLICT (id) DO NOTHING;
         """);
 
     public Task DisposeAsync() => Task.CompletedTask;
