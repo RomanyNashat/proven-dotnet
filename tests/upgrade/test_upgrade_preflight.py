@@ -120,6 +120,23 @@ class UpgradePreflightTests(unittest.TestCase):
                          [f.check for f in result.findings])
         self.assertEqual("src/Api/Errors.cs", next(f for f in result.findings if f.check == "exception-handler-diagnostics").path)
 
+    def test_story_a_date_read_on_one_line_and_cast_on_the_next_is_found(self):
+        # Given an untyped read whose value is cast a line later (the upgrade eval's U04, which this missed)
+        reads = ("var value = await command.ExecuteScalarAsync(ct);\n"
+                 "return value is null ? null : (DateTime)value;\n"
+                 "var other = reader[\"slot\"];\n"
+                 "if (other is TimeSpan span) { }\n"
+                 "var count = await command.ExecuteScalarAsync(ct);\n"
+                 "return (int)count;\n")
+        result = scan({"Api.csproj": PROJECT.format(ref("Npgsql", "8.0.5")), "Reads.cs": reads})
+        # When it is scanned, then the cast and the type test are named, and the int cast isn't
+        self.assertEqual([2, 4], [f.line for f in result.findings if f.check == "npgsql-date-read"])
+
+    def test_two_patterns_on_one_line_give_one_finding(self):
+        reads = "var value = r.GetValue(0); var day = (DateTime)r.GetValue(0) + (DateTime)value;\n"
+        result = scan({"Api.csproj": PROJECT.format(ref("Npgsql", "8.0.5")), "Reads.cs": reads})
+        self.assertEqual(1, len([f for f in result.findings if f.check == "npgsql-date-read"]))
+
     def test_story_a_service_already_on_10_with_nothing_left_says_so(self):
         out = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
