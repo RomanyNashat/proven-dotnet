@@ -3,6 +3,22 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.19 — a preflight scan before moving a service to .NET 10
+- **`dotnet-upgrade` gets `upgrade_preflight.py`.** It's read-only and uses the standard library only. Run
+  it on a service before the upgrade: it prints the target frameworks and every line that a known break in
+  .NET 9/10, ASP.NET Core 9/10, EF Core 9/10 or Npgsql 9/10 touches, worst first (breaks, obsolete,
+  behaviour, check). There are 17 checks, among them:
+  - forwarded headers with no trusted proxy (behind nginx the client IP and scheme are lost);
+  - an `IExceptionHandler` returning `true` (on 10 the exception drops out of diagnostics);
+  - untyped `date`/`time` reads on Npgsql 10;
+  - `HasData` with `DateTime.Now`;
+  - a versionless `PackageReference` (an error on SDK 10);
+  - `WithOpenApi`, `WebHostBuilder` and `KnownNetworks` (obsolete).
+- **The skill's "read the release notes for the rest" is now a table.** Each check is listed with what
+  changed and since when. The breaks the scan can't see (null configuration values, `HttpClientFactory`
+  log redaction, the W3C propagator, `.slnx`) are listed by area. The rows come from Microsoft's and
+  Npgsql's lists and are not tested here yet; tested sections for the worst of them come next.
+
 ## 0.3.18 — .NET 8 and 9 are out of support, and the scan says which services still are
 - **`known-traps` flags a framework with no more security fixes** (`framework-out-of-support`, critical):
   `net5.0` to `net9.0` and every `netcoreapp`. .NET 8 and 9 lost support on 10 November 2026. A library
