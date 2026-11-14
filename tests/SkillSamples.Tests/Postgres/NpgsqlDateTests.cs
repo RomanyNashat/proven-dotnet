@@ -1,9 +1,8 @@
 using Dapper;
-using SkillSamples.Postgres;
 using SkillSamples.Production;
 using Xunit;
 
-namespace SkillSamples.Upgrade;
+namespace SkillSamples.Postgres;
 
 // Npgsql 10 maps PostgreSQL date to DateOnly and time to TimeOnly where nothing names the type.
 public sealed class NpgsqlDateTests(PgDatabase db) : IClassFixture<PgDatabase>, IAsyncLifetime
