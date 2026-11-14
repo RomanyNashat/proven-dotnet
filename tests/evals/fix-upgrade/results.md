@@ -40,11 +40,13 @@ both reference fixes 7/7.
 
 ## Disclosures
 
-- **The preflight scan never ran.** The runner's tool list allows `dotnet` and file commands, not
-  `python3`, so each with-proven run asked to run `upgrade_preflight.py`, was refused, and went through the
-  skill's table of checks by hand instead. The skill was read; its script wasn't tested. The runner is
-  fixed in its own PR, and earlier rounds that route through a script had the same gap.
+- **The preflight scan was refused before the change, in every with-proven run.** The runner's tool list
+  allows `dotnet` and file commands, not `python3`, and the skill doesn't grant it (the `/full-review`
+  command does, so the known-traps scan ran once the review started). Each run went through the skill's
+  table of checks by hand instead; proven-3 ran the scan once afterwards, on its finished copy. So the
+  skill was read, and its script wasn't tested as the first step. The runner is fixed in #85. A developer
+  in an interactive session is asked to approve the script and isn't stopped.
 - **The scan would have missed U04 anyway**, as the README says: the cast is on a later line than the
-  untyped read. Left as is for this round; widened in its own PR.
+  untyped read. Left as is for this round; widened in #85.
 - **One round, three runs per arm, one model and effort.** With both arms at the ceiling, more runs of
   these seven findings wouldn't change the conclusion.
