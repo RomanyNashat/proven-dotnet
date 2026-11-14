@@ -27,6 +27,10 @@ EXPECTED = {
         "sqlclient-pkcs-unpinned",
         "timezone-without-fallback",
     },
+    "fix-upgrade/ClinicQueue": {
+        "framework-out-of-support",
+        "scopes-not-validated",
+    },
     "fix-lab/HomeReadings": {
         "ar-sa-default-calendar",
         "scopes-not-validated",
