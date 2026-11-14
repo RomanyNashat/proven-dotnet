@@ -37,6 +37,8 @@ jobs:
         shell: bash
         run: |
           dotnet --list-sdks
+          # Say so if the image no longer has a newer SDK, or this step would pass without checking anything.
+          dotnet --list-sdks | grep -qE '^(1[1-9]|[2-9][0-9])\.' || echo "::warning title=roslyn SDK mix::no SDK newer than 10 on this runner"
           dotnet tool install --global --add-source nupkg Proven.Roslyn.Mcp --version "$(cat VERSION)"
           dir="$RUNNER_TEMP/sdk-mix" && mkdir -p "$dir/Lib" && cd "$dir"
           printf '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>' > Lib/Lib.csproj
