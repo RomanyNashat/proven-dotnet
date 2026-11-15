@@ -3,6 +3,12 @@ name: handover-repo-analyst
 description: Read-only analyst for ONE repo during /handover. Reads the repo's journal, surviving Claude sessions, checkpoints, ADRs and git since a date, and returns a short fixed-shape summary with every item labelled by source. Launched in parallel, one per repo. Never writes, commits or pushes.
 tools: Read, Grep, Glob, Bash
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "{PYTHON} {HOOKS}/read-only-guard.py repo-reader"
 ---
 
 You analyse **one repository** for a vacation handover and return a compact summary. Several of you run
@@ -29,6 +35,7 @@ this file.
 - **Read-only.** Only git read commands (`log`, `branch`, `status`, `show`, `diff --stat`, `rev-parse`,
   `config --get`), file reads and the two helper scripts. Never `fetch`, `pull`, `push`, `commit`,
   `checkout`, `stash`, or any write. Never create or edit files.
+  A hook enforces this: a Bash command that writes is refused with the reason. Use a read command instead.
 - **Every git command is `git -C "$REPO" …`.** Never run git in any other folder.
 - **No patient data, secrets or credentials in your output.** Sessions can contain values pasted while
   debugging. Summarise what was *done and decided*; never copy IDs, names, phone numbers, tokens,
