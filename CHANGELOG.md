@@ -3,6 +3,16 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.31 — rules outside an `if`, and the business-rules eval
+- **`rule_candidates.py` finds rules outside an `if`:** DataAnnotations on a request (`[Required]`,
+  `[MaxLength(500)]`, `[Range]`) and a query's `.Where(...)`. Building the eval showed two of its six rules
+  lived there, unlisted. Tested.
+- **Eval (B2, `tests/evals/business-rules`):** a service whose rules are spread over its layers, with five
+  decoys (a comment, the README, an unused constant, a validator never registered, a calculator never
+  called). The rules-only pilot found 6 of 6 and claimed none, and also found a decoy the key had missed (a
+  `[Range]` that never runs without `ValidateDataAnnotations()`), which the reference had wrong; it was
+  fixed. The grid wasn't run; the README says why.
+
 ## 0.3.30 — business rules from the code
 - **`business-rules` skill:** finds the rules a service's code enforces, writes each as Given/When/Then in
   the business's words with the line that enforces it, and pins each with a characterization test that

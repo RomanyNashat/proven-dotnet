@@ -1,0 +1,31 @@
+{
+  "service": "Referrals",
+  "findings": [
+    "K1",
+    "K2",
+    "K3",
+    "K4",
+    "K5",
+    "K6"
+  ],
+  "regressions": [
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5"
+  ],
+  "files": {
+    "K1": "K1.txt",
+    "K2": "K2.txt",
+    "K3": "K3.txt",
+    "K4": "K4.txt",
+    "K5": "K5.txt",
+    "K6": "K6.txt",
+    "D1": "D1.txt",
+    "D2": "D2.txt",
+    "D3": "D3.txt",
+    "D4": "D4.txt",
+    "D5": "D5.txt"
+  }
+}

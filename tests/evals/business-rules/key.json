@@ -1,0 +1,125 @@
+{
+  "_": "K: a rule the code enforces when it runs; found when an R line of rules.md names one of its lines. D: looks like a rule but isn't enforced; claimed when an R line names one of its lines, or describes it (its words) without saying it isn't enforced.",
+  "K1": {
+    "what": "only a treating doctor may refer the patient; anyone else gets NotFound",
+    "lines": {
+      "ReferralDesk.cs": [
+        21,
+        22
+      ]
+    }
+  },
+  "K2": {
+    "what": "a second referral to a clinic with one still open returns the open one",
+    "lines": {
+      "ReferralDesk.cs": [
+        25,
+        26,
+        27
+      ],
+      "ReferralRepository.cs": [
+        13,
+        14
+      ]
+    }
+  },
+  "K3": {
+    "what": "a reason is required and at most 500 characters (the API answers 400)",
+    "lines": {
+      "CreateReferralRequest.cs": [
+        13,
+        14
+      ]
+    }
+  },
+  "K4": {
+    "what": "only an open referral can be accepted; otherwise 409",
+    "lines": {
+      "ReferralDesk.cs": [
+        41,
+        42
+      ],
+      "Referral.cs": [
+        28,
+        29
+      ]
+    }
+  },
+  "K5": {
+    "what": "a clinic's queue shows only open referrals from the last 90 days, oldest first",
+    "lines": {
+      "ReferralRepository.cs": [
+        9,
+        21,
+        23,
+        24
+      ]
+    }
+  },
+  "K6": {
+    "what": "a patient gets at most MaxPerPatientPerDay (3) referrals per UTC day; more answers 429 (the setting's [Range] is not enforced)",
+    "lines": {
+      "ReferralDesk.cs": [
+        29,
+        30,
+        31
+      ],
+      "appsettings.json": [
+        3
+      ]
+    }
+  },
+  "D1": {
+    "what": "patients over 65 skip the queue: only a comment says so",
+    "lines": {
+      "ReferralDesk.cs": [
+        24
+      ]
+    },
+    "words": "\\b65\\b|elderly|older patients"
+  },
+  "D2": {
+    "what": "a 10% discount from the 5th visit: FeeCalculator is never called",
+    "lines": {
+      "FeeCalculator.cs": [
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    "words": "discount|loyal|0\\.9|10 ?%|\\bfee\\b"
+  },
+  "D3": {
+    "what": "a daily cap of 5: MaxDailyReferrals is never used",
+    "lines": {
+      "ReferralOptions.cs": [
+        9,
+        10
+      ]
+    },
+    "words": "MaxDailyReferrals|\\b5 referrals|five referrals"
+  },
+  "D4": {
+    "what": "a referral expires after 30 days: only the README says so",
+    "lines": {
+      "README.md": [
+        7
+      ]
+    },
+    "words": "expir|30 days"
+  },
+  "D5": {
+    "what": "a note is required and a reason at least 10 characters: the validator is never registered",
+    "lines": {
+      "CreateReferralValidator.cs": [
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    "words": "\\bnote\\b[^.;]*\\b(required|needs|must)\\b|\\b(required|needs|must)\\b[^.;]*\\bnote\\b|10 characters|MinimumLength|at least 10"
+  }
+}

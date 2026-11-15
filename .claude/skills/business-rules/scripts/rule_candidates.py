@@ -5,8 +5,9 @@
     python rule_candidates.py <code folder> --check rules.md
 
 A candidate is a line that decides something: a guard (`if (...)` that returns or throws), a thrown
-exception, a FluentValidation `RuleFor`, a status change, a limit (a numeric constant or a TimeSpan
-field), or a calculation (`Math.Round` and friends, or a choice between two values). Test projects, bin and
+exception, a validation (a FluentValidation `RuleFor`, or a DataAnnotations attribute such as
+`[MaxLength(500)]`), a query filter (`.Where(...)`), a status change, a limit (a numeric constant or a
+TimeSpan field), or a calculation (`Math.Round` and friends, or a choice between two values). Test projects, bin and
 obj are left out, and so are comments.
 
 --check reads rules.md: rules as `R1: ... (File.cs:25 `the code`)` lines, and a `## Not rules` section of
@@ -27,7 +28,8 @@ from pathlib import Path
 GUARD = re.compile(r"^\s*(?:else\s+)?if\s*\(")
 EXITS = re.compile(r"\b(return|throw)\b")
 KINDS = [
-    ("validation", re.compile(r"\bRuleFor\s*\(")),
+    ("validation", re.compile(r"\bRuleFor\s*\(|\[(?:[\w(), ]*,\s*)?(?:Required|MaxLength|MinLength|StringLength|Range|RegularExpression|EmailAddress|Phone)\b")),
+    ("query filter", re.compile(r"\.Where\s*\(")),
     ("throw", re.compile(r"\bthrow\s+new\s+\w*Exception\b")),
     ("state change", re.compile(r"\b\w*Status\s*=(?![=>])")),
     ("limit", re.compile(r"\b(?:const\s+(?:int|long|decimal|double)|static\s+readonly\s+(?:TimeSpan|int|decimal))\s+\w+\s*=")),

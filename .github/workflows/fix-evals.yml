@@ -5,10 +5,10 @@ name: fix-evals
 
 on:
   pull_request:
-    paths: ['tests/evals/fix-*/**', 'tests/evals/story-check/**', '.claude/skills/story-check/**', 'tests/evals/tools/**', 'tools/ci/service.sh', '.github/workflows/fix-evals.yml']
+    paths: ['tests/evals/fix-*/**', 'tests/evals/story-check/**', '.claude/skills/story-check/**', 'tests/evals/business-rules/**', '.claude/skills/business-rules/**', 'tests/evals/tools/**', 'tools/ci/service.sh', '.github/workflows/fix-evals.yml']
   push:
     branches: [main]
-    paths: ['tests/evals/fix-*/**', 'tests/evals/story-check/**', '.claude/skills/story-check/**', 'tests/evals/tools/**', 'tools/ci/service.sh', '.github/workflows/fix-evals.yml']
+    paths: ['tests/evals/fix-*/**', 'tests/evals/story-check/**', '.claude/skills/story-check/**', 'tests/evals/business-rules/**', '.claude/skills/business-rules/**', 'tests/evals/tools/**', 'tools/ci/service.sh', '.github/workflows/fix-evals.yml']
 
 jobs:
   grade:
@@ -172,6 +172,22 @@ jobs:
       - name: Results
         shell: bash
         run: python3 tests/evals/tools/grade.py tests/evals/story-check results --json scores-story-check.json | tee -a "$GITHUB_STEP_SUMMARY"
+
+  grade-business-rules:
+    name: Business-rules eval (each rules.md against the enforced rules and the decoys)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Grade every copy
+        run: |
+          base=tests/evals/business-rules
+          copies="original=$base reference=$base/reference"
+          for d in "$base"/runs/*/; do [ -f "$d/Referrals/rules.md" ] && copies="$copies $(basename "$d")=${d%/}"; done
+          for c in $copies; do python3 "$base/tools/grade_one.py" "${c#*=}" "${c%%=*}" results; done
+      - name: Results
+        shell: bash
+        run: python3 tests/evals/tools/grade.py tests/evals/business-rules results --json scores-business-rules.json | tee -a "$GITHUB_STEP_SUMMARY"
 
   grade-qa:
     name: QA eval (a run's tests against ten planted bugs)

@@ -1,0 +1,1 @@
+Use the business-rules skill. For this task write only rules.md, no tests, and check it with the skill's script before you finish.

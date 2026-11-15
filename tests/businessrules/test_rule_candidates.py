@@ -95,6 +95,19 @@ class Stories(unittest.TestCase):
         self.assertNotIn("Booking.cs:9 ", out)
         self.assertNotIn("Booking.cs:10 ", out)
 
+    def test_attributes_and_query_filters_are_candidates(self):
+        # The rules that live outside an if: a request's DataAnnotations, and a repository's Where
+        (self.code / "Request.cs").write_text(
+            "namespace V;\npublic sealed record Request\n{\n    [Required, MaxLength(500)]\n    public required string Reason { get; init; }\n"
+            "    [Range(1, 20)]\n    public int Count { get; init; }\n}\n", encoding="utf-8")
+        (self.code / "Queue.cs").write_text(
+            "namespace V;\npublic sealed class Queue(Db db)\n{\n    public IQueryable<Visit> Open() =>\n"
+            "        db.Visits.Where(v => !v.Cancelled);\n}\n", encoding="utf-8")
+        out = run(self.code).stdout
+        self.assertIn("| Request.cs:4 | validation |", out)
+        self.assertIn("| Request.cs:6 | validation |", out)
+        self.assertIn("| Queue.cs:5 | query filter |", out)
+
     def test_the_tests_are_not_code_to_mine(self):
         self.assertNotIn("VisitCancellationRulesTests.cs", run(self.code).stdout)
 
