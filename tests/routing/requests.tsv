@@ -122,5 +122,5 @@ mutation-testing	would our tests notice if this comparison were wrong, run Stryk
 mutation-testing	the tests pass, but would they fail if the code were wrong on this branch
 story-check	before we build this story, what cases does it leave open that we need to ask the product owner about
 story-check	which questions should I ask about this Jira story before starting, what is missing from it
-business-rules	write down the business rules this legacy service enforces before we refactor it
-business-rules	what rules does this code actually apply, as given when then, with tests that pin them
+business-rules	before we refactor this legacy service, write down what it really decides, as given when then
+business-rules	who may cancel and until when, according to the code, pinned by tests that pass today
