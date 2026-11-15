@@ -116,3 +116,5 @@ worker-patterns	BackgroundService reading a Channel queue that drains on shutdow
 worker-patterns	PeriodicTimer loop in a hosted service that doesn't overlap
 zero-vulns	dotnet list package --vulnerable shows a CVE, which version fixes it
 zero-vulns	the build fails with NU1903, a vulnerable transitive package
+test-design	what test cases do we need for this story before I write the code
+test-design	turn these acceptance criteria into test cases with boundaries and a decision table
