@@ -1,0 +1,14 @@
+{
+  "_": "Each planted gap (G) is graded pass when the story's report marks that item a gap; each hidden answer (A) is graded pass when it does not. Items not listed here are not graded: either verdict is defensible.",
+  "G1": {"story": "refer", "item": "empty", "why": "a patient with no mobile number on file: AC3's text message has nowhere to go, and nothing says what then"},
+  "G2": {"story": "withdraw", "item": "failure", "why": "the clinic's inbox or the text message service down while withdrawing: the clinic may keep the slot"},
+  "G3": {"story": "withdraw", "item": "language", "why": "AC3's message has no language; only the other story's notes say it follows the patient's profile"},
+  "G4": {"story": "withdraw", "item": "touches", "why": "WaitingList counts every referral that isn't Closed, so a withdrawn one would still lengthen the wait it shows"},
+  "A1": {"story": "refer", "item": "maximum", "why": "ReferralDesk refuses a reason over 500 characters"},
+  "A2": {"story": "refer", "item": "permission", "why": "ReferralDesk answers NotFound unless the doctor treats the patient"},
+  "A3": {"story": "refer", "item": "duplicates", "why": "ReferralDesk returns the open referral to the same clinic instead of a second one"},
+  "A4": {"story": "refer", "item": "existing-data", "why": "the notes: paper referrals from before go-live stay on paper"},
+  "A5": {"story": "refer", "item": "language", "why": "the notes: the message goes in the language of the patient's profile"},
+  "A6": {"story": "withdraw", "item": "permission", "why": "the notes: the referring doctor and the receiving clinic's head, nobody else"},
+  "A7": {"story": "withdraw", "item": "duplicates", "why": "the notes: withdrawing twice leaves it as it is"}
+}

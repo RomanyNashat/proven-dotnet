@@ -1,0 +1,20 @@
+{"items": [
+  {"item": "empty", "verdict": "gap",
+   "question": "Patient.Mobile can be null. When the patient has no mobile number, can the referral still be withdrawn without the text (AC3), and is anyone told to let the patient know another way? (Decide together with the same question on refer.)"},
+  {"item": "maximum", "verdict": "gap",
+   "question": "The 500-character limit in the code (ReferralDesk.MaxReasonLength) is for the referral reason. What is the longest withdrawal reason allowed: the same 500, or something else?"},
+  {"item": "failure", "verdict": "gap",
+   "question": "IClinicInbox can only post a new referral, and there is no text-message dependency. If the clinic inbox or the SMS gateway is slow or down when a referral is withdrawn, does the withdrawal still stand at once, and how and for how long are the clinic (AC2) and the patient (AC3) told later?"},
+  {"item": "permission", "verdict": "stated",
+   "quote": "The head of the receiving clinic may withdraw a referral to their clinic too. Nobody else may."},
+  {"item": "duplicates", "verdict": "stated",
+   "quote": "Withdrawing a referral that is already withdrawn leaves it as it is, and the doctor sees it as withdrawn."},
+  {"item": "interruption", "verdict": "gap",
+   "question": "If the service stops after the referral is marked withdrawn but before the clinic queue and the patient's text are updated, must both still happen later (at least once, accepting a possible second text), or is at most once acceptable?"},
+  {"item": "existing-data", "verdict": "n/a",
+   "reason": "The only records from before this story are referrals made through refer, whose withdrawability the story settles by status (open yes, accepted or closed no), and paper referrals, which refer.md keeps out of the system."},
+  {"item": "language", "verdict": "gap",
+   "question": "The withdrawal story doesn't say which language the text uses. Is it the patient's profile language, as for the referral text? And does the text include the doctor's free-text reason, which may be written in a different language from the patient's?"},
+  {"item": "touches", "verdict": "gap",
+   "question": "Three things read referral status and must be told what a withdrawn referral means: (1) WaitingList.cs:10 counts every referral that isn't Closed, so a withdrawn one would still lengthen the wait shown to patients; (2) FindOpenAsync blocks a second referral to the same clinic: after a withdrawal, may the doctor refer the same patient there again?; (3) a referral whose clinic post is still waiting in the outbox (ClinicNotified = false) is withdrawn: should the outbox drop it? Also Referral.Close() (Referral.cs:27) closes from any status: may a withdrawn referral be closed?"}
+]}

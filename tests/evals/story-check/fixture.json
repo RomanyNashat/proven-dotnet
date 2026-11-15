@@ -1,0 +1,31 @@
+{
+  "service": "Referrals",
+  "findings": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "regressions": [
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5",
+    "A6",
+    "A7"
+  ],
+  "files": {
+    "G1": "G1.txt",
+    "G2": "G2.txt",
+    "G3": "G3.txt",
+    "G4": "G4.txt",
+    "A1": "A1.txt",
+    "A2": "A2.txt",
+    "A3": "A3.txt",
+    "A4": "A4.txt",
+    "A5": "A5.txt",
+    "A6": "A6.txt",
+    "A7": "A7.txt"
+  }
+}

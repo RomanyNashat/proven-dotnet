@@ -5,10 +5,10 @@ name: fix-evals
 
 on:
   pull_request:
-    paths: ['tests/evals/fix-*/**', 'tests/evals/tools/**', 'tools/ci/service.sh', '.github/workflows/fix-evals.yml']
+    paths: ['tests/evals/fix-*/**', 'tests/evals/story-check/**', '.claude/skills/story-check/**', 'tests/evals/tools/**', 'tools/ci/service.sh', '.github/workflows/fix-evals.yml']
   push:
     branches: [main]
-    paths: ['tests/evals/fix-*/**', 'tests/evals/tools/**', 'tools/ci/service.sh', '.github/workflows/fix-evals.yml']
+    paths: ['tests/evals/fix-*/**', 'tests/evals/story-check/**', '.claude/skills/story-check/**', 'tests/evals/tools/**', 'tools/ci/service.sh', '.github/workflows/fix-evals.yml']
 
 jobs:
   grade:
@@ -156,6 +156,22 @@ jobs:
           path: |
             results/
             scores-fix-sync.json
+
+  grade-story-check:
+    name: Story-check eval (each report against the planted gaps and hidden answers)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Grade every copy
+        run: |
+          base=tests/evals/story-check
+          copies="original=$base reference=$base/reference"
+          for d in "$base"/runs/*/; do [ -d "$d/Referrals/.qa" ] && copies="$copies $(basename "$d")=${d%/}"; done
+          for c in $copies; do python3 "$base/tools/grade_one.py" "${c#*=}" "${c%%=*}" results; done
+      - name: Results
+        shell: bash
+        run: python3 tests/evals/tools/grade.py tests/evals/story-check results --json scores-story-check.json | tee -a "$GITHUB_STEP_SUMMARY"
 
   grade-qa:
     name: QA eval (a run's tests against ten planted bugs)
