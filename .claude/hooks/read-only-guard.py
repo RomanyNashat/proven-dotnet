@@ -3,11 +3,13 @@
 read. Wired in the agent's own frontmatter, so it runs inside that agent and nowhere else (no launch on
 the main session's commands).
 
-    {PYTHON} {HOOKS}/read-only-guard.py <policy>      policy: repo-reader | health
+    {PYTHON} {HOOKS}/read-only-guard.py <policy>      policy: repo-reader | health | qa
 
 repo-reader (handover-repo-analyst): git read commands, file reads and searches, the harness's own skill
 scripts. health (health-analyst): the same, plus `dotnet build`/`test`/`list`/`restore`, and writes only
-into a `coverage/` folder (the report card's results, `build.log`, `health-history.json`).
+into a `coverage/` folder (the report card's results, `build.log`, `health-history.json`). qa
+(qa-engineer): the same shell as health, and Write/Edit only in a test project (a `*.Tests` folder or
+`tests/`) and on `story.md`; production code is the implementer's.
 
 A command is allowed when every command in it, including those inside `$( )` and backticks, is on the
 list for the policy and no redirect writes outside what the policy allows. Anything else, or anything
@@ -48,10 +50,34 @@ def is_skill_script(path: str) -> bool:
     return "/.claude/skills/" in p and "/scripts/" in p and p.endswith(".py") and ".." not in p.split("/")
 
 
+def is_test_path(path: str) -> bool:
+    parts = [p for p in path.replace("\\", "/").split("/") if p not in ("", ".")]
+    if not parts or ".." in parts:
+        return False
+    if parts[-1] == "story.md":
+        return True
+    return any(p.endswith((".Tests", ".Test", ".UnitTests", ".IntegrationTests")) or p.lower() in ("tests", "test")
+               for p in parts[:-1])
+
+
+def relative_to(path: str, cwd: str) -> str:
+    """The path inside the working folder, so a repo cloned under a folder named `tests` doesn't make all
+    of its code look like tests. A path outside the working folder gets no test-project parts."""
+    p, c = path.replace("\\", "/"), cwd.replace("\\", "/").rstrip("/")
+    absolute = p.startswith("/") or re.match(r"^[A-Za-z]:/", p)
+    if not absolute or not c:
+        return p
+    if p.lower().startswith(c.lower() + "/"):
+        return p[len(c) + 1:]
+    return "/outside/" + p.rsplit("/", 1)[-1]
+
+
 def writes_allowed(target: str, policy: str) -> bool:
     t = target.replace("\\", "/")
     if t in ("/dev/null", "nul", "NUL"):
         return True
+    if policy == "qa":
+        return is_test_path(t)
     if policy == "health":
         return (t.startswith("coverage/") or t.startswith("./coverage/") or "/coverage/" in t) and ".." not in t.split("/")
     return False
@@ -151,15 +177,15 @@ def check_simple(words: list[str], policy: str) -> None:
         if rest and is_skill_script(rest[0]):
             return
         raise Refused("python runs only the harness's own skill scripts here")
-    if name == "dotnet" and policy == "health":
+    if name == "dotnet" and policy in ("health", "qa"):
         if args and (args[0] in DOTNET_READ or args[:2] == ["sln", "list"]):
             return
         raise Refused("dotnet other than build, test, list or restore")
-    if name == "tee" and policy == "health":
+    if name == "tee" and policy in ("health", "qa"):
         targets = [a for a in args if not a.startswith("-")]
         if targets and all(writes_allowed(t, policy) for t in targets):
             return
-        raise Refused("tee writes only into coverage/ here")
+        raise Refused("tee writes only where this agent may write")
     raise Refused(f"{name} is not on this agent's read-only list")
 
 
@@ -226,7 +252,15 @@ def main() -> int:
     except ValueError:
         print("read-only guard: the hook input wasn't JSON, so the command was refused", file=sys.stderr)
         return 2
-    if event.get("tool_name") != "Bash":
+    tool = event.get("tool_name")
+    if tool in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
+        path = (event.get("tool_input") or {}).get("file_path") or (event.get("tool_input") or {}).get("notebook_path") or ""
+        if policy == "qa" and is_test_path(relative_to(path, event.get("cwd") or "")):
+            return 0
+        print(f"read-only agent: refused ({tool} on {path}: this agent writes only tests and story.md). "
+              "Production code is the implementer's.", file=sys.stderr)
+        return 2
+    if tool != "Bash":
         return 0
     command = (event.get("tool_input") or {}).get("command", "")
     try:

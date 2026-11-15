@@ -114,6 +114,54 @@ class Stories(unittest.TestCase):
         self.assertFalse(allowed("cat <<EOF\nhello\nEOF"))
 
 
+def tool_hook(tool, path, policy="qa", cwd="/repo"):
+    event = {"hook_event_name": "PreToolUse", "tool_name": tool, "agent_type": "qa-engineer", "cwd": cwd,
+             "tool_input": {"file_path": path, "content": "x"}}
+    return subprocess.run([sys.executable, GUARD, policy], input=json.dumps(event), capture_output=True, text=True)
+
+
+class QaEngineer(unittest.TestCase):
+    def test_story_the_qa_engineer_writes_the_tests_and_the_story_but_not_the_code(self):
+        # Given the QA engineer designing a booking story's tests
+        for path in ["/repo/tests/Clinic.Tests/Booking/BookingTests.cs", "/repo/src/Clinic.Tests/story.md",
+                     "/repo/Clinic.IntegrationTests/BookingApiTests.cs", "/repo/docs/booking/story.md"]:
+            # When it writes a test or the story, then it is allowed
+            self.assertEqual(0, tool_hook("Write", path).returncode, path)
+        # When it would write the code the tests are for, then it is refused, with who writes it
+        result = tool_hook("Edit", "/repo/src/Clinic/Booking/BookingPolicy.cs")
+        self.assertEqual(2, result.returncode)
+        self.assertIn("this agent writes only tests and story.md", result.stderr)
+        # And a path that climbs out of the test project is refused too
+        self.assertEqual(2, tool_hook("Write", "/repo/tests/Clinic.Tests/../../src/Clinic/Booking.cs").returncode)
+
+    def test_the_qa_engineer_runs_the_tests_but_writes_code_with_no_shell_trick(self):
+        for command in ["dotnet test tests/Clinic.Tests --filter \"FullyQualifiedName~Booking\"",
+                        "dotnet build", f"python \"{SKILL}\""]:
+            self.assertTrue(allowed(command, "qa"), command)
+        self.assertFalse(allowed("echo 'class X {}' > src/Clinic/X.cs", "qa"))
+        self.assertFalse(allowed("cp tests/Clinic.Tests/Fake.cs src/Clinic/Fake.cs", "qa"))
+        self.assertTrue(allowed("dotnet test 2>&1 | tee tests/Clinic.Tests/red.log", "qa"))
+
+    def test_story_a_repo_cloned_under_a_folder_named_tests_is_still_guarded(self):
+        # Given the service is cloned to /home/dev/tests/clinic
+        cwd = "/home/dev/tests/clinic"
+        # Then its production code is still refused, and its test project still allowed
+        self.assertEqual(2, tool_hook("Write", f"{cwd}/src/Clinic/Booking.cs", cwd=cwd).returncode)
+        self.assertEqual(0, tool_hook("Write", f"{cwd}/tests/Clinic.Tests/BookingTests.cs", cwd=cwd).returncode)
+        # And a file outside the working folder is refused, whatever its folders are called
+        self.assertEqual(2, tool_hook("Write", "/home/dev/other.Tests/x.cs", cwd=cwd).returncode)
+
+    def test_other_agents_never_get_the_write_tools(self):
+        self.assertEqual(2, tool_hook("Write", "/repo/tests/Clinic.Tests/A.cs", "repo-reader").returncode)
+
+    def test_windows_paths(self):
+        cwd = r"C:\src\visits"
+        self.assertEqual(0, tool_hook("Write", r"C:\src\visits\tests\Visits.Tests\BookingTests.cs", cwd=cwd).returncode)
+        self.assertEqual(2, tool_hook("Write", r"C:\src\visits\src\Visits\Booking.cs", cwd=cwd).returncode)
+        # Windows paths ignore case: the drive and folders may come back in another case
+        self.assertEqual(0, tool_hook("Write", r"c:\SRC\visits\tests\Visits.Tests\A.cs", cwd=cwd).returncode)
+
+
 class Production(unittest.TestCase):
     def test_windows_paths_and_the_py_launcher(self):
         script = r"C:\Users\dev\.claude\skills\handover\scripts\extract_sessions.py"
@@ -155,7 +203,8 @@ class Installed(unittest.TestCase):
             claude = os.path.join(home, ".claude")
             subprocess.run([sys.executable, os.path.join(repo, "tools", "layer.py"), "--claude-dir", claude,
                             "install", os.path.join(repo, ".claude")], check=True, capture_output=True)
-            for agent, write in (("handover-repo-analyst", "git commit -m x"), ("health-analyst", "touch src/a.cs")):
+            for agent, write in (("handover-repo-analyst", "git commit -m x"), ("health-analyst", "touch src/a.cs"),
+                                 ("qa-engineer", "touch src/a.cs")):
                 text = open(os.path.join(claude, "agents", f"{agent}.md"), encoding="utf-8").read()
                 command = re.search(r'command: "(.*read-only-guard\.py [a-z-]+)"', text).group(1)
                 self.assertNotIn("{", command)

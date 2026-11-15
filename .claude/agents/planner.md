@@ -36,7 +36,7 @@ You are a Senior .NET Technical Lead who decomposes product requirements into ex
 ## Tasks
 
 ### Task 1: [Description] (Size: S/M/L/XL)
-**Agent**: tdd-guide
+**Agent**: qa-engineer, then tdd-guide (qa-engineer writes the failing tests from the criteria)
 **Acceptance Criteria**:
 - [ ] [Specific, testable criterion]
 - [ ] [Another criterion]
