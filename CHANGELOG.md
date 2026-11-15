@@ -18,6 +18,11 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   BOM, cited with a Windows path, and an Arabic question the story answers.
 - `qa-engineer` checks an unchecked story first, and a NOT READY one goes back with its questions;
   `test-design` 1.2.0 points to it.
+- **Fix: an Arabic story no longer stops the scripts on Windows.** PowerShell's console is cp1252, so
+  `trace_matrix.py` (since 0.3.23) stopped with a `UnicodeEncodeError` at the first Arabic criterion. It,
+  `story_check.py`, `qa_verdict.py`, `changed_members.py` and `mutation_report.py` now write UTF-8. Found
+  by the new production test on the Windows runner; the Arabic tests now run with a cp1252 console on Linux
+  too.
 - Seven skill descriptions shortened to keep the listing under its budget; routing is as good as before
   (120 of 123 requests first, all in the top 3).
 

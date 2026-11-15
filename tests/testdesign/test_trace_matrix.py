@@ -113,6 +113,21 @@ class Production(unittest.TestCase):
                                 capture_output=True, text=True, env=bare)
         self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_an_arabic_criterion_printed_to_a_windows_console(self):
+        # A story pasted from Jira in Arabic; the developer runs the script in PowerShell, whose console is cp1252
+        tmp = Path(tempfile.mkdtemp(prefix="trace arabic "))
+        try:
+            (tmp / "story.md").write_text("- AC1: يمكن للمريض إلغاء موعده قبل ساعتين.\n", encoding="utf-8")
+            (tmp / "Tests").mkdir()
+            (tmp / "Tests" / "T.cs").write_text('namespace N;\npublic sealed class T\n{\n    [Fact, Trait("AC", "AC1")]\n'
+                                                '    public void Cancel_TwoHoursBefore_IsAllowed() { }\n}\n', encoding="utf-8")
+            result = subprocess.run([sys.executable, str(SCRIPT), str(tmp / "story.md"), str(tmp / "Tests")], capture_output=True,
+                                    env=dict(os.environ, PYTHONIOENCODING="cp1252"))
+            self.assertEqual(0, result.returncode, result.stderr.decode("utf-8", "replace"))
+            self.assertIn("يمكن للمريض إلغاء موعده", result.stdout.decode("utf-8"))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()

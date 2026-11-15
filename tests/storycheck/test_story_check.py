@@ -1,6 +1,7 @@
 """story_check.py on a real-shaped story (fixture/story.md, cancelling a visit) and the code it touches
 (fixture/src/Visits/CancelVisit.cs): each story is a way a story check goes wrong before anyone reads it."""
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -114,6 +115,10 @@ class Stories(unittest.TestCase):
         self.assertTrue(result.stdout.startswith("Story check: READY\n"), result.stdout)
 
 
+# The console a Windows developer runs this in is cp1252: the Arabic story must still come out whole.
+WINDOWS_CONSOLE = dict(os.environ, PYTHONIOENCODING="cp1252")
+
+
 class Production(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="story check prod "))
@@ -135,8 +140,8 @@ class Production(unittest.TestCase):
         report = self.tmp / "report.json"
         report.write_bytes("﻿".encode() + json.dumps({"items": items}, ensure_ascii=False).encode("utf-8"))
         out = subprocess.run([sys.executable, str(SCRIPT), str(report), "--story", str(story), "--repo", str(repo)],
-                             capture_output=True, text=True, encoding="utf-8")
-        self.assertEqual(0, out.returncode, out.stdout)
+                             capture_output=True, text=True, encoding="utf-8", env=WINDOWS_CONSOLE)
+        self.assertEqual(0, out.returncode, out.stdout + out.stderr)
         self.assertIn("NOT READY (4 questions)", out.stdout)
 
     def test_an_arabic_question_the_story_answers(self):
@@ -147,9 +152,9 @@ class Production(unittest.TestCase):
         report = self.tmp / "report.json"
         report.write_text(json.dumps({"items": items}, ensure_ascii=False), encoding="utf-8")
         out = subprocess.run([sys.executable, str(SCRIPT), str(report), "--story", str(story), "--repo", str(FIXTURE)],
-                             capture_output=True, text=True, encoding="utf-8")
+                             capture_output=True, text=True, encoding="utf-8", env=WINDOWS_CONSOLE)
         self.assertEqual(1, out.returncode)
-        self.assertIn("maximum: the story may already answer this", out.stdout)
+        self.assertIn("maximum: the story may already answer this: \"AC1: يمكن للمريض إلغاء موعده قبل ساعتين من بدايته.\"", out.stdout)
 
 
 if __name__ == "__main__":
