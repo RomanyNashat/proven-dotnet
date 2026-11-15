@@ -20,7 +20,8 @@ standard pipeline.
 When a conversation turns into a technical decision (X vs Y, a migration plan, a design trade-off, a
 root cause that is really a design choice), write a lightweight ADR to `docs/decisions/` in the repo
 (or wherever the repo keeps decision records), following `~/.claude/proven/adr-template.md` (it says
-when and how). Not for learning questions or simple coding help.
+when and how). Not for learning questions or simple coding help. A root cause, a close choice or a plan
+to stress gets its method from `problem-analysis`.
 
 ## Shareable writing — the simplicity layer
 

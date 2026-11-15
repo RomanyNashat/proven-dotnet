@@ -1,6 +1,6 @@
 ---
 name: api-contract-evolution
-description: "Change an API that installed mobile apps call without breaking old versions: new enum values, removed or new required fields, deprecation and sunset, oasdiff in CI."
+description: "Change an API installed mobile apps call without breaking old versions: new enum values, removed or required fields, sunset, oasdiff in CI."
 version: 1.0.0
 ---
 

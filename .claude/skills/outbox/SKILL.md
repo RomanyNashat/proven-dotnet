@@ -1,6 +1,6 @@
 ---
 name: outbox
-description: "Transactional outbox: publish an event only if the database write commits (the dual-write problem), relay messages from a table to the broker, an inbox for consumers."
+description: "Transactional outbox: publish an event only if the database write commits (dual write), relay rows to the broker, an inbox for consumers."
 ---
 
 # Transactional Outbox — reliable event publishing

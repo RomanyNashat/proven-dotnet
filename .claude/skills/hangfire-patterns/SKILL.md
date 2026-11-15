@@ -1,6 +1,6 @@
 ---
 name: hangfire-patterns
-description: "Hangfire on PostgreSQL or SQL Server: fire-and-forget and recurring background jobs, filters, retries, queues, continuations, a time zone, a protected dashboard."
+description: "Hangfire on PostgreSQL or SQL Server: fire-and-forget and recurring jobs, filters, retries, queues, continuations, a time zone, a protected dashboard."
 version: 2.1.0
 ---
 
