@@ -90,6 +90,12 @@ AutoMapper mapping nobody ever wrote a test for). The gate does not rely on exis
    produces for representative inputs — snapshot the outputs into a characterization test. Reuse the
    `test-coverage` skill / `coverage-analyst` machinery, which already writes characterization tests.
    For a mapping: build sample source objects, run the *current* mapping, record the exact output.
+   **When the code decides things** (guards, limits, calculations, status changes), pin its rules with
+   `business-rules` instead: `rules.md` and its tests are the characterization, written once and kept.
+   After the change, every rule must still be proven
+   (`trace_matrix.py rules.md <tests> --prefix R --trait Rule --trx <results> --require-all`), and
+   `rule_candidates.py <code> --check rules.md` must still pass: a decision the change added, or one it
+   moved out of reach of its rule, shows there as a line no rule accounts for.
 3. **Apply the change**: on the committed tree (the starting commit is the way back), or inside the
    worktree when running isolated. Nothing is committed by Claude either way.
 4. **Run the characterization test against the new code.** Same inputs → compare outputs.

@@ -1,7 +1,7 @@
 ---
 name: dotnet-upgrade
 description: "Move a service from .NET 8 or 9 to .NET 10 and turn on nullable reference types: the order of work, the breaking changes that bite, proving nothing changed."
-version: 1.1.1
+version: 1.2.0
 ---
 
 # Upgrading to .NET 10
@@ -15,6 +15,8 @@ still on 8 or 9, run `known-traps` over the folder that holds them: `framework-o
 
 - **The tests are the safety net.** Run them, and note the count. If coverage is thin around the code
   the upgrade touches (EF queries, serialization, auth), add characterization tests first (`test-coverage`).
+  A service whose rules nobody wrote down gets them first (`business-rules`): who may do what, until when,
+  for how much, each pinned by a test that passes on today's code.
 - **Inventory**, so nothing is upgraded by surprise:
   ```bash
   dotnet --list-sdks
@@ -246,6 +248,8 @@ Rules while doing it:
   version change is one you meant.
 - The service starts on the new image and answers its health check; the production tests pass under the
   slim-image conditions.
+- Every rule in `rules.md` is still proven on the new runtime (`business-rules`, step 4), and
+  `rule_candidates.py --check` still passes.
 - For a refactor-sized nullable change, run it through `remediation-parity`.
 
 ## Rules
