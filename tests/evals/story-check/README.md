@@ -49,3 +49,31 @@ The copies:
   and that is the result.
 - **Also reported:** cost, time, the questions asked outside the key, and how often the script accepts the
   rules-only arm's reports (it never sees the script).
+
+## The pilot (2026-11-15): the fixture can't tell the arms apart
+
+One rules-only run (`claude-opus-5-5`, medium, this branch's first commit): $0.49, 14 turns, 106 seconds.
+Its reports are in `runs/rules-1`.
+
+- **It asked all four gaps and none of the seven answers**: the pilot rule's "redesign" case. It cited the
+  code for the three answers there, quoted the notes for the four in the stories, and the skill's script,
+  which this arm never saw, accepted both reports.
+- **Its five questions outside the key are fair ones**, not noise: the text-message service down, a stop
+  between saving and texting, in both stories (at least once or at most once), the withdrawal reason's length, a patient
+  with no mobile when withdrawing, and three more readers of a referral's status under `touches`
+  (`FindOpenAsync`, the outbox, `Close()`).
+
+**What it means, and why there is no redesign.** The task already gives both arms the nine cases, the
+report shape and "don't ask what is settled": what is left for the skill to add is its rules and its
+script, and a strong model does without them here. A redesign would be written after reading this run's
+answers, so it would be tuned to make the baseline miss, and a win on it wouldn't mean much (the same
+reason `fix-qa` got no third design). So the grid wasn't run.
+
+The skill stays for what it enforces rather than for what it finds: one routine every time, every settled
+case backed by a quote or a line, and a script that refuses a made-up quote, a line that doesn't hold its
+claim, or a question the story answers, before anyone reads the report. That holds on a smaller or
+faster model, or on a bad day, where nothing here measured it.
+
+**What would measure more:** a plain request with no case list ("is this story ready to build?") against
+the harness, graded by a judge that maps each question to a case. It measures what a developer gets
+without the harness, but needs a judge this repo doesn't have yet, so it is parked rather than built.
