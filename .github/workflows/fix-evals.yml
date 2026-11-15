@@ -157,6 +157,37 @@ jobs:
             results/
             scores-fix-sync.json
 
+  grade-qa:
+    name: QA eval (a run's tests against ten planted bugs)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Grade every copy
+        run: |
+          base=tests/evals/fix-qa
+          copies="original=$base reference=$base/reference"
+          for d in "$base"/runs/*/; do [ -d "$d/Pharmacy/RefillDesk.Tests" ] && copies="$copies $(basename "$d")=${d%/}"; done
+          mkdir -p results
+          for c in $copies; do
+            name=${c%%=*}; src=${c#*=}
+            echo "::group::$name"
+            docker run --rm -v "$PWD:/w" -w /w mcr.microsoft.com/dotnet/sdk:10.0-noble \
+              bash "$base/tools/grade-one.sh" "$src" "$name" /w/results
+            echo "::endgroup::"
+          done
+      - name: Results
+        shell: bash
+        run: python3 tests/evals/tools/grade.py tests/evals/fix-qa results --json scores-fix-qa.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Test logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fix-eval-qa-results
+          path: |
+            results/
+            scores-fix-qa.json
+
   grade-upgrade:
     name: Upgrade eval (hidden tests on .NET 10, PostgreSQL)
     runs-on: ubuntu-26.04
