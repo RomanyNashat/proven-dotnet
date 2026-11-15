@@ -1,0 +1,11 @@
+{"items": [
+  {"item": "empty", "verdict": "n/a", "reason": "there is always a referral to withdraw"},
+  {"item": "maximum", "verdict": "n/a", "reason": "one referral at a time; the reason's length follows the referral's own limit"},
+  {"item": "failure", "verdict": "gap", "question": "If the clinic's inbox is down when a referral is withdrawn, does the withdrawal wait, or stand and reach the clinic later the way a new referral does?"},
+  {"item": "permission", "verdict": "stated", "quote": "The head of the receiving clinic may withdraw a referral to their clinic too. Nobody else may."},
+  {"item": "duplicates", "verdict": "stated", "quote": "Withdrawing a referral that is already withdrawn leaves it as it is"},
+  {"item": "interruption", "verdict": "n/a", "reason": "one request"},
+  {"item": "existing-data", "verdict": "stated", "quote": "Accepted and closed referrals can't be withdrawn"},
+  {"item": "language", "verdict": "gap", "question": "In which language does the AC3 text message about the withdrawal go out: the patient's profile language, as for a new referral?"},
+  {"item": "touches", "verdict": "gap", "question": "WaitingList counts every referral that isn't Closed: should a withdrawn referral stop counting toward the wait a clinic shows?"}
+]}

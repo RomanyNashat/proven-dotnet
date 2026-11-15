@@ -1,0 +1,20 @@
+{"items": [
+  {"item": "empty", "verdict": "gap",
+   "question": "Patient.Mobile can be null. When the patient has no mobile number on file, is the referral still made without the text (AC3), is it blocked, or is someone (the doctor or the clinic) told to reach the patient another way?"},
+  {"item": "maximum", "verdict": "code", "where": "src/Referrals/ReferralDesk.cs:15",
+   "snippet": "public const int MaxReasonLength = 500;"},
+  {"item": "failure", "verdict": "gap",
+   "question": "The code covers the clinic inbox being down (the outbox posts later), but there is no text-message dependency at all. If the SMS gateway is slow or down, does the referral still stand, is the text retried, for how long, and who is told if it never goes out?"},
+  {"item": "permission", "verdict": "code", "where": "src/Referrals/ReferralDesk.cs:23",
+   "snippet": "if (patient is null || !patient.TreatingDoctorIds.Contains(doctorId))\n    return new(CreateOutcome.NotFound, null);"},
+  {"item": "duplicates", "verdict": "code", "where": "src/Referrals/ReferralDesk.cs:26",
+   "snippet": "var open = await store.FindOpenAsync(patientId, clinicId, ct);\nif (open is not null)\n    return new(CreateOutcome.AlreadyOpen, open);"},
+  {"item": "interruption", "verdict": "gap",
+   "question": "If the service stops after the referral is saved but before the patient's text goes out, must the text still be sent later (at least once, accepting a possible second text), or is it fine to send it at most once and sometimes not at all?"},
+  {"item": "existing-data", "verdict": "stated",
+   "quote": "Paper referrals from before go-live are not moved into the system; clinics keep working them on paper."},
+  {"item": "language", "verdict": "stated",
+   "quote": "The text message goes out in the language set in the patient's profile."},
+  {"item": "touches", "verdict": "code", "where": "src/Referrals/WaitingList.cs:10",
+   "snippet": "var waiting = await store.CountAsync(clinicId, r => r.Status != ReferralStatus.Closed, ct);"}
+]}

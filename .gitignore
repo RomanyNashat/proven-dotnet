@@ -16,3 +16,5 @@ try-first-report.txt
 
 # /qa-scan output
 .qa/
+# the story-check eval keeps its copies' reports under .qa/, as the skill writes them
+!tests/evals/story-check/**/.qa/

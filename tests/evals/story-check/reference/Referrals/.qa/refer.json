@@ -1,0 +1,11 @@
+{"items": [
+  {"item": "empty", "verdict": "gap", "question": "If the patient has no mobile number on file, is the referral still made without the AC3 text message, or does the doctor have to add a number first?"},
+  {"item": "maximum", "verdict": "code", "where": "src/Referrals/ReferralDesk.cs:20", "snippet": "reason.Length > MaxReasonLength"},
+  {"item": "failure", "verdict": "code", "where": "src/Referrals/ReferralDesk.cs:42", "snippet": "catch (HttpRequestException)"},
+  {"item": "permission", "verdict": "code", "where": "src/Referrals/ReferralDesk.cs:24", "snippet": "!patient.TreatingDoctorIds.Contains(doctorId)"},
+  {"item": "duplicates", "verdict": "code", "where": "src/Referrals/ReferralDesk.cs:28", "snippet": "return new(CreateOutcome.AlreadyOpen, open)"},
+  {"item": "interruption", "verdict": "n/a", "reason": "one request; the referral is saved before the clinic is told"},
+  {"item": "existing-data", "verdict": "stated", "quote": "Paper referrals from before go-live are not moved into the system"},
+  {"item": "language", "verdict": "stated", "quote": "The text message goes out in the language set in the patient's profile"},
+  {"item": "touches", "verdict": "n/a", "reason": "a new referral lengthening the clinic's wait is what the waiting list is for"}
+]}
