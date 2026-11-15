@@ -34,9 +34,11 @@ apart, and let someone who wrote none of them choose.
    change, the deadline) and the criteria with their weights as the header of a `tradeoff.py` table
    (`problem-analysis`), each weight with why. Nothing is designed yet.
 2. **Three designers, in parallel, apart.** Launch three agents at once with the same brief and the
-   criteria, none told about the others. Give each a different lens so they don't converge on the
-   obvious one: the simplest design that meets the constraints; the one that holds up best when things
-   fail; the one cheapest to run and change in a year. Each returns one design: what changes, what it
+   criteria, none told about the others. Give each a different lens: the simplest design that meets the
+   constraints; the one that holds up best when things fail; the one cheapest to run and change in a
+   year. A lens alone isn't enough (in the first run two lenses reached the same design), so also tell
+   each what its design may not share with an obvious answer: where the change lives, or what it gives
+   up. Each returns one design: what changes, what it
    costs, how it fails, what it rules out later.
 3. **A judge who wrote none of them.** A fresh agent gets the brief, the criteria and the three designs,
    with the authors' lenses removed, and scores each design 1 to 5 on each criterion with a line of reason.
