@@ -42,7 +42,7 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
             if (today < runsOut.AddDays(-WindowDays))
                 return new(RefillRefusal.TooEarly, null);
 
-            if (store.RequestsFor(prescriptionId).Any(r => r.Status is RefillStatus.Requested or RefillStatus.PendingApproval))
+            if (store.RequestsFor(prescriptionId).Any(r => r.Status is RefillStatus.Requested or RefillStatus.PendingApproval or RefillStatus.Approved))
                 return new(RefillRefusal.AlreadyOpen, null);
 
             var status = prescription.Controlled ? RefillStatus.PendingApproval : RefillStatus.Requested;
@@ -60,7 +60,7 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
                 return false;
 
             request.Status = to;
-            if (to == RefillStatus.Approved)
+            if (to == RefillStatus.Dispensed)
             {
                 var prescription = store.FindPrescription(request.PrescriptionId)!;
                 store.Save(prescription with { RefillsLeft = prescription.RefillsLeft - 1, LastDispensedOn = Today });

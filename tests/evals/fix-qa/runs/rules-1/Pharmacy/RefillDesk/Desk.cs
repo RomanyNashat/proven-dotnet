@@ -23,7 +23,7 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
 
     public RefillResult Request(int requesterId, int prescriptionId)
     {
-        // no lock: two requests at the same moment both pass the open-request check
+        lock (_gate)
         {
             var prescription = store.FindPrescription(prescriptionId);
             if (prescription is null)

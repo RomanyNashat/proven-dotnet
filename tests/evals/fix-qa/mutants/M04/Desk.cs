@@ -30,8 +30,8 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
                 return new(RefillRefusal.NotFound, null);
             var today = Today;
 
-            if (requesterId != prescription.PatientId && !store.DelegationsOf(requesterId).Any(d =>
-                    d.PatientId == prescription.PatientId && d.From <= today && today <= d.To))
+            var delegation = store.DelegationsOf(requesterId).FirstOrDefault(d => d.PatientId == prescription.PatientId);
+            if (requesterId != prescription.PatientId && !(delegation is not null && delegation.From <= today && today <= delegation.To))
                 return new(RefillRefusal.NotYourPrescription, null);
             if (today > prescription.ExpiresOn)
                 return new(RefillRefusal.Expired, null);
@@ -45,7 +45,7 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
             if (store.RequestsFor(prescriptionId).Any(r => r.Status is RefillStatus.Requested or RefillStatus.PendingApproval))
                 return new(RefillRefusal.AlreadyOpen, null);
 
-            var status = prescription.Controlled && requesterId == prescription.PatientId ? RefillStatus.PendingApproval : RefillStatus.Requested;
+            var status = prescription.Controlled ? RefillStatus.PendingApproval : RefillStatus.Requested;
             return new(RefillRefusal.None, store.AddRequest(prescriptionId, requesterId, status));
         }
     }

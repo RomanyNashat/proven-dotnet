@@ -31,11 +31,11 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
             var today = Today;
 
             if (requesterId != prescription.PatientId && !store.DelegationsOf(requesterId).Any(d =>
-                    d.PatientId == prescription.PatientId && d.From <= today && today <= d.To))
+                    d.From <= today && today <= d.To))
                 return new(RefillRefusal.NotYourPrescription, null);
             if (today > prescription.ExpiresOn)
                 return new(RefillRefusal.Expired, null);
-            if (prescription.RefillsLeft < 0)
+            if (prescription.RefillsLeft <= 0)
                 return new(RefillRefusal.NoRefillsLeft, null);
 
             var runsOut = prescription.LastDispensedOn.AddDays(prescription.DaysSupply);

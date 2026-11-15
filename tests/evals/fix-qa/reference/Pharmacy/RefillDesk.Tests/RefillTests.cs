@@ -189,6 +189,91 @@ public sealed class RefillTests
         store.FindPrescription(1)!.RefillsLeft.Should().Be(2);
     }
 
+    // AC8 is checked on every rule that has a day: the window, the delegation's edges and the expiry.
+    private static readonly DateTimeOffset JustAfterMidnight13 = new(2026, 11, 13, 0, 30, 0, Desk.PharmacyOffset);
+
+    [Theory]
+    [InlineData(-10, -1, RefillRefusal.NotYourPrescription)] // ended on the 12th: over at the pharmacy, not yet in UTC
+    [InlineData(0, 10, RefillRefusal.None)]                  // starts on the 13th: started at the pharmacy, not yet in UTC
+    [Trait("AC", "AC1"), Trait("AC", "AC8")]
+    public void Request_DelegationEdgeJustAfterMidnight_UsesThePharmacysDay(int fromOffset, int toOffset, RefillRefusal expected)
+    {
+        var day = new DateOnly(2026, 11, 13);
+        var (desk, _, _) = Setup(now: JustAfterMidnight13, runsOut: day.AddDays(3),
+            delegation: new Delegation(Caregiver, Patient, day.AddDays(fromOffset), day.AddDays(toOffset)));
+
+        desk.Request(Caregiver, 1).Refusal.Should().Be(expected);
+    }
+
+    [Fact]
+    [Trait("AC", "AC2"), Trait("AC", "AC8")]
+    public void Request_ExpiredYesterdayJustAfterMidnight_IsExpired() =>
+        Setup(now: JustAfterMidnight13, expiresOn: new DateOnly(2026, 11, 12), runsOut: new DateOnly(2026, 11, 16))
+            .Desk.Request(Patient, 1).Refusal.Should().Be(RefillRefusal.Expired);
+
+    [Fact]
+    [Trait("AC", "AC1")]
+    public void Request_CaregiverDelegatedForAnotherPatient_IsRefused()
+    {
+        var (desk, _, _) = Setup(delegation: new Delegation(Caregiver, Patient + 1, Day.AddDays(-5), Day.AddDays(5)));
+
+        desk.Request(Caregiver, 1).Refusal.Should().Be(RefillRefusal.NotYourPrescription);
+    }
+
+    [Fact]
+    [Trait("AC", "AC1")]
+    public void Request_AnOldDelegationAndACurrentOne_TheCurrentOneCounts()
+    {
+        var (desk, store, _) = Setup(delegation: new Delegation(Caregiver, Patient, Day.AddDays(-60), Day.AddDays(-30)));
+        store.Add(new Delegation(Caregiver, Patient, Day.AddDays(-1), Day.AddDays(30)));
+
+        desk.Request(Caregiver, 1).Ok.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(RefillStatus.Rejected)]
+    [InlineData(RefillStatus.Approved)]
+    [Trait("AC", "AC4")]
+    public void Request_WhenTheLastRequestIsNoLongerOpen_IsAccepted(RefillStatus closed)
+    {
+        var (desk, _, _) = Setup(controlled: true);
+        var first = desk.Request(Patient, 1).Request!;
+        desk.Move(first.Id, closed).Should().BeTrue();
+
+        desk.Request(Patient, 1).Ok.Should().BeTrue();
+    }
+
+    [Fact]
+    [Trait("AC", "AC7"), Trait("AC", "AC6")]
+    public async Task Move_TwoDispensesAtTheSameMoment_RefillsGoDownOnce()
+    {
+        for (var round = 0; round < 200; round++)
+        {
+            var (desk, store, _) = Setup(refillsLeft: 3);
+            var request = desk.Request(Patient, 1).Request!;
+            desk.Move(request.Id, RefillStatus.Approved).Should().BeTrue();
+            using var start = new Barrier(8);
+            var moves = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ =>
+                Task.Run(() => { start.SignalAndWait(); return desk.Move(request.Id, RefillStatus.Dispensed); })));
+
+            moves.Count(m => m).Should().Be(1, $"round {round}");
+            store.FindPrescription(1)!.RefillsLeft.Should().Be(2, $"round {round}");
+        }
+    }
+
+    [Fact]
+    [Trait("AC", "AC3")]
+    public void Request_RightAfterADispense_IsTooEarlyForTheNewSupply()
+    {
+        // Dispensing today starts a new 30-day supply, so the next window opens in 23 days.
+        var (desk, _, _) = Setup(refillsLeft: 3);
+        var request = desk.Request(Patient, 1).Request!;
+        desk.Move(request.Id, RefillStatus.Approved).Should().BeTrue();
+        desk.Move(request.Id, RefillStatus.Dispensed).Should().BeTrue();
+
+        desk.Request(Patient, 1).Refusal.Should().Be(RefillRefusal.TooEarly);
+    }
+
     [Fact]
     [Trait("AC", "AC8")]
     public void Request_JustAfterMidnightInRiyadh_CountsAsTheNewDay()

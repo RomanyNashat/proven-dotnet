@@ -33,13 +33,13 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
             if (requesterId != prescription.PatientId && !store.DelegationsOf(requesterId).Any(d =>
                     d.PatientId == prescription.PatientId && d.From <= today && today <= d.To))
                 return new(RefillRefusal.NotYourPrescription, null);
-            if (today > prescription.ExpiresOn)
+            if (DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime) > prescription.ExpiresOn)
                 return new(RefillRefusal.Expired, null);
             if (prescription.RefillsLeft <= 0)
                 return new(RefillRefusal.NoRefillsLeft, null);
 
             var runsOut = prescription.LastDispensedOn.AddDays(prescription.DaysSupply);
-            if (today <= runsOut.AddDays(-WindowDays))
+            if (today < runsOut.AddDays(-WindowDays))
                 return new(RefillRefusal.TooEarly, null);
 
             if (store.RequestsFor(prescriptionId).Any(r => r.Status is RefillStatus.Requested or RefillStatus.PendingApproval))

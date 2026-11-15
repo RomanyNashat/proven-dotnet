@@ -15,7 +15,6 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
         (RefillStatus.PendingApproval, RefillStatus.Rejected),
         (RefillStatus.PendingApproval, RefillStatus.Cancelled),
         (RefillStatus.Approved, RefillStatus.Dispensed),
-        (RefillStatus.PendingApproval, RefillStatus.Dispensed),
     ];
 
     private readonly object _gate = new();
@@ -64,7 +63,7 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
             if (to == RefillStatus.Dispensed)
             {
                 var prescription = store.FindPrescription(request.PrescriptionId)!;
-                store.Save(prescription with { RefillsLeft = prescription.RefillsLeft - 1, LastDispensedOn = Today });
+                store.Save(prescription with { RefillsLeft = prescription.RefillsLeft - 1 });
             }
             return true;
         }

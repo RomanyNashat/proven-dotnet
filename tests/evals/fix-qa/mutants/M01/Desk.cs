@@ -19,7 +19,7 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
 
     private readonly object _gate = new();
 
-    public DateOnly Today => DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
+    public DateOnly Today => DateOnly.FromDateTime(time.GetUtcNow().ToOffset(PharmacyOffset).DateTime);
 
     public RefillResult Request(int requesterId, int prescriptionId)
     {
@@ -29,9 +29,10 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
             if (prescription is null)
                 return new(RefillRefusal.NotFound, null);
             var today = Today;
+            var utcDay = DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
 
             if (requesterId != prescription.PatientId && !store.DelegationsOf(requesterId).Any(d =>
-                    d.PatientId == prescription.PatientId && d.From <= today && today <= d.To))
+                    d.PatientId == prescription.PatientId && d.From <= utcDay && utcDay <= d.To))
                 return new(RefillRefusal.NotYourPrescription, null);
             if (today > prescription.ExpiresOn)
                 return new(RefillRefusal.Expired, null);

@@ -42,7 +42,7 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
             if (today < runsOut.AddDays(-WindowDays))
                 return new(RefillRefusal.TooEarly, null);
 
-            if (store.RequestsFor(prescriptionId).Any(r => r.Status is RefillStatus.Requested))
+            if (store.RequestsFor(prescriptionId).Any(r => r.Status is RefillStatus.Requested or RefillStatus.PendingApproval))
                 return new(RefillRefusal.AlreadyOpen, null);
 
             var status = prescription.Controlled ? RefillStatus.PendingApproval : RefillStatus.Requested;
@@ -53,7 +53,7 @@ public sealed class Desk(IRefillStore store, TimeProvider time)
     /// <summary>Moves a request to <paramref name="to"/>; false when that move isn't allowed.</summary>
     public bool Move(int requestId, RefillStatus to)
     {
-        lock (_gate)
+        // no lock: two moves of one request at the same moment both pass the check
         {
             var request = store.FindRequest(requestId);
             if (request is null || !Moves.Contains((request.Status, to)))

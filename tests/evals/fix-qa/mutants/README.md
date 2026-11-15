@@ -5,13 +5,11 @@ least one of them fails on that copy, after all of them passed on the correct on
 
 | Bug | What is wrong |
 |---|---|
-| M01 | the pharmacy's day is taken in UTC (AC8) |
-| M02 | the first day of the refill window is refused (AC3) |
-| M03 | a prescription with no refills left is accepted (AC2) |
-| M04 | a caregiver's request for a controlled medicine skips approval (AC5) |
-| M05 | a delegation's last day is refused (AC1) |
-| M06 | a request waiting for approval doesn't count as open (AC4) |
-| M07 | a request waiting for approval can be dispensed (AC6) |
-| M08 | refills go down on approval, not on dispensing (AC7) |
-| M09 | the expiry date itself is refused (AC2) |
-| M10 | two requests at the same moment both open (AC4) |
+| M01 | a delegation's days are taken in UTC (AC1, AC8) |
+| M02 | the expiry is checked in UTC (AC2, AC8) |
+| M03 | a delegation for another patient counts (AC1) |
+| M04 | only a caregiver's first delegation for the patient counts (AC1) |
+| M05 | a rejected request still counts as open (AC4) |
+| M06 | two dispenses of one request at the same moment both go through (AC6, AC7) |
+| M07 | dispensing doesn't start a new supply (AC3) |
+| M08 | an approved request still counts as open (AC4) |
