@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.34 — the fact that would change the verdict
+- **`/full-review` ends with one line:** the fact the review couldn't check from the code that would move
+  a finding most, and which way ("if the endpoint sits behind a gateway policy that checks the patient, F2
+  drops from Critical to Warning"). When nothing outside the code would change it, it says so.
+- **A refutation pass (a fresh agent re-checking each finding) is parked, not built:** every committed
+  review eval's reports have no false positive to remove (`full-review-hard` 0 of 5 distractors flagged in
+  each run, `full-review` 0 of 3, `diff-review` none), so its effect couldn't be measured. It waits for a
+  fixture from real, noisy code.
+
 ## 0.3.33 — the silent-failure lens in `/full-review`
 - **`silent_failures.py`** (`code-quality` 1.2.0): lists where a failure can pass for success: an empty
   catch, a catch that returns a success-looking value, one that only logs and carries on, one that

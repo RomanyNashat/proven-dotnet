@@ -108,6 +108,13 @@ End the report with two read-only informational sections:
 
 Both sections are informational — they report, they never modify tests, coverage, or package versions.
 
+**End with the one fact that would change the verdict most**, in a line: something the review couldn't
+check from the code, and which way it would move a finding. "If `/refills/{id}` sits behind a gateway
+policy that checks the patient, F2 drops from Critical to Warning", or "if the insurer's client retries,
+the swallowed timeout in `NotifyAsync` is a Warning, not Critical". One fact, the one that matters most,
+so the developer knows what to check before arguing with the report. When nothing outside the code would
+change it, say so.
+
 ### After the review
 Findings that are pure cleanup — dead code, needless complexity, outdated syntax — go to the
 **`refactor-cleaner`** agent. It is behaviour-preserving work, so it runs under the parity gate
