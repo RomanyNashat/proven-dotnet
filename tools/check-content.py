@@ -81,7 +81,10 @@ for script in sorted(scripts.glob("*.py")) if scripts.is_dir() else []:
 skills = {p.name for p in (claude / "skills").iterdir()} if (claude / "skills").is_dir() else set()
 commands = {p.stem for p in (claude / "commands").glob("*.md")} if (claude / "commands").is_dir() else set()
 commands |= {"compact", "introspect", "metrics"}   # Claude Code built-ins and URL paths, not our commands
+commands |= skills   # a skill is started with /its-name too (/story-check KEY)
 for md in sorted(claude.rglob("*.md")):
+    if md.name in ("journal.md", ".journal-raw.md"):
+        continue   # the session journal is git-ignored notes, never installed; a plan in it names what isn't built yet
     text = md.read_text(encoding="utf-8")
     rel = md.relative_to(root).as_posix()
     names = set(re.findall(r"skills/([a-z0-9-]+)/", text)) | set(re.findall(r"`([a-z0-9-]+)` skill", text))

@@ -1,7 +1,8 @@
 ---
 name: story-check
 description: "Check a story before building it: the cases it leaves open (empty, failure, permission, duplicates, existing data), grounded in the code, as questions."
-version: 1.0.0
+version: 1.1.0
+argument-hint: "[Jira key | path to story.md]"
 ---
 
 # Story check: what the story leaves open, before we build it
@@ -9,6 +10,20 @@ version: 1.0.0
 A story is checked once, before `qa-engineer` designs its tests and before any code. The check answers one
 question: **is there a case the story, and the code it touches, leave open?** Each open case becomes one
 question for whoever owns the story. Nothing else goes in: no wording, no taste, no "consider adding".
+
+## Started as `/story-check KEY` or `/story-check story.md`
+
+1. **Get the story's text, and only from where the developer pointed.**
+   - A path: read that file.
+   - A Jira key: read the issue through a connected Jira tool, **read only**: its summary, description,
+     acceptance criteria and the comments of whoever owns the story. Save them to `.qa/story.md`, with the
+     key at the top, so the quotes can be checked.
+   - No Jira tool connected, or the read fails: say so, and ask the developer to paste the story's text.
+     Never check a story from its key alone, from memory or from the branch name: there is nothing to
+     quote.
+2. Run the routine below against the story and the code in this folder, then check it with the script.
+3. Show what the script prints, and where the story came from. Nothing goes back to Jira: no comment,
+   no field change, no transition. The developer takes the questions to whoever owns the story.
 
 ## The rules
 - **Only open cases.** A case is settled when the story says what happens (quote it) or the code already

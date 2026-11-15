@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.28 — `/story-check` from a Jira key or a file
+- **`/story-check KEY` or `/story-check story.md`:** the skill takes the argument itself, so no command of
+  the same name is needed and the listing doesn't grow. A key is read through a connected Jira tool, read
+  only (summary, description, criteria, the owner's comments), and saved to `.qa/story.md` so its quotes
+  can be checked. With no Jira tool, it says so and asks for the story's text: never a check from the key
+  alone. Nothing goes back to Jira.
+- **Production eval** (`tests/evals/story-check-prod`): headless, a clean home, no connector. With a file it
+  ends with a report the script accepts and the questions word for word (5/5, $0.47); with a key and no
+  Jira it writes nothing and asks for the text (4/4, $0.24). One grader check was loosened after the first
+  run, and why is in `results.md`.
+- **Content check:** a skill counts as something `/name` can start, and the session journal (git-ignored
+  notes) is no longer read for references.
+
 ## 0.3.27 — story check: what a story leaves open, before we build it
 - **`story-check` skill:** a fixed routine for a story and the code it touches (empty, maximum, failure,
   permission, duplicates, interruption, existing data, language, what else it touches). Each case is
