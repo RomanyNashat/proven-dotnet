@@ -108,6 +108,25 @@ class Stories(unittest.TestCase):
         self.assertIn("touches: a gap needs the question to ask", out)
         self.assertIn("empty: n/a needs a reason", out)
 
+    def test_story_a_team_case_is_required_once_its_list_is_given(self):
+        # Given a team whose stories must also answer consent, listed in its own file
+        team = self.tmp / "items.txt"
+        team.write_text("# our cases\nconsent: whose consent the action needs\n\n", encoding="utf-8")
+        report = self.tmp / "report.json"
+        report.write_text(json.dumps({"items": good_items()}), encoding="utf-8")
+        run = lambda: subprocess.run([sys.executable, str(SCRIPT), str(report), "--story", str(FIXTURE / "story.md"),
+                                      "--repo", str(FIXTURE), "--items", str(team)], capture_output=True, text=True, encoding="utf-8")
+        # Then a report that leaves it out is refused, naming it
+        first = run()
+        self.assertEqual(1, first.returncode)
+        self.assertIn("consent: no entry (whose consent the action needs)", first.stdout)
+        # And once it has an entry, checked like the others, the report passes
+        report.write_text(json.dumps({"items": good_items() + [{"item": "consent", "verdict": "gap",
+                                      "question": "Does cancelling need the patient's consent, or only the booking's owner?"}]}), encoding="utf-8")
+        second = run()
+        self.assertEqual(0, second.returncode, second.stdout)
+        self.assertIn("NOT READY (4 questions)", second.stdout)
+
     def test_everything_settled_is_ready(self):
         items = [i if i["verdict"] != "gap" else {"item": i["item"], "verdict": "n/a", "reason": "settled with the lead"}
                  for i in good_items()]

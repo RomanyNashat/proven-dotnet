@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.29 — a team's own cases in the story check
+- **`story_check.py --items FILE`:** a team's own cases, one `name: what it asks` per line, become required
+  like the routine's nine: a report that leaves one out is refused, naming it and what it asks, and its
+  entry is checked like the others (a quote that's in the story, a line that holds its snippet, a question
+  the story doesn't answer). `story-check` 1.2.0 says how a team layer passes its file.
+- **Tested:** a report without the team's case is refused; with it, it passes and its question is counted.
+- **Eval (S3, `tests/evals/story-check`, from #95):** the rules-only pilot asked all four planted gaps and
+  none of the seven hidden answers, so the grid wasn't run; the README says why and what would measure more.
+
 ## 0.3.28 — `/story-check` from a Jira key or a file
 - **`/story-check KEY` or `/story-check story.md`:** the skill takes the argument itself, so no command of
   the same name is needed and the listing doesn't grow. A key is read through a connected Jira tool, read
