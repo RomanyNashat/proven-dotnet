@@ -1,6 +1,6 @@
 ---
 name: simplicity
-description: "Plain writing for anything others read: docs, READMEs, emails, release notes, commit messages. Short, lead with the verb, no padding, nothing that reads like a bot."
+description: "Plain writing for what others read: docs, READMEs, emails, release notes, commit messages. Short, verb first, nothing that reads like a bot."
 version: 1.2.0
 ---
 

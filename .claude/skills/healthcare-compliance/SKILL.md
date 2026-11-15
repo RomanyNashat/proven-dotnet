@@ -1,6 +1,6 @@
 ---
 name: healthcare-compliance
-description: "Patient-data rules in .NET: an audit trail of every change that can't be edited, consent checks before sharing records, break-the-glass, data residency, PDPL, HIPAA."
+description: "Patient-data rules in .NET: an audit trail that can't be edited, consent before sharing records, break-the-glass, data residency, PDPL, HIPAA."
 version: 2.0.0
 ---
 

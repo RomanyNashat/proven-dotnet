@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: "ASP.NET Core REST endpoints: minimal APIs and TypedResults, ProblemDetails, validation, versioning, the OpenAPI document, ownership checks, keyset paging, rate limits."
+description: "ASP.NET Core REST endpoints: minimal APIs, TypedResults, ProblemDetails, validation, versioning, OpenAPI, ownership checks, keyset paging, rate limits."
 version: 3.3.0
 ---
 

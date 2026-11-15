@@ -124,3 +124,5 @@ story-check	before we build this story, what cases does it leave open that we ne
 story-check	which questions should I ask about this Jira story before starting, what is missing from it
 business-rules	before we refactor this legacy service, write down what it really decides, as given when then
 business-rules	who may cancel and until when, according to the code, pinned by tests that pass today
+problem-analysis	this bug keeps coming back, help me find the root cause with evidence for each step
+problem-analysis	we have to pick between two designs, score them on weighted criteria and tell me how close it is

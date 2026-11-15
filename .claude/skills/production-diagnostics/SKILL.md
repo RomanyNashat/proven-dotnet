@@ -334,6 +334,8 @@ to send back.
 
 ## 7. Fix, then prove it
 
+Once the evidence is in, the root cause is a 5-whys chain with a piece of it on every line (`problem-analysis`): a why with no evidence is still a guess.
+
 - Fix in code with a test that reproduces the cause where possible: a characterization test around the
   blocking call, or a test that the cache has a size limit.
 - After the deploy, compare the same heartbeat fields or APM chart before and after, over the same time

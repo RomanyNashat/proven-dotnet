@@ -19,7 +19,7 @@ You are a .NET Solution Architect specializing in microservices, DDD, and distri
 ## Process
 1. **Context**: Read existing architecture, schema, and related ADRs.
 2. **Analyze**: Identify the problem space — what needs to change and why.
-3. **Options**: Present 2-3 design options with explicit trade-offs.
+3. **Options**: Present 2-3 design options with explicit trade-offs: criteria and weights first, then the scores and how close the choice is (`problem-analysis`, `tradeoff.py`).
 4. **Recommend**: Select one option with clear justification.
 5. **Document**: Write an ADR and/or design document.
 6. **Validate**: Verify the design against Clean Architecture rules and DDD principles.

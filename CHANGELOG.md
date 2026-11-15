@@ -3,6 +3,21 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.35 — problem analysis: the method that fits the problem
+- **`problem-analysis` skill:** a root cause gets 5 whys, each with its evidence (a log line, a commit, a
+  metric, a file and line), stopping at a cause the team can change; a choice gets a weighted trade-off,
+  criteria and weights written before any score; a plan gets a pre-mortem with likelihood and impact.
+  The result goes into the lightweight ADR, with a worked example.
+- **`tradeoff.py`:** scores the table, names the winner and says how close it is: how far each weight must
+  move, and which single score moved by one point, before another option wins. `close` means the table
+  can't decide alone, and the ADR names the fact that would.
+- **Tested:** a close decision (push 77.1% against polling 72.9%, flipped by one weight or one score), a
+  clear one no weight can reverse, a tie, tables with holes or out-of-range values, a header without a
+  weight, only the first table read, and an Arabic table with CRLF and a BOM on a cp1252 console.
+- `architect` scores its options this way; `production-diagnostics` ends in a 5-whys chain; `core.md`'s
+  ADR section points here. Seven descriptions shortened, reworded to the words requests use; routing 124 of
+  127 first (it was 122 of 125), listing 11990 of 12000.
+
 ## 0.3.34 — the fact that would change the verdict
 - **`/full-review` ends with one line:** the fact the review couldn't check from the code that would move
   a finding most, and which way ("if the endpoint sits behind a gateway policy that checks the patient, F2
