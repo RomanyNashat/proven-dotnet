@@ -97,3 +97,33 @@ The table is close: polling wins if on-time matters less (weight 3, not 5) or pu
 versions. The fact that settles it is the share of active patients on versions without the SDK: under 10%
 (from App-Version in the last 30 days of requests), push; otherwise polling until they update.
 ```
+
+## Estimating in hours
+
+Each task gets three numbers in hours, best, likely and worst, and the unknown that makes the worst worse.
+What a task touches comes from the code (`find_callers` on what it changes), not from memory: callers
+nobody has read yet are an unknown.
+
+<!-- sample: tests/problemanalysis/fixture/cancel-visit-plan.md -->
+```markdown
+| Task | Best | Likely | Worst | Unknowns |
+|---|---|---|---|---|
+| Cancel endpoint with the ownership check | 3 | 4 | 6 | |
+| Refund rules (full a day out, half closer) | 2 | 3 | 5 | |
+| Free the slot for the waiting list | 2 | 4 | 14 | WaitingList has three callers we haven't read |
+| Text message to the patient in their language | 1 | 2 | 4 | |
+| Integration tests on SQL Server | 3 | 5 | 8 | |
+```
+
+```bash
+python ~/.claude/skills/problem-analysis/scripts/pert.py plan.md
+```
+
+This plan expects 20 hours, and is done within 22 hours 80% of the time. Promise the 80% figure, not the
+sum of the likely hours (18), which comes true less than half the time. `pert.py` also says where the
+uncertainty is: here 73% of it is the waiting list, flagged because its worst is over three times its
+likely. Spike it (read those callers) before promising anything: with its worst at 6, the 80% figure falls
+to 20.
+
+It treats the tasks as independent. When several share one unknown (the same external API, the same
+reviewer), they go wrong together: estimate them as one task, or add their worst cases instead.
