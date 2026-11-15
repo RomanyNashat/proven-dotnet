@@ -1,6 +1,6 @@
 ---
 name: mutation-testing
-description: "Mutation testing for .NET with Stryker.NET: would the tests fail if the code were wrong? Score the lines a change touched, name the edges no test checks, gate a PR on it."
+description: "Mutation testing with Stryker.NET: would the tests fail if the code were wrong? Score a change's lines, name the edges no test checks."
 version: 1.0.0
 ---
 

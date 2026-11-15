@@ -3,6 +3,24 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.27 — story check: what a story leaves open, before we build it
+- **`story-check` skill:** a fixed routine for a story and the code it touches (empty, maximum, failure,
+  permission, duplicates, interruption, existing data, language, what else it touches). Each case is
+  settled by a quote from the story or a line of code, doesn't apply for a stated reason, or becomes one
+  question. Only open cases: no wording, no taste. A team layer adds its own items.
+- **`story_check.py`** checks the report before anyone reads it, and refuses it with each problem listed: a
+  routine item missing, a quote the story doesn't have, a line of code that doesn't hold its snippet, a gap
+  with no question, or a question a story sentence may already answer (unless the report says why that
+  sentence doesn't). Otherwise it prints the ruling, READY or NOT READY with the questions numbered.
+- **Tested** on a real-shaped story (cancelling a visit) and its code: a made-up quote, a wrong line, a line
+  two off, a missing file, a question the story answers and the same one kept with a reason, a missing item,
+  a fully settled story. Production: an Arabic story with diacritics and alef forms, saved with CRLF and a
+  BOM, cited with a Windows path, and an Arabic question the story answers.
+- `qa-engineer` checks an unchecked story first, and a NOT READY one goes back with its questions;
+  `test-design` 1.2.0 points to it.
+- Seven skill descriptions shortened to keep the listing under its budget; routing is as good as before
+  (120 of 123 requests first, all in the top 3).
+
 ## 0.3.26 — /qa-scan: is the story's branch ready to ship?
 - **`/qa-scan` command (read-only):** judges a finished story branch on evidence. It runs the tests with
   a TRX log and traces each criterion to a passing test, runs Stryker on the lines the branch changed,

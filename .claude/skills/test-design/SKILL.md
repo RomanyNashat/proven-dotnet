@@ -1,7 +1,7 @@
 ---
 name: test-design
-description: "Design a story's test cases before the code: number the acceptance criteria, rank risks, use decision tables, boundaries or state transitions, trace each criterion to a test."
-version: 1.1.0
+description: "Design a story's test cases before the code: numbered criteria, risks, decision tables, boundaries, state transitions, each criterion traced to a test."
+version: 1.2.0
 ---
 
 # Test design: the cases before the code
@@ -17,7 +17,8 @@ below.
 
 Put the story next to the tests as `story.md`, its criteria as `AC1: ...` lines, in the story's own words.
 A criterion that can't be tested as written ("fast", "user friendly", "handles errors") is not guessed at:
-write the question it leaves open and ask it before designing.
+write the question it leaves open and ask it before designing. The cases the story leaves open altogether
+(empty, failure, duplicates, existing data) are found before this, by `story-check`.
 
 ## 2. Rank the risks
 

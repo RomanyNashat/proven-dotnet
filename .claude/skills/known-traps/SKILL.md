@@ -1,6 +1,6 @@
 ---
 name: known-traps
-description: "Scan one or many .NET services for library traps the harness's tests proved: SqlClient in invariant mode, a singleton DbContext, Quartz missed runs, the ar-SA calendar."
+description: "Scan .NET services for library traps the harness's tests proved: SqlClient in invariant mode, a singleton DbContext, Quartz missed runs, ar-SA."
 version: 1.6.0
 ---
 

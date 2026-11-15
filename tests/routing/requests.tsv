@@ -120,3 +120,5 @@ test-design	what test cases do we need for this story before I write the code
 test-design	turn these acceptance criteria into test cases with boundaries and a decision table
 mutation-testing	would our tests notice if this comparison were wrong, run Stryker on the change
 mutation-testing	the tests pass, but would they fail if the code were wrong on this branch
+story-check	before we build this story, what cases does it leave open that we need to ask the product owner about
+story-check	which questions should I ask about this Jira story before starting, what is missing from it

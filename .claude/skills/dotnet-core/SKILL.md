@@ -1,6 +1,6 @@
 ---
 name: dotnet-core
-description: ".NET host and DI: lifetimes and the captive dependency (a singleton holding a scoped service), options validated at start-up, typed HTTP clients, TimeProvider, modern C#."
+description: ".NET host and DI: lifetimes and the captive dependency, options validated at start-up, typed HTTP clients, TimeProvider, modern C#."
 version: 2.1.0
 ---
 

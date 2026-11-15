@@ -1,6 +1,6 @@
 ---
 name: retrospective
-description: "Audit the harness against its own rules for drift: enforcement gaps, orphan or overlapping skills, commands and agents. Proposes fixes one at a time. Behind /improve."
+description: "Audit the harness against its own rules for drift: enforcement gaps, orphan or overlapping skills and agents. Proposes fixes one at a time. Behind /improve."
 ---
 
 # Retrospective — the harness audits itself
