@@ -1,7 +1,7 @@
 ---
 name: code-quality
 description: "Code quality gates for .NET: Roslyn analyzers (Roslynator/Meziantou/.NET), warnings-as-errors, format verification, architecture tests."
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Code Quality Patterns
@@ -168,3 +168,27 @@ dotnet list package --vulnerable --include-transitive | grep -i "has the followi
 
 echo "=== All quality gates passed ==="
 ```
+
+## Silent failures: a failure that passes for success
+
+The bug a patient sees as a wrong answer, not an error: an insurer outage shown as "0% covered", a lab
+value that isn't on file read as 0, a claim marked sent after its send failed. No analyzer flags these, so
+a review looks for them:
+
+```bash
+python ~/.claude/skills/code-quality/scripts/silent_failures.py <code folder> [--diff change.diff]
+```
+
+It lists each candidate with its kind: `swallowed` (an empty catch), `fallback` (a catch that returns a
+success-looking value), `logged and ignored`, `skipped` (a catch that `continue`s), `default for missing`
+(`?? 0` after a lookup), `not awaited` (`_ = SomethingAsync(...)`) and `parse ignored`. It leaves out a
+catch that rethrows, wraps, returns an error result (`Problem`, a 4xx or 5xx) or catches a cancellation.
+
+Each candidate gets a verdict, with the reason:
+- **Silent failure:** the caller, the user or the next step can't tell it failed. The fix makes the failure
+  visible where it matters: let it throw, return an error result or a `Result` failure, mark the item
+  failed instead of done, or `await` it. Logging alone is not a fix: nobody reads the log at the moment
+  the wrong answer is shown.
+- **Fine:** the fallback is the design (a cache miss reads the database, a best-effort metric), and the
+  code or a comment says so.
+

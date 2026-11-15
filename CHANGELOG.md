@@ -3,6 +3,21 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.33 — the silent-failure lens in `/full-review`
+- **`silent_failures.py`** (`code-quality` 1.2.0): lists where a failure can pass for success: an empty
+  catch, a catch that returns a success-looking value, one that only logs and carries on, one that
+  `continue`s, `?? 0` after a lookup, `_ = SomethingAsync(...)`, a `TryParse` whose result is thrown away.
+  It leaves out a catch that rethrows, wraps, returns an error result or catches a cancellation. `--diff`
+  marks each `changed` or `touched`.
+- **`/full-review`** runs it and gives the table to `code-reviewer`, which judges each candidate silent
+  (with severity and the fix) or fine (with why). Logging alone doesn't count as a fix.
+- **Tested** on a coverage service with seven planted silent failures (an insurer outage read as 0%
+  covered, a lost notification, a claim marked sent after its send failed, a claim dropped from a batch, an
+  unobserved audit write, a missing lab value read as 0, an age that didn't parse) and the right-looking
+  code beside each that isn't one: all seven found with their kind, none of the six distractors. Also a
+  change judged on the catch it edited, an Arabic line on a cp1252 console, and a UTF-16 diff from
+  PowerShell.
+
 ## 0.3.32 — the business rules as the parity net
 - **`remediation-parity`:** when the code being changed decides things, its rules are pinned with
   `business-rules`, and after the change every rule must still be proven (`trace_matrix.py --prefix R

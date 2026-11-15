@@ -40,6 +40,7 @@ this file.
 - [ ] Single Responsibility — each class has one reason to change
 - [ ] Interface Segregation — no fat interfaces with unused methods
 - [ ] Patterns: none of the misuses in `skills/design-patterns/` §5 (service locator, generic repository over EF, factory that only `new`s, swallowing decorator, bool-flag state); report with that skill's verdict words
+- [ ] Silent failures: each candidate from `silent_failures.py` (`skills/code-quality/`) judged silent or fine, with why; a catch that logs and carries on, or a fallback that returns a normal-looking value for a failed call, is a Warning at least, and Critical when it shows a patient wrong data
 - [ ] Aggregates: loaded whole before a method changes them (`skills/ddd-patterns/` §7); no `Equals` on `Id`; no Kafka call in a domain-event handler
 
 ### C# Patterns
