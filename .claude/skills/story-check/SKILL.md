@@ -1,7 +1,7 @@
 ---
 name: story-check
 description: "Check a story before building it: the cases it leaves open (empty, failure, permission, duplicates, existing data), grounded in the code, as questions."
-version: 1.1.0
+version: 1.2.0
 argument-hint: "[Jira key | path to story.md]"
 ---
 
@@ -54,8 +54,9 @@ question for whoever owns the story. Nothing else goes in: no wording, no taste,
 | `language` | Arabic and English: text, direction, dates, digits. |
 | `touches` | What else depends on what this changes (`find_callers` on what the story changes). |
 
-A team layer adds its own items (a healthcare service adds consent, for example); they go in the same
-report and the script checks them the same way.
+A team layer adds its own items (a healthcare service adds consent, for example) as a file of
+`name: what it asks` lines, and its rules say where. Pass it with `--items <file>`: the script then
+requires those items like the routine's, and checks them the same way.
 
 ## Writing it down, and checking it before anyone reads it
 

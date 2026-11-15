@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Checks a story check before anyone reads it, then prints it.
 
-    python story_check.py report.json --story story.md [--repo DIR] [--json]
+    python story_check.py report.json --story story.md [--repo DIR] [--items FILE ...] [--json]
 
-report.json has one entry per routine item (and any the team adds):
+report.json has one entry per routine item, and per item of each --items file: a team's own cases, one
+per line as `name: what it asks` (blank lines and `#` lines ignored).
 
     {"items": [
       {"item": "empty",       "verdict": "stated",  "quote": "words copied from the story"},
@@ -96,12 +97,23 @@ def check_code(repo: Path, where: str, snippet: str) -> str | None:
     return None
 
 
-def check(report: dict, story: str, repo: Path) -> tuple[list[str], list[dict]]:
+def team_items(paths: list[Path]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for path in paths:
+        for line in path.read_text(encoding="utf-8-sig").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                name, _, asks = line.partition(":")
+                out[name.strip()] = asks.strip()
+    return out
+
+
+def check(report: dict, story: str, repo: Path, required: dict[str, str] | None = None) -> tuple[list[str], list[dict]]:
     problems, items = [], report.get("items", [])
     seen = {i.get("item") for i in items}
-    for name in ROUTINE:
+    for name, asks in {**ROUTINE, **(required or {})}.items():
         if name not in seen:
-            problems.append(f"{name}: no entry ({ROUTINE[name]})")
+            problems.append(f"{name}: no entry ({asks})")
     story_norm, story_sentences = normalize(story), sentences(story)
     for i in items:
         name, verdict = i.get("item", "?"), i.get("verdict")
@@ -145,10 +157,11 @@ def main(argv=None) -> int:
     p.add_argument("report", type=Path)
     p.add_argument("--story", type=Path, required=True)
     p.add_argument("--repo", type=Path, default=Path("."))
+    p.add_argument("--items", type=Path, action="append", default=[], help="a team's own cases, `name: what it asks` per line")
     p.add_argument("--json", action="store_true")
     a = p.parse_args(argv)
     report = json.loads(a.report.read_text(encoding="utf-8-sig"))
-    problems, items = check(report, a.story.read_text(encoding="utf-8-sig"), a.repo)
+    problems, items = check(report, a.story.read_text(encoding="utf-8-sig"), a.repo, team_items(a.items))
     if a.json:
         print(json.dumps({"problems": problems, "ready": not problems and not any(i.get("verdict") == "gap" for i in items)},
                          indent=2, ensure_ascii=False))
