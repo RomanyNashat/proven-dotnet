@@ -1,7 +1,7 @@
 ---
 name: business-rules
 description: "Mine the business rules a service's code enforces into Given/When/Then, each pinned by a test that passes on today's code."
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Business rules: what the code really decides, written down and pinned
@@ -9,7 +9,8 @@ version: 1.0.0
 Old services hold rules nobody wrote down: who may cancel, until when, how much comes back. This skill
 finds them in the code, writes each as Given/When/Then in the business's words, and pins each with a test
 that passes on the code as it is today (a characterization test). The tests are then the safety net for a
-refactor or an upgrade, and the rules are what `story-check` and `qa-engineer` check a new story against.
+refactor or an upgrade (`remediation-parity`, `dotnet-upgrade`), and the rules are what `story-check` and
+`qa-engineer` check a new story against.
 
 It describes; it doesn't judge. A rule that looks wrong is still written and tested as the code does it,
 with its question beside it. Fixing it is a story of its own.

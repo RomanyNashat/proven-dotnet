@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.32 — the business rules as the parity net
+- **`remediation-parity`:** when the code being changed decides things, its rules are pinned with
+  `business-rules`, and after the change every rule must still be proven (`trace_matrix.py --prefix R
+  --trait Rule --require-all`) and `rule_candidates.py --check` must still pass.
+- **`dotnet-upgrade`:** a service whose rules nobody wrote down gets them before the move, and "nothing
+  changed" includes every rule still proven on the new runtime.
+- **Checked by hand on the sample:** turning the 2-hour cutoff's `<` into `<=` fails R4's edge test, the
+  trace shows R4 `failing` and exits 1.
+
 ## 0.3.31 — rules outside an `if`, and the business-rules eval
 - **`rule_candidates.py` finds rules outside an `if`:** DataAnnotations on a request (`[Required]`,
   `[MaxLength(500)]`, `[Range]`) and a query's `.Where(...)`. Building the eval showed two of its six rules
