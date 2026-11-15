@@ -14,7 +14,8 @@ For a new feature, follow this flow:
 User request
   → planner (decompose into tasks with acceptance criteria)
   → architect (if design decisions needed: service boundaries, DB schema, ADRs)
-  → tdd-guide (write tests first, then implement)
+  → qa-engineer (story with acceptance criteria: the failing tests from the story, test-design)
+  → tdd-guide (write tests first, then implement; against qa-engineer's tests when there are any)
   → [parallel review]:
       code-reviewer (quality, patterns, C# idioms)
       security-reviewer (OWASP, auth, PII, crypto)

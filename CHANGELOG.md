@@ -3,6 +3,21 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.24 — a QA engineer writes the story's tests before the code
+- **`qa-engineer` agent (Opus):**
+  - designs a story's cases with `test-design`, before the code;
+  - writes them as failing tests, each with its `[Trait("AC", ...)]`, plus `story.md`;
+  - confirms every criterion is covered with `trace_matrix.py`.
+- **`tdd-guide` implements against those tests and doesn't write them:** a test written by the one it
+  grades proves less. A test it believes is wrong is reported with its reason, not edited to pass.
+- **Wired in** `rules/agents.md`, `planner` and `/tdd`, on any story with acceptance criteria.
+- **Its hook (`read-only-guard.py qa`):**
+  - Write and Edit only in a test project (`*.Tests`, `tests/`) and on `story.md`, checked inside the
+    working folder, so a repo cloned under a folder named `tests` is still guarded;
+  - the shell may read, build and run tests.
+  - Tested with stories and Windows paths. In real runs of an agent with this hook, a test file was
+    written and `src/` was refused.
+
 ## 0.3.23 — test design: the cases before the code
 - **`test-design` skill.** It turns a story into test cases before the code is written:
   - number the acceptance criteria;
