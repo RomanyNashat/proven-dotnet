@@ -3,6 +3,17 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.21 — a pilot run and a noise floor before an eval's grid
+- **`run-queue.sh --pilot`** runs only the first run of a round (the baseline goes first) and stops with
+  exit 4, so it is graded against the bar before the rest are paid for. Run the same queue again without
+  it and the pilot counts as done.
+- **`gate.py noise <scores.json> <arm A> <arm B>`** reads two arms of the same harness at the same ref and
+  prints each case whose pass rate differs, and the floor: the largest difference. A later change has to
+  move a case by more than that before it counts as shown.
+- **`skill-evals`, rule 9:** write the bar in the fixture's README first, pilot one baseline run, and
+  measure the noise floor once per fixture. The upgrade eval's round one is the example of what skipping
+  the pilot costs.
+
 ## 0.3.20 — the preflight scan follows a date read to its cast
 - **`npgsql-date-read` now finds a cast on a later line.** An untyped read (`ExecuteScalar`, `GetValue`,
   `reader[...]`) into a variable that is cast to `DateTime` or `TimeSpan`, tested with `is DateTime`, or
