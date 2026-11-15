@@ -1,6 +1,6 @@
 ---
 name: zero-vulns
-description: "A known-vulnerable NuGet package is a hard fail: NU1903 and dotnet list package --vulnerable, then which version fixes the CVE: upgrade the package or its parent."
+description: "A known-vulnerable NuGet package is a hard fail: NU1903, dotnet list package --vulnerable, and which upgrade fixes the CVE."
 version: 1.2.1
 ---
 

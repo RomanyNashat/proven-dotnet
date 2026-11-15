@@ -32,7 +32,8 @@ question for whoever owns the story. Nothing else goes in: no wording, no taste,
   the store being down; that silence is a gap.
 - **The story first, then the code.** Look for the answer in the story's text, then in the code it touches
   (`find_symbol`, `find_callers`; text search only if Roslyn isn't there). A case the code already handles is
-  settled, even if the story never mentions it.
+  settled, even if the story never mentions it. A service with a `rules.md` (`business-rules`) has its
+  rules written down already: cite the rule's line of code.
 - **One question per gap, and a question a person can answer in a sentence.** It names the case and the
   choice: "If the booking store is down, does the app say so or keep the visit shown as booked?", not
   "What about errors?".

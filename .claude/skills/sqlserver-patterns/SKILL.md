@@ -1,6 +1,6 @@
 ---
 name: sqlserver-patterns
-description: "SQL Server for .NET: deadlocks and read committed snapshot, UPDLOCK upserts, table-valued parameters, SqlBulkCopy, execution plans, indexes, Query Store, temporal tables."
+description: "SQL Server for .NET: deadlocks and read committed snapshot, UPDLOCK upserts, table-valued parameters, SqlBulkCopy, plans, Query Store."
 version: 2.1.0
 ---
 
