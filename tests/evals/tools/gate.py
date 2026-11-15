@@ -2,6 +2,7 @@
 
     python3 tools/gate.py scores <graded.json> > scores.json        # per arm, per case: passes out of runs
     python3 tools/gate.py check <baseline scores.json> <new scores.json>
+    python3 tools/gate.py noise <scores.json> <arm A> <arm B>       # two arms of the same harness
 
 `grade.py --json` writes each graded copy's results. Copies are named `<arm>-<n>` (`with-proven-2`);
 `original` and `reference*` are the fixture's own checks and don't count. `scores` adds up each arm.
@@ -12,6 +13,10 @@ both have. It fails when:
     comfort if the case that dropped is the one the change was about, so the total isn't what's compared);
   - an arm has fewer runs than before (fewer runs can't show a case held).
 A case that passes in more runs is reported as better. Exit 1 on any failure.
+
+`noise` reads two arms that ran the same harness at the same ref (`proven-a`, `proven-b`): whatever differs
+between them is noise. It prints each case whose pass rate differs and the floor, the largest difference.
+A later change has to move a case by more than the floor before it is reported as shown.
 """
 import json
 import re
@@ -53,6 +58,19 @@ def check(baseline, current):
     return failures, better
 
 
+def noise(scores_, first, second):
+    a, b = scores_["arms"][first], scores_["arms"][second]
+    cases = sorted(set(a["passes"]) | set(b["passes"]))
+    differ = []
+    for case in cases:
+        rate_a = a["passes"].get(case, 0) / a["runs"]
+        rate_b = b["passes"].get(case, 0) / b["runs"]
+        if rate_a != rate_b:
+            differ.append((case, rate_a, rate_b))
+    floor = max((abs(x - y) for _, x, y in differ), default=0.0)
+    return differ, floor
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) == 2 and argv[0] == "scores":
@@ -72,6 +90,14 @@ def main(argv=None):
         if not failures:
             print("eval gate: no case got worse")
         return 1 if failures else 0
+    if len(argv) == 4 and argv[0] == "noise":
+        with open(argv[1], encoding="utf-8") as f:
+            graded = json.load(f)
+        differ, floor = noise(graded, argv[2], argv[3])
+        for case, x, y in differ:
+            print(f"{case}: {argv[2]} {x:.0%}, {argv[3]} {y:.0%}")
+        print(f"noise floor: {floor:.0%} of runs on one case ({len(differ)} of the cases differ)")
+        return 0
     print(__doc__, file=sys.stderr)
     return 2
 

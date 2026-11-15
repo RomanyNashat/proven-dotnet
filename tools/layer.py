@@ -25,7 +25,7 @@ What the layer owns is recorded in .layers/registry.json. Install is also update
   - settings.json keys are added only where the user has none; a key this layer set is updated or removed
     only while it still holds the value the layer wrote. Hook entries are this layer's when their command
     runs a script from hooks/<id>/.
-Placeholders in settings.json: {HOOKS} -> ~/.claude/hooks/<id>, {FILES} -> the absolute path of <id>/
+Placeholders in settings.json and in agents' frontmatter hooks: {HOOKS} -> ~/.claude/hooks/<id>, {FILES} -> the absolute path of <id>/
 (forward slashes, which Windows accepts), {PYTHON} -> how this machine starts Python 3.
 """
 from __future__ import annotations
@@ -146,7 +146,12 @@ def install_files(claude: Path, layer_id: str, plan: dict[str, Path], registry: 
     for target, src in installed.items():
         dest = claude / target
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(src, dest)
+        text = src.read_text(encoding="utf-8") if target.startswith("agents/") else ""
+        if "{PYTHON}" in text or "{HOOKS}" in text:
+            # An agent's own hooks (its frontmatter) start the layer's scripts the way settings.json does.
+            dest.write_text(fill_placeholders(text, layer_id, claude), encoding="utf-8", newline="")
+        else:
+            shutil.copyfile(src, dest)
     return sorted(installed)
 
 

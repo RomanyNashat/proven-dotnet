@@ -75,6 +75,16 @@ plausible-but-wrong answer would do. Traps are the valuable half; anyone can wri
    too easy, not the skills useless. Plant what the skills' own tests found (a bug a careful reviewer
    without them misses), and two-file findings that need the Dockerfile read with the code.
    `tests/evals/full-review-hard/` is built that way.
+9. **Pilot, bar, noise floor, in that order, before the grid.**
+   - **Write the bar first,** in the fixture's README: the number that counts as a win, and the number
+     that would show the change useless. A bar set after the results is a story told about them.
+   - **Pilot one baseline run** (`run-queue.sh <fixture> <rounds> --pilot <baseline first> ...`) and
+     grade it. If it already scores full, redesign the fixture before paying for the rest. The upgrade
+     eval's round one skipped this and spent about $17 to learn that both arms fixed all 21
+     (`tests/evals/fix-upgrade/results.md`).
+   - **Measure the noise floor once per fixture:** two arms of the same harness at the same ref
+     (`proven-a`, `proven-b`), then `gate.py noise scores.json proven-a proven-b`. A later difference
+     no bigger than the floor is reported as "not shown", never as a gain or a loss.
 
 ## Fix evals and the gate
 
