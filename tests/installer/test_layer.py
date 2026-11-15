@@ -107,6 +107,17 @@ class LayerTests(unittest.TestCase):
         self.assertIn("Bash(git push:*)", s["permissions"]["ask"])
         self.assert_user_things_intact()
 
+    def test_an_agents_own_hook_gets_the_layers_hook_folder_and_python(self):
+        src = make_layer(self.root, "proven", "1.0.0", {
+            "agents/reader.md": "---\nname: reader\nhooks:\n  PreToolUse:\n    - matcher: Bash\n      hooks:\n"
+                                "        - type: command\n          command: \"{PYTHON} {HOOKS}/guard.py x\"\n---\nbody\n",
+            "hooks/guard.py": "print()",
+        })
+        run("install", src, "--claude-dir", self.claude)
+        text = (self.claude / "agents/reader.md").read_text(encoding="utf-8")
+        self.assertIn(f"{layer.python_command()} ~/.claude/hooks/proven/guard.py x", text)
+        self.assertNotIn("{HOOKS}", text)
+
     def test_installing_twice_changes_nothing(self):
         src = make_layer(self.root, "proven", "0.1.0", CORE_FILES, CORE_SETTINGS)
         self.install(src)

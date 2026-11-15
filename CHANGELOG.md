@@ -3,6 +3,18 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.22 — the read-only agents that need a shell can't write
+- **`read-only-guard.py`,** a PreToolUse hook in the frontmatter of `handover-repo-analyst` and
+  `health-analyst`, so it runs only inside those agents. Every Bash command they send must only read: git
+  read commands, file reads and searches, and the harness's own skill scripts. This includes the commands
+  inside `$( )` and backticks, and redirects. `health-analyst` may also build, test and list, and write
+  only into `coverage/` (its report card). Anything else, or a command it can't parse, is refused with the
+  reason, which the agent reads.
+- **`layer.py` fills `{PYTHON}` and `{HOOKS}` in agents' frontmatter** too, as it does in `settings.json`.
+- **Tested:** stories for each agent's own steps and for writes hidden inside reads; Windows paths and
+  `py -3`; the hook as the layer installs it. CI runs them on Linux and Windows. A headless run of the
+  installed `health-analyst` had `touch` refused and `git status` allowed.
+
 ## 0.3.20 — the preflight scan follows a date read to its cast
 - **`npgsql-date-read` now finds a cast on a later line.** An untyped read (`ExecuteScalar`, `GetValue`,
   `reader[...]`) into a variable that is cast to `DateTime` or `TimeSpan`, tested with `is DateTime`, or

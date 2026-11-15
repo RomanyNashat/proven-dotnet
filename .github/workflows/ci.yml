@@ -28,6 +28,9 @@ jobs:
       # The known-traps scan runs on developers' Windows machines too: test it there.
       - name: Known-traps scan
         run: python -m unittest discover tests/traps -v
+      # The read-only agents' hook runs on developers' Windows machines too.
+      - name: Read-only guard (agents with a shell)
+        run: python -m unittest discover tests/hooks -v
       - name: First fixed version (zero-vulns)
         run: python -m unittest discover tests/vulns -v
       - name: Upgrade preflight scan (dotnet-upgrade)
