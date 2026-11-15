@@ -3,6 +3,23 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.23 — test design: the cases before the code
+- **`test-design` skill.** It turns a story into test cases before the code is written:
+  - number the acceptance criteria;
+  - rank the risks (likelihood times harm, where a wrong patient or a skipped consent is harm 3);
+  - pick the technique by the criterion's shape: a decision table for rules, boundary values for ranges and
+    dates, every pair of states for a status, pairwise for independent inputs;
+  - run each criterion past the cases that go wrong most often here;
+  - pick the lowest level that can fail for the right reason;
+  - check each test can fail.
+- **`trace_matrix.py`** traces each `AC1:` line of a story to the tests that name it with
+  `[Trait("AC", ...)]`, and, with a TRX from `dotnet test`, to whether they passed. `--require-all` gates CI.
+- **Tested sample** (`tests/SkillSamples.Tests/TestDesign`): booking a visit for yourself or a dependent,
+  five criteria, a decision table, boundaries, every status pair, a story test (a dependent turns 18 at
+  midnight in Riyadh, 21:00 in UTC) and a production test without tzdata. Breaking the rule on purpose
+  (the day counted in UTC) fails the story test. The script's tests run on Linux and Windows against the
+  sample and a real TRX.
+
 ## 0.3.20 — the preflight scan follows a date read to its cast
 - **`npgsql-date-read` now finds a cast on a later line.** An untyped read (`ExecuteScalar`, `GetValue`,
   `reader[...]`) into a variable that is cast to `DateTime` or `TimeSpan`, tested with `is DateTime`, or
