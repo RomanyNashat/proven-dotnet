@@ -5,16 +5,20 @@
 **Status:** in-progress
 
 ## Decision
-Hide the 20 commands the model can start (`disable-model-invocation: true`), so the listing holds skills
-only: 9,825 of 12,000 characters instead of 11,990, room for about 14 more skills. A command people really
-do start from plain words stays listed, named with its reason in `tests/routing/visible-commands.tsv`.
-`check-listing-budget.py` fails on a listed command that file doesn't name, and prints the headroom for a
-1M and a 200K window. A new command ships hidden; one the model must start on its own becomes a skill.
+**The commands stay listed.** The bake-off's winner was to hide the 20 model-invocable commands, but it
+rested on one fact it couldn't check: how often a developer starts a command from plain words. The answer
+(2026-11-15) is often. Hiding them would break a habit the team relies on, and keeping the relied-on ones
+visible would eat the room it frees, so that design buys nothing here.
 
-**Not final until one fact is in:** how often a developer starts a command from plain words ("review my
-branch" running `/full-review`). If rarely, this ships as a Y version with an UPDATING line. If often, the
-visible list eats the room this frees, and the hub design below comes back, after an eval shows its extra
-hop doesn't lose routing.
+What happens instead:
+- **The hub design comes back, but only after an eval** shows its extra hop doesn't lose routing: requests
+  sent to a listing of hubs, scored on whether the model opens the right member skill, against today's flat
+  listing. Until that eval passes, nothing moves.
+- **Until then**, a new skill only some services need goes to `project-skills/` (not installed, no listing
+  cost), and the routing check and the budget check stay as they are: a new listed skill has to make its
+  own room by shortening others, with the routing check proving nothing got worse.
+- `check-listing-budget.py` prints the headroom for a 1M and a 200K window (taken from the winner), so the
+  squeeze shows before it fails.
 
 ## Alternatives Considered
 Three designs were written apart, each with a different lens and none told of the others, and scored by a
@@ -28,7 +32,7 @@ judge who wrote none of them (`architect`'s bake-off), against criteria and weig
 | What a developer has to change | 3 | 2 | 3 | 3 |
 | Context each session pays beyond the listing | 2 | 5 | 5 | 3 |
 
-`tradeoff.py`: the visible list 73.3%, hide all 64.4%, hubs 62.2%, **clear** (no one-point score or weight
+`tradeoff.py` on the judge's scores, before the deciding fact was in: the visible list 73.3%, hide all 64.4%, hubs 62.2%, **clear** (no one-point score or weight
 move of 2 or less changes it; hubs only tie with routing weighted 0 or the budget 10).
 
 - **Hide all commands, no exceptions:** the same room, but every prose habit across 20 commands becomes an
@@ -46,8 +50,11 @@ move of 2 or less changes it; hubs only tie with routing weighted 0 or the budge
   overstated: `retrospective` asks a side-effect command for the flag **or** the never-self-commit guard,
   so `/commit` isn't a gap; `/migrate` and `/docker-build` have neither.
 - **Routing is unchanged:** `check-skill-routing.py` already ranks skills only.
-- **It buys time, about 14 skills, not a fix.** The headroom print makes the next squeeze visible weeks
-  before it fails.
+- **The judge named the fact that would change its verdict**, and it did: with commands started from plain
+  words, the winner's score for "requests still reach the right skill" and for what a developer has to
+  change no longer holds. A clear table can still rest on one unchecked fact; the bake-off asks for it.
+- **Hiding commands would have bought about 14 skills of room, not a fix.** The hubs are the only design
+  here that lasts, which is why they get the eval.
 
 ## How the bake-off itself went
 Two of the three lenses (the simplest, the cheapest to run) reached nearly the same design; only the

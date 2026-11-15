@@ -11,8 +11,9 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
 - **Run once on a real decision** (`docs/decisions/skill-listing-budget.md`): how to keep every skill
   findable as the listing nears its budget. The judge checked each design's facts in the repo (one claim
   was overstated) and chose hiding the 20 model-invocable commands, with a visible list for the ones
-  started from plain words: 73.3% against 64.4% and 62.2%, clear. It isn't applied: it waits for one fact,
-  how often a command is started from plain words.
+  started from plain words: 73.3% against 64.4% and 62.2%, clear, resting on one fact it named: how often a
+  command is started from plain words. The answer was "often", so the commands stay listed, and the hub
+  design (the only one that lasts) waits for an eval of its extra hop. Nothing is applied here.
 - **Learned in the run:** two of the three lenses reached nearly the same design, so each designer is now
   also told what its design may not share with the obvious answer.
 
