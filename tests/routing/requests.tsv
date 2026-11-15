@@ -118,3 +118,5 @@ zero-vulns	dotnet list package --vulnerable shows a CVE, which version fixes it
 zero-vulns	the build fails with NU1903, a vulnerable transitive package
 test-design	what test cases do we need for this story before I write the code
 test-design	turn these acceptance criteria into test cases with boundaries and a decision table
+mutation-testing	would our tests notice if this comparison were wrong, run Stryker on the change
+mutation-testing	the tests pass, but would they fail if the code were wrong on this branch

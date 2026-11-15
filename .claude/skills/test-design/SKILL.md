@@ -1,7 +1,7 @@
 ---
 name: test-design
 description: "Design a story's test cases before the code: number the acceptance criteria, rank risks, use decision tables, boundaries or state transitions, trace each criterion to a test."
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Test design: the cases before the code
@@ -132,7 +132,8 @@ because Saudi Arabia keeps UTC+3 all year and the code uses that fixed offset.
 
 A test that can't fail proves nothing. Break each high-risk rule once on purpose and watch its test go red:
 in the sample, computing the visit's day in UTC instead of Riyadh fails the story test with "found
-Allowed". Put the code back before going on.
+Allowed". Put the code back before going on. `mutation-testing` does this for every line a change
+touched, with Stryker.NET.
 
 ## 7. Trace every criterion to a test that passed
 

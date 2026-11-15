@@ -1,0 +1,6 @@
+<Project>
+  <!-- The mutation sample is a service of its own: it keeps its own versions, not the test suite's. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>
