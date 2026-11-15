@@ -3,6 +3,27 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.30 — business rules from the code
+- **`business-rules` skill:** finds the rules a service's code enforces, writes each as Given/When/Then in
+  the business's words with the line that enforces it, and pins each with a characterization test that
+  passes on today's code. It describes, it doesn't judge: a rule that looks wrong is tested as it is, with
+  its question beside it.
+- **`rule_candidates.py`:** lists the lines that decide something (guards, throws, `RuleFor`, status
+  changes, limits, calculations; tests and comments left out), and with `--check rules.md` refuses a
+  candidate that is neither a rule nor a not-rule, or a rule whose code isn't at its line. Each reference
+  carries its line's code, so a rule is found again within 3 lines when lines move, and a rule added later
+  between them is still caught.
+- **`trace_matrix.py --prefix R --trait Rule`** traces rules to their tests the way it traces criteria.
+- **Sample** (`tests/SkillSamples.Tests/BusinessRules`): a visit cancellation with six unwritten rules
+  (ownership, already cancelled, the clinic cancels, the 2-hour cutoff, the third cancellation in 30 days,
+  the refund), each proven by passing tests; story tests, and a production test on the slim image (a visit
+  saved with the clinic's offset counts the same in UTC).
+- **Tested** (`tests/businessrules`): the sample accounted for in full; a guard added later named, with the
+  moved rules still found; a snippet that isn't there, a missing reference, a brace line, a line past the
+  end, a missing file; validators, throws and status changes found, comparisons and comments not; and a
+  Windows checkout (CRLF, BOM, backslash paths, Arabic in a guard on a cp1252 console).
+- Three descriptions shortened to keep the listing under its budget (11970/12000).
+
 ## 0.3.29 — a team's own cases in the story check
 - **`story_check.py --items FILE`:** a team's own cases, one `name: what it asks` per line, become required
   like the routine's nine: a report that leaves one out is refused, naming it and what it asks, and its

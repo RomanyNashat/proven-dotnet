@@ -2,6 +2,7 @@
 """Traces a story's acceptance criteria to the tests that prove them.
 
     python trace_matrix.py <story.md> <test folder> [--trx results.trx] [--require-all] [--json]
+                           [--prefix AC] [--trait AC]
 
 The story lists its criteria as `AC1: ...` lines (a list item, bold or plain). Tests name the criteria
 they prove with xUnit traits, on the method or on the class:
@@ -15,6 +16,9 @@ one failed, and `not run` when none of its tests are in the results. Tests that 
 story doesn't have are listed too: a typo there would hide a gap.
 
 --require-all exits 1 unless every criterion is covered (proven, with --trx).
+
+--prefix and --trait trace other numbered lines the same way: `business-rules` traces `R1: ...` rules to
+`[Trait("Rule", "R1")]` with `--prefix R --trait Rule`.
 """
 from __future__ import annotations
 
@@ -25,8 +29,13 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-CRITERION = re.compile(r"^\s*(?:[-*+]|\d+[.)])?\s*\**\s*(AC\d+)\s*\**\s*[:.)–—-]\s*\**\s*(.+?)\s*$")
-TRAIT = re.compile(r'Trait\(\s*"AC"\s*,\s*"(AC\d+)"\s*\)')
+def patterns(prefix: str = "AC", trait: str = "AC") -> tuple[re.Pattern, re.Pattern]:
+    p, t = re.escape(prefix), re.escape(trait)
+    return (re.compile(rf"^\s*(?:[-*+]|\d+[.)])?\s*\**\s*({p}\d+)\s*\**\s*[:.)–—-]\s*\**\s*(.+?)\s*$"),
+            re.compile(rf'Trait\(\s*"{t}"\s*,\s*"({p}\d+)"\s*\)'))
+
+
+CRITERION, TRAIT = patterns()
 NAMESPACE = re.compile(r"^\s*namespace\s+([\w.]+)")
 CLASS = re.compile(r"\b(?:class|record)\s+(\w+)")
 METHOD = re.compile(r"\b(?:public|internal|private|protected)\s+(?:static\s+)?(?:async\s+)?[\w<>\[\],.? ]+?\s+(\w+)\s*\(")
@@ -136,10 +145,14 @@ def main(argv=None) -> int:
     p.add_argument("--trx", type=Path)
     p.add_argument("--require-all", action="store_true")
     p.add_argument("--json", action="store_true")
+    p.add_argument("--prefix", default="AC", help="the numbered lines to trace (AC, or R for rules)")
+    p.add_argument("--trait", default=None, help="the trait the tests use (default: the prefix)")
     a = p.parse_args(argv)
+    global CRITERION, TRAIT
+    CRITERION, TRAIT = patterns(a.prefix, a.trait or a.prefix)
     result = matrix(a.story, a.tests, a.trx)
     if not result["criteria"]:
-        print(f"no acceptance criteria (AC1: ...) found in {a.story}", file=sys.stderr)
+        print(f"no {a.prefix}1: ... lines found in {a.story}", file=sys.stderr)
         return 2
     if a.json:
         print(json.dumps(result, indent=2))
