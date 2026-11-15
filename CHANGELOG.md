@@ -3,6 +3,23 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.25 — mutation testing: would the tests notice?
+- **`mutation-testing` skill:** Stryker.NET, pinned (5.1.0) and installed outside the repo, run on a
+  branch with `--since`. The skill says how to read what survives: a missed edge, an outcome nobody
+  asserts, a line no test runs, an equivalent change.
+- **`mutation_report.py`** reads Stryker's JSON report. With `--since REF` it keeps only the mutants on
+  the lines the branch changed (Stryker's own `--since` works by file). It prints the score and the
+  changes the tests missed, with file, line, what the code was and what it became. `--min-score` gates a
+  pipeline.
+- **Tested:**
+  - A sample rule with strong and weak tests. The weak ones cover every line and still score 71%,
+    missing exactly the two edges they don't check; the strong ones score 100%. CI runs Stryker on both
+    and checks those numbers.
+  - The script's tests run on Linux and Windows against a real report, in a throwaway git repo for
+    `--since`.
+  - Stryker's `--since` was checked by hand in a throwaway repo.
+- `test-design` points to it for the "check the tests can fail" step.
+
 ## 0.3.24 — a QA engineer writes the story's tests before the code
 - **`qa-engineer` agent (Opus):**
   - designs a story's cases with `test-design`, before the code;

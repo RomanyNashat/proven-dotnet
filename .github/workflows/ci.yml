@@ -37,6 +37,8 @@ jobs:
         run: python -m unittest discover tests/upgrade -v
       - name: Test design (trace_matrix.py)
         run: python -m unittest discover tests/testdesign -v
+      - name: Mutation report (mutation-testing)
+        run: python -m unittest discover tests/mutation -v
       - name: First fixed version against nuget.org
         if: runner.os == 'Linux'
         run: python .claude/skills/zero-vulns/scripts/first_fixed.py System.Security.Cryptography.Pkcs 9.0.11
@@ -169,3 +171,34 @@ jobs:
           print("\n".join(missing) or "all hook commands resolve")
           sys.exit(1 if missing else 0)
           PY
+
+  mutation-sample:
+    name: Mutation testing sample (Stryker.NET)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      # The runner image ships SDK 11 beside it; the sample is built with 10, as a service on 10 is.
+      - name: Use SDK 10
+        run: echo '{"sdk":{"version":"10.0.100","rollForward":"latestFeature"}}' > global.json
+      - name: Install Stryker.NET
+        run: dotnet tool install dotnet-stryker --version 5.1.0 --tool-path "$RUNNER_TEMP/tools"
+      # The strong tests detect every change Stryker makes; the weak ones run every line and still miss the two
+      # edges (refills at zero, the window's first day). The report script must say exactly that.
+      - name: Strong tests score 100, weak tests miss the two edges
+        shell: bash
+        run: |
+          s=tests/mutation/Sample
+          for p in Clinic.Rules.Tests Clinic.Rules.WeakTests; do
+            (cd "$s/$p" && "$RUNNER_TEMP/tools/dotnet-stryker" --reporter json --reporter cleartext --output "../out-$p")
+          done
+          report=.claude/skills/mutation-testing/scripts/mutation_report.py
+          python3 "$report" "$s/out-Clinic.Rules.Tests/reports/mutation-report.json" --min-score 100
+          if python3 "$report" "$s/out-Clinic.Rules.WeakTests/reports/mutation-report.json" --min-score 90; then
+            echo "::error::the weak tests passed the bar"; exit 1
+          fi
+          python3 "$report" "$s/out-Clinic.Rules.WeakTests/reports/mutation-report.json" --json \
+            | python3 -c "import json,sys; r=json.load(sys.stdin); lines=sorted(m['line'] for m in r['missed']); assert lines==[16,19], lines; print('missed', lines)"

@@ -1,0 +1,237 @@
+{
+ "files": {
+  "ROOT/Clinic.Rules/RefillWindow.cs": {
+   "language": "cs",
+   "source": "namespace Clinic.Rules;\n\n/// <summary>When a repeat prescription may be refilled.</summary>\npublic static class RefillWindow\n{\n    public const int DaysBefore = 7;\n\n    /// <summary>A refill may be asked for from <see cref=\"DaysBefore\"/> days before the supply runs out, while refills are left.</summary>\n    /// <param name=\"today\">The pharmacy's date.</param>\n    /// <param name=\"lastDispensed\">The day the current supply was dispensed.</param>\n    /// <param name=\"daysSupply\">How many days the supply lasts.</param>\n    /// <param name=\"refillsLeft\">Refills left on the prescription.</param>\n    /// <returns>Whether a refill may be requested today.</returns>\n    public static bool IsOpen(DateOnly today, DateOnly lastDispensed, int daysSupply, int refillsLeft)\n    {\n        if (refillsLeft <= 0)\n            return false;\n        var runsOut = lastDispensed.AddDays(daysSupply);\n        return today >= runsOut.AddDays(-DaysBefore);\n    }\n}\n",
+   "mutants": [
+    {
+     "id": "0",
+     "mutatorName": "Block removal mutation",
+     "replacement": "{}",
+     "location": {
+      "start": {
+       "line": 15,
+       "column": 5
+      },
+      "end": {
+       "line": 20,
+       "column": 6
+      }
+     },
+     "status": "Ignored",
+     "statusReason": "Removed by block already covered filter",
+     "static": false,
+     "coveredBy": [
+      "18ad877d-31f1-91cd-5b43-f45fcd72b356",
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ],
+     "killedBy": []
+    },
+    {
+     "id": "1",
+     "mutatorName": "Equality mutation",
+     "replacement": "refillsLeft > 0",
+     "location": {
+      "start": {
+       "line": 16,
+       "column": 13
+      },
+      "end": {
+       "line": 16,
+       "column": 29
+      }
+     },
+     "status": "Killed",
+     "static": false,
+     "coveredBy": [
+      "18ad877d-31f1-91cd-5b43-f45fcd72b356",
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ],
+     "killedBy": [
+      "18ad877d-31f1-91cd-5b43-f45fcd72b356",
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ]
+    },
+    {
+     "id": "2",
+     "mutatorName": "Equality mutation",
+     "replacement": "refillsLeft < 0",
+     "location": {
+      "start": {
+       "line": 16,
+       "column": 13
+      },
+      "end": {
+       "line": 16,
+       "column": 29
+      }
+     },
+     "status": "Survived",
+     "static": false,
+     "coveredBy": [
+      "18ad877d-31f1-91cd-5b43-f45fcd72b356",
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ],
+     "killedBy": []
+    },
+    {
+     "id": "3",
+     "mutatorName": "Negate expression",
+     "replacement": "!(refillsLeft <= 0)",
+     "location": {
+      "start": {
+       "line": 16,
+       "column": 13
+      },
+      "end": {
+       "line": 16,
+       "column": 29
+      }
+     },
+     "status": "Killed",
+     "static": false,
+     "coveredBy": [
+      "18ad877d-31f1-91cd-5b43-f45fcd72b356",
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ],
+     "killedBy": [
+      "18ad877d-31f1-91cd-5b43-f45fcd72b356",
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ]
+    },
+    {
+     "id": "4",
+     "mutatorName": "Boolean mutation",
+     "replacement": "true",
+     "location": {
+      "start": {
+       "line": 17,
+       "column": 20
+      },
+      "end": {
+       "line": 17,
+       "column": 25
+      }
+     },
+     "status": "Killed",
+     "static": false,
+     "coveredBy": [
+      "18ad877d-31f1-91cd-5b43-f45fcd72b356"
+     ],
+     "killedBy": [
+      "18ad877d-31f1-91cd-5b43-f45fcd72b356"
+     ]
+    },
+    {
+     "id": "5",
+     "mutatorName": "Equality mutation",
+     "replacement": "today < runsOut.AddDays(-DaysBefore)",
+     "location": {
+      "start": {
+       "line": 19,
+       "column": 16
+      },
+      "end": {
+       "line": 19,
+       "column": 53
+      }
+     },
+     "status": "Killed",
+     "static": false,
+     "coveredBy": [
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ],
+     "killedBy": [
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ]
+    },
+    {
+     "id": "6",
+     "mutatorName": "Equality mutation",
+     "replacement": "today > runsOut.AddDays(-DaysBefore)",
+     "location": {
+      "start": {
+       "line": 19,
+       "column": 16
+      },
+      "end": {
+       "line": 19,
+       "column": 53
+      }
+     },
+     "status": "Survived",
+     "static": false,
+     "coveredBy": [
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ],
+     "killedBy": []
+    },
+    {
+     "id": "7",
+     "mutatorName": "UnaryMinusExpression to UnaryPlusExpression mutation",
+     "replacement": "+DaysBefore",
+     "location": {
+      "start": {
+       "line": 19,
+       "column": 41
+      },
+      "end": {
+       "line": 19,
+       "column": 52
+      }
+     },
+     "status": "Killed",
+     "static": false,
+     "coveredBy": [
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ],
+     "killedBy": [
+      "f55c70be-f518-4aeb-eb0d-080fb1891d14"
+     ]
+    }
+   ]
+  }
+ },
+ "projectRoot": "ROOT/Clinic.Rules",
+ "schemaVersion": "2",
+ "testFiles": {
+  "ROOT/Clinic.Rules.WeakTests/RefillWindowTests.cs": {
+   "language": "cs",
+   "source": "using Clinic.Rules;\n\nnamespace Clinic.Rules.WeakTests;\n\n// Only the happy path: full coverage of the method, yet the edges are untested.\npublic sealed class RefillWindowTests\n{\n    [Fact]\n    public void IsOpen_InTheMiddleOfTheWindow_IsOpen() =>\n        Assert.True(RefillWindow.IsOpen(new DateOnly(2026, 11, 28), new DateOnly(2026, 11, 1), 30, refillsLeft: 2));\n\n    [Fact]\n    public void IsOpen_NoRefillsLeft_IsClosed() =>\n        Assert.False(RefillWindow.IsOpen(new DateOnly(2026, 11, 28), new DateOnly(2026, 11, 1), 30, refillsLeft: -1));\n}\n",
+   "tests": [
+    {
+     "id": "f55c70be-f518-4aeb-eb0d-080fb1891d14",
+     "name": "Clinic.Rules.WeakTests.RefillWindowTests.IsOpen_InTheMiddleOfTheWindow_IsOpen",
+     "location": {
+      "start": {
+       "line": 8,
+       "column": 5
+      },
+      "end": {
+       "line": 10,
+       "column": 117
+      }
+     }
+    },
+    {
+     "id": "18ad877d-31f1-91cd-5b43-f45fcd72b356",
+     "name": "Clinic.Rules.WeakTests.RefillWindowTests.IsOpen_NoRefillsLeft_IsClosed",
+     "location": {
+      "start": {
+       "line": 12,
+       "column": 5
+      },
+      "end": {
+       "line": 14,
+       "column": 119
+      }
+     }
+    }
+   ]
+  }
+ },
+ "thresholds": {
+  "high": 80,
+  "low": 60
+ }
+}
