@@ -50,6 +50,14 @@ Give its table to all three reviewers. Each confirms or dismisses the findings i
 skill named in the table, and says which. A finding nobody confirms or dismisses stays in the report as
 found by the scan.
 
+Then the **silent-failure scan** (`skills/code-quality/`, read-only):
+```bash
+python ~/.claude/skills/code-quality/scripts/silent_failures.py <service folder>
+```
+Its table goes to **code-reviewer**, which gives each candidate a verdict: silent (with severity and the
+fix) or fine (with why). With `--diff`, add `--diff change.diff`: the change's candidates are `changed` or
+`touched`, the same as the traps.
+
 Then run three review agents in parallel:
 
 1. **code-reviewer** agent (Read-only, Opus)
