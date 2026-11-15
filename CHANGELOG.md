@@ -14,6 +14,7 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
 - **Tested:** stories for each agent's own steps and for writes hidden inside reads; Windows paths and
   `py -3`; the hook as the layer installs it. CI runs them on Linux and Windows. A headless run of the
   installed `health-analyst` had `touch` refused and `git status` allowed.
+
 ## 0.3.21 — a pilot run and a noise floor before an eval's grid
 - **`run-queue.sh --pilot`** runs only the first run of a round (the baseline goes first) and stops with
   exit 4, so it is graded against the bar before the rest are paid for. Run the same queue again without
