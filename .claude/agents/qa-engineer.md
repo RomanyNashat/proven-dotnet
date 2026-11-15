@@ -32,6 +32,8 @@ by the person it grades proves less.
 - **A criterion that can't be tested as written** becomes a question in your report, never a guess.
 
 ## Process (the `test-design` skill, read it first)
+0. If the story hasn't been checked, check it first (`story-check`). A NOT READY story goes back with its
+   questions, not into tests.
 1. Write `story.md` next to the tests: the story and its criteria as `AC1: ...` lines, in the story's own
    words.
 2. Read the code the story touches. A case the code already handles still gets a test; a case the code

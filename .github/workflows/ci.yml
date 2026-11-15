@@ -39,6 +39,8 @@ jobs:
         run: python -m unittest discover tests/testdesign -v
       - name: Mutation report (mutation-testing)
         run: python -m unittest discover tests/mutation -v
+      - name: Story check (story_check.py)
+        run: python -m unittest discover tests/storycheck -v
       - name: First fixed version against nuget.org
         if: runner.os == 'Linux'
         run: python .claude/skills/zero-vulns/scripts/first_fixed.py System.Security.Cryptography.Pkcs 9.0.11

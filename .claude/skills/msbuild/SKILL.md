@@ -1,6 +1,6 @@
 ---
 name: msbuild
-description: "Directory.Build.props and Central Package Management (Directory.Packages.props): move a solution onto it, version ranges, why restore picked a version (nuget why, binlog)."
+description: "Directory.Build.props and Central Package Management: moving a solution onto it, version ranges, why restore picked a version (nuget why, binlog)."
 version: 1.3.0
 ---
 

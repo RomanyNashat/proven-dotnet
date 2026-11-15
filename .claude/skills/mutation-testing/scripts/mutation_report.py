@@ -109,4 +109,6 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
+    # A Windows console is cp1252: an Arabic criterion or line of code would stop the script mid-report.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.exit(main())
