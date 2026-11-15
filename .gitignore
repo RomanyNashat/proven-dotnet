@@ -13,3 +13,6 @@ TestResults/
 .claude/.journal-raw.md
 .claude/settings.local.json
 try-first-report.txt
+
+# /qa-scan output
+.qa/

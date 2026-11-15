@@ -1,7 +1,7 @@
 ---
 name: test-design
 description: "Design a story's test cases before the code: number the acceptance criteria, rank risks, use decision tables, boundaries or state transitions, trace each criterion to a test."
-version: 1.0.1
+version: 1.1.0
 ---
 
 # Test design: the cases before the code
@@ -154,6 +154,14 @@ It also lists tests that name a criterion the story doesn't have, since a typo t
 `--require-all` exits 1 unless every criterion is covered, or proven with `--trx`, so it can gate CI.
 `--json` is for a tool that reads it. It handles CRLF, a BOM, attributes on the method's line and class
 traits; `bin` and `obj` are skipped. Tested in `tests/testdesign` against the sample and a real TRX.
+
+## 8. On the finished branch: `/qa-scan`
+
+`/qa-scan` puts the evidence together before a story ships. The criteria come from `trace_matrix.py` with
+the test results, the tests' strength from `mutation-testing` on the changed lines, and what else to
+retest from `changed_members.py --since origin/main` and Roslyn's callers. `qa_verdict.py` then says YES
+(every criterion proven, every survivor accepted with a reason), NO (each reason named) or CAN'T SAY
+(evidence missing, never read as YES). The scripts' tests are in `tests/testdesign`.
 
 ## Rules
 - Cases come from the story, before the code, and the developer writes them failing first.

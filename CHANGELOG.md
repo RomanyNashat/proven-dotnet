@@ -3,6 +3,23 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.26 — /qa-scan: is the story's branch ready to ship?
+- **`/qa-scan` command (read-only):** judges a finished story branch on evidence. It runs the tests with
+  a TRX log and traces each criterion to a passing test, runs Stryker on the lines the branch changed,
+  lists the members it changed with their callers and the tests of those callers, checks the cases that go
+  wrong most often here (UTC midnight, Hijri, Arabic text against a length, a double submit, another
+  person's id, an old app, an empty setting, a dependency down), and gives a verdict.
+- **`qa_verdict.py`:** YES only when every criterion is proven and every survivor on the changed lines is
+  accepted with a reason in a file the developer writes; NO with each reason; CAN'T SAY when evidence is
+  missing (no mutation report, or a trace without test results). Missing evidence is never a YES.
+- **`changed_members.py`:** the methods, constructors and properties a branch changed, test projects left
+  out. A change on a signature line belongs to that member (git's hunk header names the one above it).
+- **Tested:** `changed_members.py` on throwaway git repos (a fix inside a method, a changed signature, a
+  property, a field, CRLF with a BOM); `qa_verdict.py` on what the real `trace_matrix.py` and
+  `mutation_report.py` print for the committed samples: NO naming the two survivors, YES once they're
+  accepted, CAN'T SAY with no mutation report, NO for a criterion with no test.
+- `test-design` 1.1.0 points to it for the finished branch. `.qa/` (its output) is git-ignored.
+
 ## 0.3.25 — mutation testing: would the tests notice?
 - **`mutation-testing` skill:** Stryker.NET, pinned (5.1.0) and installed outside the repo, run on a
   branch with `--since`. The skill says how to read what survives: a missed edge, an outcome nobody
