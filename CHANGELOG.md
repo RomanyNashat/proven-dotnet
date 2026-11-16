@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.37 — estimates in hours
+- **`planner` and `/plan-feature` estimate each task in hours:** best, likely and worst, with the unknown
+  that widens the worst, read from what the task touches (`find_callers`; `planner` now has the Roslyn
+  tools it needs). The plan promises its 80% figure, not the sum of the likely hours. No new command: the
+  listing has no room for one (11,999 of 12,000).
+- **`pert.py`** (`problem-analysis` 1.2.0): each task's expected hours, the plan's 80% and 90% figures, and
+  the tasks that drive the uncertainty. It flags a worst over three times the likely (spike or split it),
+  a likely over 16 hours (split it), and a wide range with no unknown named. It rounds half up, so the total
+  agrees with its rows (Python's `round` made 5.25 into 5.2 while the rows added to 5.3).
+- **Tested:** a five-task plan (20 hours expected, 22 at 80%, one task 73% of the uncertainty and flagged),
+  the same plan after its spike, refused tables, hours written as `1h` or `0.5`, and an Arabic plan with
+  Arabic digits from a Windows editor on a cp1252 console.
+
 ## 0.3.36 — a design bake-off for decisions that are expensive to undo
 - **`architect`:** for a service boundary, a data store, a core table, a public contract or a migration
   path, three designs written apart (each with its own lens, none told of the others), scored by a judge

@@ -1,7 +1,7 @@
 ---
 name: problem-analysis
 description: "Find a root cause (5 whys, evidence each), choose between designs (weighted criteria, how close), or pre-mortem a plan, into an ADR."
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Problem analysis: the method that fits the problem
