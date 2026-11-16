@@ -54,6 +54,9 @@ def build(out: Path) -> dict:
                 md = dest / "SKILL.md"
                 md.write_text(hide(md.read_text(encoding="utf-8")), encoding="utf-8")
         if arm == "hubs":
+            clash = set(hubs) & ({p.stem for p in (CORE / "commands").glob("*.md")} | {p.name for p in (CORE / "skills").iterdir()})
+            if clash:
+                sys.exit(f"a hub has the name of a command or skill: {sorted(clash)}")
             for name, hub in hubs.items():
                 (target / "skills" / name).mkdir(parents=True)
                 (target / "skills" / name / "SKILL.md").write_text(hub_md(name, hub), encoding="utf-8")

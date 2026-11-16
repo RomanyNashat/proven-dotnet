@@ -10,11 +10,24 @@ import re
 import sys
 from pathlib import Path
 
-HUBS = set(json.loads((Path(__file__).resolve().parent / "hubs.json").read_text(encoding="utf-8")))
+HERE = Path(__file__).resolve().parent
+HUBS = set(json.loads((HERE / "hubs.json").read_text(encoding="utf-8")))
+CLAUDE = HERE.parents[2] / ".claude"
+AGENTS = {p.stem: p.read_text(encoding="utf-8") for p in (CLAUDE / "agents").glob("*.md")}
+# A command's text, with the text of each agent it hands the work to (/health-check -> health-analyst).
+COMMANDS = {p.stem: p.read_text(encoding="utf-8") for p in (CLAUDE / "commands").glob("*.md")}
+COMMANDS = {name: text + "".join(AGENTS[a] for a in AGENTS if re.search(rf"\b{re.escape(a)}\b", text))
+            for name, text in COMMANDS.items()}
+
+
+def accepted(want: str) -> set[str]:
+    """The skill, or a command that runs it (`/coverage` runs test-coverage): both land the request there."""
+    return {want} | {name for name, text in COMMANDS.items() if re.search(rf"\b{re.escape(want)}\b", text)}
 SKILL_FILE = re.compile(r"skills/([\w-]+)/SKILL\.md$")
 
 
-def opened(path: Path) -> tuple[list[str], int]:
+def opened(path: Path) -> tuple[list[str] | None, int]:
+    """The skills opened in order, or None when the session never ran (a usage limit, an API error)."""
     order, turns = [], 0
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         try:
@@ -23,6 +36,8 @@ def opened(path: Path) -> tuple[list[str], int]:
             continue
         if event.get("type") == "result":
             turns = event.get("num_turns", 0)
+            if event.get("terminal_reason") == "api_error" or event.get("api_error"):
+                return None, 0
         if event.get("type") != "assistant":
             continue
         for block in event.get("message", {}).get("content", []):
@@ -45,17 +60,23 @@ def main() -> int:
         index = runs / arm / "index.tsv"
         if not index.is_file():
             continue
-        right, hops, turns, rows = 0, 0, [], []
+        right, hops, turns, rows, skipped = 0, 0, [], [], 0
         for line in index.read_text(encoding="utf-8").splitlines():
             n, want = line.split("\t")
-            order, t = opened(runs / arm / f"{n}.jsonl")
-            member = next((s for s in order if s not in HUBS), None)
-            ok = member == want
+            path = runs / arm / f"{n}.jsonl"
+            order, t = opened(path) if path.is_file() else (None, 0)
+            if order is None:
+                skipped += 1
+                rows.append(f"SKIP  {arm} {n:>2} want {want:<24} (the session didn't run)")
+                continue
+            hubs = HUBS if arm == "hubs" else set()
+            member = next((s for s in order if s not in hubs), None)
+            ok = member in accepted(want)
             right += ok
-            hops += bool(order and order[0] in HUBS)
+            hops += bool(order and order[0] in hubs)
             turns.append(t)
             rows.append(f"{'PASS' if ok else 'FAIL'}  {arm} {n:>2} want {want:<24} opened {' > '.join(order) or '-'}")
-        summary[arm] = {"right": right, "of": len(rows), "hub_first": hops, "mean_turns": round(sum(turns) / max(1, len(turns)), 1)}
+        summary[arm] = {"right": right, "of": len(rows) - skipped, "not_run": skipped, "hub_first": hops, "mean_turns": round(sum(turns) / max(1, len(turns)), 1)}
         print("\n".join(rows))
     print(json.dumps(summary, indent=1))
     return 0

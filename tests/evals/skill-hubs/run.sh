@@ -14,8 +14,10 @@ n=0
 while IFS=$'\t' read -r skill request; do
   case "$skill" in "#"*|"") continue;; esac
   n=$((n + 1))
+  if [ -n "${RESUME:-}" ] && [ -f "$OUT/$ARM/$n.jsonl" ] && ! grep -q '"api_error"' "$OUT/$ARM/$n.jsonl"; then continue; fi
   (cd "$WORK/$ARM" && timeout 300 claude -p "$request" --setting-sources project --output-format stream-json --verbose \
      --max-turns 6 --allowedTools "Skill" "Read" --append-system-prompt "$NOTE" < /dev/null > "$OUT/$ARM/$n.jsonl" 2>/dev/null) || true
-  printf '%s\t%s\n' "$n" "$skill" >> "$OUT/$ARM/index.tsv"
+  grep -q "^$n	" "$OUT/$ARM/index.tsv" 2>/dev/null || printf '%s\t%s\n' "$n" "$skill" >> "$OUT/$ARM/index.tsv"
+  if grep -q '"usage_limit_reached"' "$OUT/$ARM/$n.jsonl"; then echo "usage limit at run $n: stopping; RESUME=1 picks up from here"; exit 3; fi
 done < "${REQUESTS:-$HERE/requests.tsv}"
 echo "$OUT/$ARM: $n runs"
