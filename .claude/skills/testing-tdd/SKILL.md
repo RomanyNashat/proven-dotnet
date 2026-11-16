@@ -1,7 +1,7 @@
 ---
 name: testing-tdd
 description: "TDD for .NET: write the failing test first, red-green-refactor, unit tests with xUnit, Moq, FluentAssertions 7 and AutoFixture, test names, a fixed clock."
-version: 2.4.0
+version: 2.5.0
 ---
 
 # TDD & Unit Testing Patterns
@@ -346,6 +346,24 @@ Don't generate a wrapper for every static (`IFileSystem`, `IDateTime`, `IEnviron
 ships the seam for the clock, timers, configuration and HTTP, and a wrapper that mirrors `File` has
 dozens of methods to fake. Where there is no built-in seam, write the small interface for what this code
 does (`IReportStore.SaveAsync`), which says more and fakes in one line.
+
+## A regression: which commit broke it
+
+A test that passed last month fails today, and the diff since is long. Write (or pick) the test that shows
+the failure first; it is the judge. Then let git find the commit:
+
+```bash
+python ~/.claude/skills/testing-tdd/scripts/bisect_regression.py --good v0.4.2 \
+  --build "dotnet build --nologo -v q" -- dotnet test --no-build --filter "FullyQualifiedName~RefundTests"
+```
+
+It runs `git bisect` in a throwaway worktree, so the branch, the working tree and any uncommitted change
+stay where they are, and the worktree goes when it ends. A commit whose build fails is skipped, not blamed;
+when skipped commits sit right before the break, it names every commit the break could be in rather than
+guess. It checks first that the test fails on the bad commit and passes on the good one: a test that
+doesn't is the wrong judge.
+
+The commit it names says where to look, not what to do: the fix is still test-first, with the same test.
 
 ## Reviewing a test: what to fix
 
