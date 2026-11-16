@@ -1,7 +1,7 @@
 ---
 name: problem-analysis
 description: "Find a root cause (5 whys, evidence each), choose between designs (weighted criteria, how close), or pre-mortem a plan, into an ADR."
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Problem analysis: the method that fits the problem
@@ -49,6 +49,8 @@ commit, a metric, a file and line, a ticket.
 
    It prints each option's weighted score, the winner, and how robust the win is: how far each weight would
    have to move before another option wins, and which single score, moved by one point, would change it.
+   For a decision that is expensive to undo, the options come from `architect`'s bake-off: three designs
+   written apart, scored by a judge who wrote none.
 4. **`clear`:** no plausible change flips it. **`close`:** moving one weight by 2 or less, or one score by
    one point, changes the winner. A close table doesn't decide: name the fact that would (a measurement, a
    spike, a question to the people who know) and get it before choosing.
