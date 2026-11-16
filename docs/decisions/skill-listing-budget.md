@@ -13,7 +13,8 @@ visible would eat the room it frees, so that design buys nothing here.
 What happens instead:
 - **The hub design comes back, but only after an eval** shows its extra hop doesn't lose routing: requests
   sent to a listing of hubs, scored on whether the model opens the right member skill, against today's flat
-  listing. Until that eval passes, nothing moves.
+  listing. Until that eval passes, nothing moves. (Run 2026-11-16, below: the hubs are viable, and the
+  flat listing stays while it fits.)
 - **Until then**, a new skill only some services need goes to `project-skills/` (not installed, no listing
   cost), and the routing check and the budget check stay as they are: a new listed skill has to make its
   own room by shortening others, with the routing check proving nothing got worse.
@@ -55,6 +56,25 @@ move of 2 or less changes it; hubs only tie with routing weighted 0 or the budge
   change no longer holds. A clear table can still rest on one unchecked fact; the bake-off asks for it.
 - **Hiding commands would have bought about 14 skills of room, not a fix.** The hubs are the only design
   here that lasts, which is why they get the eval.
+
+## The hub eval (2026-11-16)
+`tests/evals/skill-hubs`, with the bar written before any run. Nine hubs listed instead of the 63 skills
+(29 entries, 3,993 characters, against 83 and 12,328), every member reached only through its hub's table.
+- **The pilot met its bar:** 17 of 18 in both listings, the hop followed 17 times, 0.9 of a turn more.
+- **Every request in `tests/routing/requests.tsv`, once each:** flat 127 of 128, hubs 124 of 128, 0.8 of a
+  turn more. Each time the model went through a hub (107 runs), it opened one of that hub's members; the
+  other 21 went straight to a command, listed in both.
+- **The three requests only the hubs missed, run three more times each:** flat 9 of 9, hubs 4 of 9. One is
+  a request that spans two hubs and goes to the wrong one every time ("read the connection string from Key
+  Vault in App Service" opens `secret-management`, never `azure-deployment`). The other two are flaky:
+  right two times in three after missing in round one.
+
+**What it means:** the hubs route almost as well as the flat listing, in a third of the room, at the cost
+of a turn, the requests that sit between two hubs, and some noise the flat listing doesn't have. The
+requests were written against the flat listing's descriptions, so the real gap may be a little larger.
+**The flat listing stays while it fits.** The hubs are the way out once a skill can't be fitted by
+shortening others. Before that happens, a skill that two hubs could own is listed in both, and the requests
+that cross hubs get their own rows in the eval.
 
 ## How the bake-off itself went
 Two of the three lenses (the simplest, the cheapest to run) reached nearly the same design; only the

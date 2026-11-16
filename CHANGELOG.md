@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.43 — the skill-hub eval
+- **`tests/evals/skill-hubs`:** the eval the listing-budget ADR waited for. Nine hubs are listed instead of
+  the 63 skills, in a third of the room, against today's flat listing. The bar was written first.
+- **Results:** the pilot met its bar. Every routing request, once each: flat 127 of 128, hubs 124 of 128,
+  0.8 of a turn more. The three requests only the hubs missed were repeated three times: flat 9 of 9, hubs
+  4 of 9. One of them sits between two hubs and goes to the wrong one every time.
+- **Decision** (`docs/decisions/skill-listing-budget.md`): the flat listing stays while it fits. The hubs
+  are the way out after that, with a skill two hubs could own listed in both.
+
 ## 0.3.42 — trace_matrix.py finds results for a class with no namespace
 - **Fix:** a test class declared outside any namespace was named `.CancelTests.Method`, with a leading dot,
   so its results never matched and its criterion stayed "not run" after a passing run (`test-design` 1.2.1).

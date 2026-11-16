@@ -1,0 +1,22 @@
+PASS  flat  1 want azure-deployment         opened azure-deployment
+PASS  flat  2 want grpc-patterns            opened grpc-patterns
+PASS  flat  3 want api-contract-evolution   opened api-contract-evolution
+FAIL  hubs  1 want azure-deployment         opened apis-and-security > secret-management
+FAIL  hubs  2 want grpc-patterns            opened design-and-architecture > polly-resilience
+FAIL  hubs  3 want api-contract-evolution   opened writing > simplicity
+{
+ "flat": {
+  "right": 3,
+  "of": 3,
+  "not_run": 0,
+  "hub_first": 0,
+  "mean_turns": 3.0
+ },
+ "hubs": {
+  "right": 0,
+  "of": 3,
+  "not_run": 0,
+  "hub_first": 3,
+  "mean_turns": 4.0
+ }
+}
