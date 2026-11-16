@@ -17,5 +17,5 @@ while IFS=$'\t' read -r skill request; do
   (cd "$WORK/$ARM" && timeout 300 claude -p "$request" --setting-sources project --output-format stream-json --verbose \
      --max-turns 6 --allowedTools "Skill" "Read" --append-system-prompt "$NOTE" < /dev/null > "$OUT/$ARM/$n.jsonl" 2>/dev/null) || true
   printf '%s\t%s\n' "$n" "$skill" >> "$OUT/$ARM/index.tsv"
-done < "$HERE/requests.tsv"
+done < "${REQUESTS:-$HERE/requests.tsv}"
 echo "$OUT/$ARM: $n runs"
