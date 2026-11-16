@@ -3,6 +3,23 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.41 — the TDD gate in tdd-guide
+- **`tdd-gate.py`**, in `tdd-guide`'s frontmatter (so `/tdd` too), holds the order instead of asking for it:
+  - an edit to a production `.cs` file is refused until a `dotnet test` run in this task has gone red (a
+    failing test, or a test that doesn't compile yet);
+  - once production code changed, the agent can't finish until the last run after the last edit is green.
+    It asks three times, then lets the agent finish and say what is still red.
+  - Tests, projects, settings and `story.md` are never held back, and tests `qa-engineer` wrote beforehand
+    count once they're run red. Each agent run starts locked.
+- **What the hooks receive was probed in a real session first** (Claude Code 2.1.325): a failing command
+  never reaches PostToolUse but PostToolUseFailure, its output in `error` after "Exit code 1", so the gate
+  listens to both; an agent's Stop hook runs as SubagentStop.
+- **Tested:** `tests/hooks/test_tdd_gate.py` (9 tests: red-green-refactor, code first refused, qa-engineer's
+  tests, finishing red, Windows paths and `dotnet.exe`). Then a real run: an agent told to write the
+  implementation first was refused, wrote the tests, saw them fail to compile, then implemented, and ended
+  green (6 of 6). This closes the finding that `tdd-guide` once wrote the tests after the code.
+- **Cost:** a Python start on each edit and each shell command inside `tdd-guide` only, nowhere else.
+
 ## 0.3.40 — each lesson in its cheapest lasting form
 - **`/lessons` keeps a lesson in the first form that can hold it** (`lessons` 1.3.0, "The cheapest form
   that lasts"): a test that fails if it happens again, then a check (a script, hook, setting or
