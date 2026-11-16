@@ -1,7 +1,7 @@
 ---
 name: lessons
 description: "Capture what went wrong or was taught this session, then fold each correction into the harness one approved change at a time. Behind /lessons."
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Lessons — turn a session's corrections into harness changes
@@ -58,7 +58,10 @@ Date: YYYY-MM-DD · Layers: <from /version> · Where: <repo label, e.g. "Service
 ### L1. <one line>
 - **Did:** … **Wanted:** … **Rule behind it:** …
 - **Evidence:** "<the developer's words, short>"
+- **Form:** test | check | rule | prose | none   (the cheapest that lasts, below)
 - **Harness change:** `<file>`: <the change in one or two lines>
+- **Why not a test:** <for rule or prose: what no test or check can see>
+- **Shown by:** <for none: the file and line that already shows it>
 - **Priority:** must | should | nice
 - **Status:** open
 
@@ -91,6 +94,28 @@ Date: YYYY-MM-DD · Layers: <from /version> · Where: <repo label, e.g. "Service
 Numbering runs through the whole file (L1, L2, L3…), so an item can be referred to by its number. A
 procedure is one item, however long; it never shrinks to a single "check first"-style line.
 
+### The cheapest form that lasts
+
+Each lesson is kept in the first of these that can hold it, because the ones higher up can't be
+forgotten and cost nothing in a session:
+
+1. **test:** a test that fails if it happens again (a story test beside the skill's sample, a case in
+   a script's tests). "The parity test must run before the first edit" is a test the gate runs, not a
+   sentence.
+2. **check:** a script, hook, setting or `known-traps` rule that refuses it (a content check, a deny in
+   settings, a scan rule).
+3. **rule:** one line in a rule file or a skill's `## Gotchas`, for what only judgement can see (how
+   to phrase a question to the team, which of two good options the team picks). A rule file loads in
+   every session, so a rule line there costs every session; a gotcha loads with its skill.
+4. **prose:** a section of a skill. A taught procedure lands here by nature.
+
+**`none`, and nothing is written, when the code or the harness already shows it:** a test that already
+fails on it, a rule that already says it, a skill sample that already does it right. The item is
+dropped, with `Shown by:` naming the file and line. Writing it again adds a second place to keep in step.
+
+For `rule` or `prose`, `Why not a test:` says what no test or check can see. "It was quicker" is not a
+reason.
+
 **`Harness change` names a real file:** a command (`commands/handover.md`), an agent, a skill
 (`skills/<name>/SKILL.md`, usually its `## Gotchas` section), a rule, `CLAUDE.md`, or a script. If it's
 unclear which, write the best guess and say so.
@@ -111,14 +136,28 @@ unclear which, write the best guess and say so.
 Run in a session on the harness repo. The lessons files come from `~/.claude/lessons/` on that machine, or
 are attached to the chat.
 
-1. **Read every item with `Status: open`** across the files. Group items that point at the same file.
+1. **Check the files, then read every item with `Status: open`** across them. Group items that point at
+   the same file.
+
+   ```bash
+   python ~/.claude/skills/lessons/scripts/lessons_check.py ~/.claude/lessons/*.md
+   ```
+
+   It refuses an item without a Form; a `test` or `check` whose change names no test file or script; a
+   `rule` or `prose` without `Why not a test:`; a `none` without `Shown by:`, or marked applied; and a
+   secret, a connection string, a token or an internal address anywhere in the file.
 2. **Check again before anything enters the harness:** no service or repo names beyond neutral labels
    (a private team layer may keep its own template and tool names), no patient data, no internal URLs,
    no secrets. If an item can't be written without one, rewrite it generally or drop it.
-3. **Walk the items one at a time, highest priority first.** For each: the lesson, the evidence, the exact change to the file (as a diff), and a recommendation (apply, change it, or drop it as a
-   one-off). The developer approves, edits or skips.
-4. **Apply the approved changes** on a branch, with the usual release notes; a skill's lesson usually
-   becomes one line in its `## Gotchas` section (create the section at the end of the skill if it
+3. **Walk the items one at a time, highest priority first.** For each: the lesson, the evidence, the
+   form and why nothing cheaper holds it, the exact change to the file (as a diff), and a recommendation
+   (apply, change it, or drop it as a one-off or as already shown). Before proposing a rule or prose, look
+   for the test or check that could hold it instead, and for the place that already shows it. The
+   developer approves, edits or skips.
+4. **Apply the approved changes** on a branch, with the usual release notes, in the item's form: a
+   `test` lands with the fix it guards and fails without it (run it once against the old behaviour to
+   see it fail); a `check` is tested like any script; a `rule` lesson usually
+   becomes one line in its skill's `## Gotchas` section (create the section at the end of the skill if it
    doesn't exist). **A procedure becomes skill content**, not a gotcha: a section in the skill for that
    job (its steps, the result's structure, the checks), or a new skill when none fits. Show the developer
    the whole section before applying; a procedure written from the report alone misses what only the

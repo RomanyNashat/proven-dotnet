@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.40 — each lesson in its cheapest lasting form
+- **`/lessons` keeps a lesson in the first form that can hold it** (`lessons` 1.3.0, "The cheapest form
+  that lasts"): a test that fails if it happens again, then a check (a script, hook, setting or
+  `known-traps` rule), then one rule line, then prose. A rule or prose item says why no test or check can
+  see it. When the code or the harness already shows the lesson, nothing is written: the item is dropped
+  with where it's shown, so there's no second place to keep in step.
+- **`lessons_check.py`** runs before the fold-in and refuses an item without a form, a `test` or `check`
+  whose change names no test file or script, a `rule` or `prose` without its reason, a `none` without
+  where it's shown or marked applied, a status that says nothing, and a secret, connection string, token
+  or internal address anywhere in the file. A taught procedure is prose by nature and needs no reason.
+- **Tested** on a handover report shaped like a real one (`tests/lessons`, 8 tests, with a Windows file on a
+  cp1252 console).
+
 ## 0.3.39 — the handoff for the mobile team
 - **`api_handoff.py`** (`api-contract-evolution` 1.1.0, "Telling the mobile team what changed"): from the
   two OpenAPI documents oasdiff compares, each endpoint that changed with an example request and response,
