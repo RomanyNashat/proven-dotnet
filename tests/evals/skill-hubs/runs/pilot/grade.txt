@@ -1,0 +1,50 @@
+PASS  flat  1 want efcore-patterns          opened efcore-patterns
+PASS  flat  2 want redis-patterns           opened redis-patterns
+PASS  flat  3 want outbox                   opened outbox
+PASS  flat  4 want quartz-scheduling        opened quartz-scheduling
+PASS  flat  5 want api-contract-evolution   opened api-contract-evolution
+PASS  flat  6 want file-uploads             opened file-uploads
+PASS  flat  7 want pii-masking              opened pii-masking
+PASS  flat  8 want ddd-patterns             opened ddd-patterns
+PASS  flat  9 want polly-resilience         opened polly-resilience
+PASS  flat 10 want test-design              opened test-design
+PASS  flat 11 want mutation-testing         opened mutation-testing
+PASS  flat 12 want nginx                    opened nginx
+PASS  flat 13 want zero-vulns               opened zero-vulns
+FAIL  flat 14 want code-health              opened health-check
+PASS  flat 15 want lessons                  opened lessons
+PASS  flat 16 want simplicity               opened simplicity
+PASS  flat 17 want handover                 opened handover
+PASS  flat 18 want story-check              opened story-check
+PASS  hubs  1 want efcore-patterns          opened data-access > efcore-patterns
+PASS  hubs  2 want redis-patterns           opened data-access > redis-patterns
+PASS  hubs  3 want outbox                   opened messaging-and-jobs > outbox
+PASS  hubs  4 want quartz-scheduling        opened messaging-and-jobs > quartz-scheduling
+PASS  hubs  5 want api-contract-evolution   opened apis-and-security > api-contract-evolution
+PASS  hubs  6 want file-uploads             opened apis-and-security > file-uploads
+PASS  hubs  7 want pii-masking              opened apis-and-security > pii-masking
+PASS  hubs  8 want ddd-patterns             opened design-and-architecture > ddd-patterns
+PASS  hubs  9 want polly-resilience         opened design-and-architecture > polly-resilience
+PASS  hubs 10 want test-design              opened testing > test-design
+PASS  hubs 11 want mutation-testing         opened testing > mutation-testing
+PASS  hubs 12 want nginx                    opened build-and-run > nginx
+PASS  hubs 13 want zero-vulns               opened build-and-run > zero-vulns
+FAIL  hubs 14 want code-health              opened health-check
+PASS  hubs 15 want lessons                  opened code-health-and-the-harness > lessons
+PASS  hubs 16 want simplicity               opened writing > simplicity
+PASS  hubs 17 want handover                 opened writing > handover
+PASS  hubs 18 want story-check              opened stories > story-check
+{
+ "flat": {
+  "right": 17,
+  "of": 18,
+  "hub_first": 0,
+  "mean_turns": 3.0
+ },
+ "hubs": {
+  "right": 17,
+  "of": 18,
+  "hub_first": 17,
+  "mean_turns": 3.9
+ }
+}

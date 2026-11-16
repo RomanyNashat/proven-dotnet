@@ -4,7 +4,7 @@
 #   bash run.sh flat|hubs <runs folder>
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-ARM="$1"; OUT="$2"
+ARM="$1"; mkdir -p "$2"; OUT="$(cd "$2" && pwd)"
 [ "$ARM" = flat ] || [ "$ARM" = hubs ] || { echo "arm is flat or hubs"; exit 2; }
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 python3 "$HERE/build.py" "$WORK" > "$OUT.listing.json"
