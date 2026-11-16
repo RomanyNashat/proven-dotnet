@@ -105,6 +105,24 @@ class Production(unittest.TestCase):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    def test_story_a_test_class_with_no_namespace_is_proven_by_its_results(self):
+        # Given a test file with no namespace (top-level, as a quick test project often starts)
+        tmp = Path(tempfile.mkdtemp(prefix="trace global "))
+        try:
+            (tmp / "story.md").write_text("- AC1: A patient can cancel up to an hour before\n", encoding="utf-8")
+            (tmp / "CancelTests.cs").write_text('public sealed class CancelTests\n{\n    [Fact, Trait("AC", "AC1")]\n'
+                                               "    public void Cancel_AnHourBefore_IsAllowed() { }\n}\n", encoding="utf-8")
+            (tmp / "results.trx").write_text(
+                '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Results>'
+                '<UnitTestResult testId="a" outcome="Passed" /></Results><TestDefinitions><UnitTest id="a">'
+                '<TestMethod className="CancelTests" name="Cancel_AnHourBefore_IsAllowed" /></UnitTest></TestDefinitions></TestRun>',
+                encoding="utf-8")
+            row = trace_matrix.matrix(tmp / "story.md", tmp, tmp / "results.trx")["criteria"][0]
+            # Then its name has no leading dot, so the result matches it and the criterion is proven
+            self.assertEqual((["CancelTests.Cancel_AnHourBefore_IsAllowed"], "proven"), (row["tests"], row["status"]))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
     def test_runs_with_a_bare_environment(self):
         bare = {"PATH": os.environ.get("PATH", ""), "LC_ALL": "C"}
         if "SYSTEMROOT" in os.environ:  # Windows can't start Python without it

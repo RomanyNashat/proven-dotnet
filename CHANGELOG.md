@@ -3,6 +3,11 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.42 — trace_matrix.py finds results for a class with no namespace
+- **Fix:** a test class declared outside any namespace was named `.CancelTests.Method`, with a leading dot,
+  so its results never matched and its criterion stayed "not run" after a passing run (`test-design` 1.2.1).
+  Found by the private layer's story pane, run on a real session. A story test covers it now.
+
 ## 0.3.41 — the TDD gate in tdd-guide
 - **`tdd-gate.py`**, in `tdd-guide`'s frontmatter (so `/tdd` too), holds the order instead of asking for it:
   - an edit to a production `.cs` file is refused until a `dotnet test` run in this task has gone red (a

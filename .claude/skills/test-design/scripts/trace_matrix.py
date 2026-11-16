@@ -94,7 +94,8 @@ def traced_tests(folder: Path) -> dict[str, set[str]]:
             if m := METHOD.search(line):
                 named = pending | class_acs
                 if named:
-                    tests.setdefault(f"{namespace}.{cls}.{m.group(1)}", set()).update(named)
+                    # A class in no namespace is named as the results name it: no leading dot
+                    tests.setdefault(".".join(p for p in (namespace, cls, m.group(1)) if p), set()).update(named)
             pending = set()
     return tests
 
