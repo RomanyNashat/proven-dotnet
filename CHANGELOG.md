@@ -3,6 +3,20 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.36 — a design bake-off for decisions that are expensive to undo
+- **`architect`:** for a service boundary, a data store, a core table, a public contract or a migration
+  path, three designs written apart (each with its own lens, none told of the others), scored by a judge
+  who wrote none of them against criteria and weights written first, with `tradeoff.py`. The ADR records
+  the winner, what it takes from the others, and how close it was.
+- **Run once on a real decision** (`docs/decisions/skill-listing-budget.md`): how to keep every skill
+  findable as the listing nears its budget. The judge checked each design's facts in the repo (one claim
+  was overstated) and chose hiding the 20 model-invocable commands, with a visible list for the ones
+  started from plain words: 73.3% against 64.4% and 62.2%, clear, resting on one fact it named: how often a
+  command is started from plain words. The answer was "often", so the commands stay listed, and the hub
+  design (the only one that lasts) waits for an eval of its extra hop. Nothing is applied here.
+- **Learned in the run:** two of the three lenses reached nearly the same design, so each designer is now
+  also told what its design may not share with the obvious answer.
+
 ## 0.3.35 — problem analysis: the method that fits the problem
 - **`problem-analysis` skill:** a root cause gets 5 whys, each with its evidence (a log line, a commit, a
   metric, a file and line), stopping at a cause the team can change; a choice gets a weighted trade-off,
