@@ -161,99 +161,99 @@ PASS  hubs 32 want dotnet-core              opened design-and-architecture > dot
 PASS  hubs 33 want dotnet-upgrade           opened build-and-run > dotnet-upgrade
 PASS  hubs 34 want dotnet-upgrade           opened build-and-run > dotnet-upgrade
 PASS  hubs 35 want efcore-patterns          opened data-access > efcore-patterns
-SKIP  hubs 36 want efcore-patterns          (the session didn't run)
-SKIP  hubs 37 want encryption-patterns      (the session didn't run)
-SKIP  hubs 38 want encryption-patterns      (the session didn't run)
-SKIP  hubs 39 want file-uploads             (the session didn't run)
-SKIP  hubs 40 want file-uploads             (the session didn't run)
-SKIP  hubs 41 want grpc-patterns            (the session didn't run)
-SKIP  hubs 42 want grpc-patterns            (the session didn't run)
-SKIP  hubs 43 want handover                 (the session didn't run)
-SKIP  hubs 44 want handover                 (the session didn't run)
-SKIP  hubs 45 want hangfire-patterns        (the session didn't run)
-SKIP  hubs 46 want hangfire-patterns        (the session didn't run)
-SKIP  hubs 47 want healthcare-compliance    (the session didn't run)
-SKIP  hubs 48 want healthcare-compliance    (the session didn't run)
-SKIP  hubs 49 want k6-load-testing          (the session didn't run)
-SKIP  hubs 50 want k6-load-testing          (the session didn't run)
-SKIP  hubs 51 want kafka-patterns           (the session didn't run)
-SKIP  hubs 52 want kafka-patterns           (the session didn't run)
-SKIP  hubs 53 want known-traps              (the session didn't run)
-SKIP  hubs 54 want known-traps              (the session didn't run)
-SKIP  hubs 55 want kubernetes-dotnet        (the session didn't run)
-SKIP  hubs 56 want kubernetes-dotnet        (the session didn't run)
-SKIP  hubs 57 want lessons                  (the session didn't run)
-SKIP  hubs 58 want lessons                  (the session didn't run)
-SKIP  hubs 59 want localization             (the session didn't run)
-SKIP  hubs 60 want localization             (the session didn't run)
-SKIP  hubs 61 want mongodb-patterns         (the session didn't run)
-SKIP  hubs 62 want mongodb-patterns         (the session didn't run)
-SKIP  hubs 63 want msbuild                  (the session didn't run)
-SKIP  hubs 64 want msbuild                  (the session didn't run)
-SKIP  hubs 65 want nginx                    (the session didn't run)
-SKIP  hubs 66 want nginx                    (the session didn't run)
-SKIP  hubs 67 want openiddict-server        (the session didn't run)
-SKIP  hubs 68 want openiddict-server        (the session didn't run)
-SKIP  hubs 69 want outbox                   (the session didn't run)
-SKIP  hubs 70 want outbox                   (the session didn't run)
-SKIP  hubs 71 want owasp-aspnetcore         (the session didn't run)
-SKIP  hubs 72 want owasp-aspnetcore         (the session didn't run)
-SKIP  hubs 73 want pii-masking              (the session didn't run)
-SKIP  hubs 74 want pii-masking              (the session didn't run)
-SKIP  hubs 75 want polly-resilience         (the session didn't run)
-SKIP  hubs 76 want polly-resilience         (the session didn't run)
-SKIP  hubs 77 want postgresql-patterns      (the session didn't run)
-SKIP  hubs 78 want postgresql-patterns      (the session didn't run)
-SKIP  hubs 79 want production-diagnostics   (the session didn't run)
-SKIP  hubs 80 want production-diagnostics   (the session didn't run)
-SKIP  hubs 81 want quartz-scheduling        (the session didn't run)
-SKIP  hubs 82 want quartz-scheduling        (the session didn't run)
-SKIP  hubs 83 want redis-patterns           (the session didn't run)
-SKIP  hubs 84 want redis-patterns           (the session didn't run)
-SKIP  hubs 85 want remediation-parity       (the session didn't run)
-SKIP  hubs 86 want remediation-parity       (the session didn't run)
-SKIP  hubs 87 want retrospective            (the session didn't run)
-SKIP  hubs 88 want retrospective            (the session didn't run)
-SKIP  hubs 89 want scaffold-from-sql        (the session didn't run)
-SKIP  hubs 90 want scaffold-from-sql        (the session didn't run)
-SKIP  hubs 91 want secret-management        (the session didn't run)
-SKIP  hubs 92 want secret-management        (the session didn't run)
-SKIP  hubs 93 want service-documentation    (the session didn't run)
-SKIP  hubs 94 want service-documentation    (the session didn't run)
-SKIP  hubs 95 want simplicity               (the session didn't run)
-SKIP  hubs 96 want simplicity               (the session didn't run)
-SKIP  hubs 97 want simplicity               (the session didn't run)
-SKIP  hubs 98 want skill-evals              (the session didn't run)
-SKIP  hubs 99 want skill-evals              (the session didn't run)
-SKIP  hubs 100 want sqlserver-patterns       (the session didn't run)
-SKIP  hubs 101 want sqlserver-patterns       (the session didn't run)
-SKIP  hubs 102 want story-engine             (the session didn't run)
-SKIP  hubs 103 want story-engine             (the session didn't run)
-SKIP  hubs 104 want story-review             (the session didn't run)
-SKIP  hubs 105 want story-review             (the session didn't run)
-SKIP  hubs 106 want test-coverage            (the session didn't run)
-SKIP  hubs 107 want test-coverage            (the session didn't run)
-SKIP  hubs 108 want testing-architecture     (the session didn't run)
-SKIP  hubs 109 want testing-architecture     (the session didn't run)
-SKIP  hubs 110 want testing-integration      (the session didn't run)
-SKIP  hubs 111 want testing-integration      (the session didn't run)
-SKIP  hubs 112 want testing-tdd              (the session didn't run)
-SKIP  hubs 113 want testing-tdd              (the session didn't run)
-SKIP  hubs 114 want worker-patterns          (the session didn't run)
-SKIP  hubs 115 want worker-patterns          (the session didn't run)
-SKIP  hubs 116 want zero-vulns               (the session didn't run)
-SKIP  hubs 117 want zero-vulns               (the session didn't run)
-SKIP  hubs 118 want test-design              (the session didn't run)
-SKIP  hubs 119 want test-design              (the session didn't run)
-SKIP  hubs 120 want mutation-testing         (the session didn't run)
-SKIP  hubs 121 want mutation-testing         (the session didn't run)
-SKIP  hubs 122 want story-check              (the session didn't run)
-SKIP  hubs 123 want story-check              (the session didn't run)
-SKIP  hubs 124 want business-rules           (the session didn't run)
-SKIP  hubs 125 want business-rules           (the session didn't run)
-SKIP  hubs 126 want problem-analysis         (the session didn't run)
-SKIP  hubs 127 want problem-analysis         (the session didn't run)
-SKIP  hubs 128 want api-contract-evolution   (the session didn't run)
+PASS  hubs 36 want efcore-patterns          opened migrate
+PASS  hubs 37 want encryption-patterns      opened apis-and-security > encryption-patterns
+PASS  hubs 38 want encryption-patterns      opened apis-and-security > encryption-patterns
+PASS  hubs 39 want file-uploads             opened apis-and-security > file-uploads
+PASS  hubs 40 want file-uploads             opened apis-and-security > file-uploads
+FAIL  hubs 41 want grpc-patterns            opened design-and-architecture > polly-resilience
+PASS  hubs 42 want grpc-patterns            opened apis-and-security > grpc-patterns
+PASS  hubs 43 want handover                 opened writing > handover
+PASS  hubs 44 want handover                 opened writing > handover
+PASS  hubs 45 want hangfire-patterns        opened messaging-and-jobs > hangfire-patterns
+PASS  hubs 46 want hangfire-patterns        opened messaging-and-jobs > hangfire-patterns
+PASS  hubs 47 want healthcare-compliance    opened apis-and-security > healthcare-compliance
+PASS  hubs 48 want healthcare-compliance    opened apis-and-security > healthcare-compliance
+PASS  hubs 49 want k6-load-testing          opened testing > k6-load-testing
+PASS  hubs 50 want k6-load-testing          opened testing > k6-load-testing
+PASS  hubs 51 want kafka-patterns           opened messaging-and-jobs > kafka-patterns
+PASS  hubs 52 want kafka-patterns           opened messaging-and-jobs > kafka-patterns
+PASS  hubs 53 want known-traps              opened build-and-run > known-traps
+PASS  hubs 54 want known-traps              opened build-and-run > known-traps
+PASS  hubs 55 want kubernetes-dotnet        opened build-and-run > kubernetes-dotnet
+PASS  hubs 56 want kubernetes-dotnet        opened build-and-run > kubernetes-dotnet
+PASS  hubs 57 want lessons                  opened code-health-and-the-harness > lessons
+PASS  hubs 58 want lessons                  opened code-health-and-the-harness > lessons
+PASS  hubs 59 want localization             opened design-and-architecture > localization
+PASS  hubs 60 want localization             opened design-and-architecture > localization
+PASS  hubs 61 want mongodb-patterns         opened data-access > mongodb-patterns
+PASS  hubs 62 want mongodb-patterns         opened data-access > mongodb-patterns
+PASS  hubs 63 want msbuild                  opened build-and-run > msbuild
+PASS  hubs 64 want msbuild                  opened build-and-run > msbuild
+PASS  hubs 65 want nginx                    opened build-and-run > nginx
+PASS  hubs 66 want nginx                    opened build-and-run > nginx
+PASS  hubs 67 want openiddict-server        opened apis-and-security > openiddict-server
+PASS  hubs 68 want openiddict-server        opened apis-and-security > openiddict-server
+PASS  hubs 69 want outbox                   opened messaging-and-jobs > outbox
+PASS  hubs 70 want outbox                   opened messaging-and-jobs > outbox
+PASS  hubs 71 want owasp-aspnetcore         opened security-scan
+PASS  hubs 72 want owasp-aspnetcore         opened security-scan
+PASS  hubs 73 want pii-masking              opened apis-and-security > pii-masking
+PASS  hubs 74 want pii-masking              opened apis-and-security > pii-masking
+PASS  hubs 75 want polly-resilience         opened design-and-architecture > polly-resilience
+PASS  hubs 76 want polly-resilience         opened design-and-architecture > polly-resilience
+PASS  hubs 77 want postgresql-patterns      opened data-access > postgresql-patterns
+PASS  hubs 78 want postgresql-patterns      opened data-access > postgresql-patterns
+PASS  hubs 79 want production-diagnostics   opened build-and-run > production-diagnostics
+PASS  hubs 80 want production-diagnostics   opened build-and-run > production-diagnostics
+PASS  hubs 81 want quartz-scheduling        opened messaging-and-jobs > quartz-scheduling
+PASS  hubs 82 want quartz-scheduling        opened messaging-and-jobs > quartz-scheduling
+PASS  hubs 83 want redis-patterns           opened data-access > redis-patterns
+PASS  hubs 84 want redis-patterns           opened data-access > redis-patterns
+PASS  hubs 85 want remediation-parity       opened testing > remediation-parity
+PASS  hubs 86 want remediation-parity       opened testing > remediation-parity
+PASS  hubs 87 want retrospective            opened code-health-and-the-harness > retrospective
+PASS  hubs 88 want retrospective            opened code-health-and-the-harness > retrospective
+PASS  hubs 89 want scaffold-from-sql        opened data-access > scaffold-from-sql
+PASS  hubs 90 want scaffold-from-sql        opened data-access > scaffold-from-sql
+PASS  hubs 91 want secret-management        opened apis-and-security > secret-management
+PASS  hubs 92 want secret-management        opened apis-and-security > secret-management
+PASS  hubs 93 want service-documentation    opened document
+PASS  hubs 94 want service-documentation    opened document
+PASS  hubs 95 want simplicity               opened writing > simplicity
+PASS  hubs 96 want simplicity               opened writing > simplicity
+PASS  hubs 97 want simplicity               opened writing > simplicity
+PASS  hubs 98 want skill-evals              opened code-health-and-the-harness > skill-evals
+PASS  hubs 99 want skill-evals              opened code-health-and-the-harness > skill-evals
+PASS  hubs 100 want sqlserver-patterns       opened data-access > sqlserver-patterns
+PASS  hubs 101 want sqlserver-patterns       opened data-access > sqlserver-patterns
+PASS  hubs 102 want story-engine             opened stories
+PASS  hubs 103 want story-engine             opened stories
+FAIL  hubs 104 want story-review             opened story-work > story-check
+PASS  hubs 105 want story-review             opened story-work > story-review
+PASS  hubs 106 want test-coverage            opened coverage
+PASS  hubs 107 want test-coverage            opened coverage
+PASS  hubs 108 want testing-architecture     opened architecture-check
+PASS  hubs 109 want testing-architecture     opened architecture-check
+PASS  hubs 110 want testing-integration      opened testing > testing-integration
+PASS  hubs 111 want testing-integration      opened testing > testing-integration
+PASS  hubs 112 want testing-tdd              opened testing > testing-tdd
+PASS  hubs 113 want testing-tdd              opened tdd
+PASS  hubs 114 want worker-patterns          opened messaging-and-jobs > worker-patterns
+PASS  hubs 115 want worker-patterns          opened messaging-and-jobs > worker-patterns
+PASS  hubs 116 want zero-vulns               opened build-and-run > zero-vulns
+PASS  hubs 117 want zero-vulns               opened build-and-run > zero-vulns
+PASS  hubs 118 want test-design              opened testing > test-design
+PASS  hubs 119 want test-design              opened testing > test-design
+PASS  hubs 120 want mutation-testing         opened testing > mutation-testing
+PASS  hubs 121 want mutation-testing         opened testing > mutation-testing
+PASS  hubs 122 want story-check              opened story-work > story-check
+PASS  hubs 123 want story-check              opened story-work > story-check
+PASS  hubs 124 want business-rules           opened testing > business-rules
+PASS  hubs 125 want business-rules           opened testing > business-rules
+PASS  hubs 126 want problem-analysis         opened design-and-architecture > problem-analysis
+PASS  hubs 127 want problem-analysis         opened design-and-architecture > problem-analysis
+FAIL  hubs 128 want api-contract-evolution   opened writing > simplicity
 {
  "flat": {
   "right": 127,
@@ -263,10 +263,10 @@ SKIP  hubs 128 want api-contract-evolution   (the session didn't run)
   "mean_turns": 3.0
  },
  "hubs": {
-  "right": 34,
-  "of": 35,
-  "not_run": 93,
-  "hub_first": 26,
-  "mean_turns": 3.7
+  "right": 124,
+  "of": 128,
+  "not_run": 0,
+  "hub_first": 107,
+  "mean_turns": 3.8
  }
 }
