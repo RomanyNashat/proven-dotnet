@@ -96,6 +96,7 @@
     <None Include="MsBuild/**/*.props;MsBuild/**/*.csproj;MsBuild/nuget.config" CopyToOutputDirectory="PreserveNewest" />
     <None Include="CodeQuality/sample/**/*.props;CodeQuality/sample/**/*.csproj;CodeQuality/sample/.editorconfig" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Contracts/oasdiff-levels.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../apihandoff/fixture/*.json" Link="Contracts/handoff/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Protobuf Include="Grpc/orders.proto" GrpcServices="Both" />

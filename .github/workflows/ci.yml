@@ -49,6 +49,8 @@ jobs:
         run: python -m unittest discover tests/problemanalysis -v
       - name: Regression bisect (bisect_regression.py)
         run: python -m unittest discover tests/bisect -v
+      - name: API handoff for the mobile team (api_handoff.py)
+        run: python -m unittest discover tests/apihandoff -v
       - name: First fixed version against nuget.org
         if: runner.os == 'Linux'
         run: python .claude/skills/zero-vulns/scripts/first_fixed.py System.Security.Cryptography.Pkcs 9.0.11

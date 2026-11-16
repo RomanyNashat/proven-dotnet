@@ -3,6 +3,21 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.39 — the handoff for the mobile team
+- **`api_handoff.py`** (`api-contract-evolution` 1.1.0, "Telling the mobile team what changed"): from the
+  two OpenAPI documents oasdiff compares, each endpoint that changed with an example request and response,
+  its errors and headers, and what an installed app will see. Each change is judged by the skill's table
+  (`breaks`, `risky`, `safe`, `note`); what breaks comes first, with what to do about it. It reads 3.0 and
+  3.1 spellings (`nullable`, `["null", "string"]`), `$ref` and `allOf`, path-level parameters, and a
+  document Windows PowerShell saved as UTF-16.
+- **Tested on real documents:** the visits API's two releases, as ASP.NET Core generates them, are committed
+  for the script's tests, and a story test fails if they stop being what .NET generates (refresh with
+  `OPENAPI_FIXTURES`). Release 2 gains a cancel endpoint with 404 and 409 as ProblemDetails, so the handoff
+  shows errors from a real document. Hand-written documents cover the rest: removed, retyped and
+  now-nullable fields, a request enum value dropped, a new required parameter, an endpoint removed, and
+  what stays safe.
+- The skill's description names the handoff, in the same room in the listing (11,996 of 12,000).
+
 ## 0.3.38 — which commit broke this test
 - **`bisect_regression.py`** (`testing-tdd` 2.5.0, "A regression: which commit broke it"): `git bisect`
   judged by the failing test, in a throwaway worktree, so the developer's branch, HEAD and uncommitted

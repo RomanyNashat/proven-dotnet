@@ -126,3 +126,4 @@ business-rules	before we refactor this legacy service, write down what it really
 business-rules	who may cancel and until when, according to the code, pinned by tests that pass today
 problem-analysis	this bug keeps coming back, help me find the root cause with evidence for each step
 problem-analysis	we have to pick between two designs, score them on weighted criteria and tell me how close it is
+api-contract-evolution	write up for the mobile developers what changed in our endpoints this release, with request and response examples
