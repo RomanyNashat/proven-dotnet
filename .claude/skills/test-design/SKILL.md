@@ -1,7 +1,7 @@
 ---
 name: test-design
 description: "Design a story's test cases before the code: numbered criteria, risks, decision tables, boundaries, state transitions, each criterion traced to a test."
-version: 1.2.0
+version: 1.2.1
 ---
 
 # Test design: the cases before the code
