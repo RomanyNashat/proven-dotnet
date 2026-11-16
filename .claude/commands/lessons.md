@@ -22,7 +22,9 @@ the fold-in steps.
    checks), everything that broke, and what worked.
 2. Write the report in `~/.claude/lessons/` (create the folder if needed; on Windows it's
    `%USERPROFILE%\.claude\lessons\`). **Never inside a repo.**
-3. Neutral labels for services and repos, no patient data, no secrets or internal URLs.
+3. Give each item its Form, the cheapest that lasts (test, check, rule, prose, or none when the code or
+   the harness already shows it; the skill's "The cheapest form that lasts"). Neutral labels for services
+   and repos, no patient data, no secrets or internal URLs.
 4. **Read-only for everything else.** Capture never edits the harness, the repo or memory.
 5. Tell the developer the file path and how many items are in each section, naming each procedure
    captured, so a missing one is noticed while the session still remembers it.
@@ -32,9 +34,11 @@ the fold-in steps.
 Only on a harness repo: proven-dotnet or a team layer, which has `.claude/layer.json` (stop and say so
 anywhere else).
 1. Read the open items (`Status: open`) in `~/.claude/lessons/*.md`, or in the files attached to the chat.
-2. Re-check each for names, patient data, internal URLs and secrets before anything enters the harness.
-3. Present one item at a time, highest priority first: the lesson, its evidence, the exact diff to the
-   harness file, and a recommendation. Wait for approve / edit / skip.
+2. Run `lessons_check.py` on the files, then re-check each item for names and patient data before
+   anything enters the harness.
+3. Present one item at a time, highest priority first: the lesson, its evidence, its form and why
+   nothing cheaper holds it, the exact diff to the harness file, and a recommendation. A `none` item is
+   dropped with where it's already shown. Wait for approve / edit / skip.
 4. Apply approved changes on a branch with release notes (the repo's `CLAUDE.md` says how). Never
    commit to `main` directly.
 5. Mark each item `applied (vX.Y.Z)` or `dropped (<reason>)` in its lessons file.
