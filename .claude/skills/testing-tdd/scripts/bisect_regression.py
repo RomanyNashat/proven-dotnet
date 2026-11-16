@@ -81,15 +81,20 @@ def main(argv=None) -> int:
         git("bisect", "start", bad, good, cwd=tree)
         cfg = tree.parent / "step.json"
         cfg.write_text(json.dumps({"build": a.build, "test": test}), encoding="utf-8")
-        out = git("bisect", "run", sys.executable, str(Path(__file__).resolve()), "--step", str(cfg), cwd=tree, check=False).stdout
-        skipped = git("bisect", "log", cwd=tree, check=False).stdout
-        skipped = sorted(set(re.findall(r"^git bisect skip ([0-9a-f]{40})", skipped, re.M)))
-        found = re.search(r"^([0-9a-f]{40}) is the first bad commit", out, re.M)
+        git("bisect", "run", sys.executable, str(Path(__file__).resolve()), "--step", str(cfg), cwd=tree, check=False)
+        # The result is read from git's own log, not from `bisect run`'s output, whose wording and stream
+        # changed between git versions (2.43 and 2.56 differ).
+        log = git("bisect", "log", cwd=tree, check=False).stdout
+        skipped = sorted(set(re.findall(r"^git bisect skip ([0-9a-f]{40})", log, re.M)))
+        found = re.search(r"^# first bad commit: \[([0-9a-f]{40})\]", log, re.M)
         if not found:
+            possible = re.findall(r"^# possible first bad commit: \[([0-9a-f]{40})\]", log, re.M)
+            if not possible:
+                print("git bisect didn't finish; its log:\n" + log)
+                return 2
             print("Skipped commits left it between several; the first bad commit is one of these:")
-            for line in out.splitlines():
-                if re.match(r"^[0-9a-f]{40}$", line.strip()):
-                    print(f"- {git('log', '-1', '--format=%h %s', line.strip(), cwd=top).stdout.strip()}")
+            for sha in possible:
+                print(f"- {git('log', '-1', '--format=%h %s', sha, cwd=top).stdout.strip()}")
             return 2
         sha = found.group(1)
         info = git("show", "--no-patch", "--format=%h|%an|%ad|%s", "--date=short", sha, cwd=top).stdout.strip().split("|", 3)

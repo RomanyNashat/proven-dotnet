@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.38 — which commit broke this test
+- **`bisect_regression.py`** (`testing-tdd` 2.5.0, "A regression: which commit broke it"): `git bisect`
+  judged by the failing test, in a throwaway worktree, so the developer's branch, HEAD and uncommitted
+  changes never move and nothing is left behind. A commit whose build fails is skipped, not blamed; when
+  skipped commits sit right before the break, it names every commit the break could be in. It checks first
+  that the test fails on the bad commit and passes on the good one. `build-error-resolver` points to it.
+- **It reads the result from `git bisect log`**, not from `git bisect run`'s output: CI's git 2.56 printed
+  it differently from 2.43, and the first version found nothing there. The build and test commands reach
+  each step through a small JSON file, so quotes and spaces survive git and a Windows shell.
+- **Tested** on a throwaway repo with a refund regression among seven commits: the culprit named; the
+  developer's checkout untouched; a broken build right before the break leaving both named; a test that
+  passes today; a good commit where it already fails.
+
 ## 0.3.37 — estimates in hours
 - **`planner` and `/plan-feature` estimate each task in hours:** best, likely and worst, with the unknown
   that widens the worst, read from what the task touches (`find_callers`; `planner` now has the Roslyn
