@@ -1,0 +1,272 @@
+PASS  flat  1 want api-contract-evolution   opened api-contract-evolution
+PASS  flat  2 want api-contract-evolution   opened api-contract-evolution
+PASS  flat  3 want api-design               opened api-design
+PASS  flat  4 want api-design               opened api-design
+PASS  flat  5 want aspire-patterns          opened aspire-patterns
+PASS  flat  6 want aspire-patterns          opened aspire-patterns
+PASS  flat  7 want auth-patterns            opened auth-patterns
+PASS  flat  8 want auth-patterns            opened auth-patterns
+PASS  flat  9 want azure-deployment         opened azure-deployment
+PASS  flat 10 want azure-deployment         opened azure-deployment
+PASS  flat 11 want caching                  opened caching
+PASS  flat 12 want caching                  opened caching
+PASS  flat 13 want code-health              opened health-check
+PASS  flat 14 want code-health              opened health-check
+PASS  flat 15 want code-quality             opened code-quality
+PASS  flat 16 want code-quality             opened code-quality
+PASS  flat 17 want cqrs-eventsourcing       opened cqrs-eventsourcing
+PASS  flat 18 want cqrs-eventsourcing       opened cqrs-eventsourcing
+PASS  flat 19 want cronjob-patterns         opened cronjob-patterns
+PASS  flat 20 want cronjob-patterns         opened cronjob-patterns
+PASS  flat 21 want dapper-patterns          opened dapper-patterns
+PASS  flat 22 want dapper-patterns          opened dapper-patterns
+PASS  flat 23 want ddd-patterns             opened ddd-patterns
+PASS  flat 24 want ddd-patterns             opened ddd-patterns
+PASS  flat 25 want design-patterns          opened design-patterns
+PASS  flat 26 want design-patterns          opened patterns
+PASS  flat 27 want doc-review               opened doc-review
+PASS  flat 28 want doc-review               opened doc-review
+PASS  flat 29 want docker-dotnet            opened docker-build
+PASS  flat 30 want docker-dotnet            opened docker-dotnet
+PASS  flat 31 want dotnet-core              opened dotnet-core
+PASS  flat 32 want dotnet-core              opened dotnet-core
+PASS  flat 33 want dotnet-upgrade           opened dotnet-upgrade
+PASS  flat 34 want dotnet-upgrade           opened dotnet-upgrade
+PASS  flat 35 want efcore-patterns          opened efcore-patterns
+PASS  flat 36 want efcore-patterns          opened migrate
+PASS  flat 37 want encryption-patterns      opened encryption-patterns
+PASS  flat 38 want encryption-patterns      opened encryption-patterns
+PASS  flat 39 want file-uploads             opened file-uploads
+PASS  flat 40 want file-uploads             opened file-uploads
+PASS  flat 41 want grpc-patterns            opened grpc-patterns
+PASS  flat 42 want grpc-patterns            opened grpc-patterns
+PASS  flat 43 want handover                 opened handover
+PASS  flat 44 want handover                 opened handover
+PASS  flat 45 want hangfire-patterns        opened hangfire-patterns
+PASS  flat 46 want hangfire-patterns        opened hangfire-patterns
+PASS  flat 47 want healthcare-compliance    opened healthcare-compliance
+PASS  flat 48 want healthcare-compliance    opened healthcare-compliance
+PASS  flat 49 want k6-load-testing          opened k6-load-testing
+PASS  flat 50 want k6-load-testing          opened k6-load-testing
+PASS  flat 51 want kafka-patterns           opened kafka-patterns
+PASS  flat 52 want kafka-patterns           opened kafka-patterns
+PASS  flat 53 want known-traps              opened known-traps
+PASS  flat 54 want known-traps              opened known-traps
+PASS  flat 55 want kubernetes-dotnet        opened kubernetes-dotnet
+PASS  flat 56 want kubernetes-dotnet        opened kubernetes-dotnet
+PASS  flat 57 want lessons                  opened lessons
+PASS  flat 58 want lessons                  opened lessons
+PASS  flat 59 want localization             opened localization
+PASS  flat 60 want localization             opened localization
+PASS  flat 61 want mongodb-patterns         opened mongodb-patterns
+PASS  flat 62 want mongodb-patterns         opened mongodb-patterns
+PASS  flat 63 want msbuild                  opened msbuild
+PASS  flat 64 want msbuild                  opened msbuild
+PASS  flat 65 want nginx                    opened nginx
+PASS  flat 66 want nginx                    opened nginx
+PASS  flat 67 want openiddict-server        opened openiddict-server
+PASS  flat 68 want openiddict-server        opened openiddict-server
+PASS  flat 69 want outbox                   opened outbox
+PASS  flat 70 want outbox                   opened outbox
+PASS  flat 71 want owasp-aspnetcore         opened owasp-aspnetcore
+PASS  flat 72 want owasp-aspnetcore         opened security-scan
+PASS  flat 73 want pii-masking              opened pii-masking
+PASS  flat 74 want pii-masking              opened pii-masking
+PASS  flat 75 want polly-resilience         opened polly-resilience
+PASS  flat 76 want polly-resilience         opened polly-resilience
+PASS  flat 77 want postgresql-patterns      opened postgresql-patterns
+PASS  flat 78 want postgresql-patterns      opened postgresql-patterns
+PASS  flat 79 want production-diagnostics   opened production-diagnostics
+PASS  flat 80 want production-diagnostics   opened production-diagnostics
+PASS  flat 81 want quartz-scheduling        opened quartz-scheduling
+PASS  flat 82 want quartz-scheduling        opened quartz-scheduling
+PASS  flat 83 want redis-patterns           opened redis-patterns
+PASS  flat 84 want redis-patterns           opened redis-patterns
+PASS  flat 85 want remediation-parity       opened remediation-parity
+PASS  flat 86 want remediation-parity       opened remediation-parity
+PASS  flat 87 want retrospective            opened retrospective
+PASS  flat 88 want retrospective            opened retrospective
+PASS  flat 89 want scaffold-from-sql        opened scaffold-from-sql
+PASS  flat 90 want scaffold-from-sql        opened scaffold-from-sql
+PASS  flat 91 want secret-management        opened secret-management
+PASS  flat 92 want secret-management        opened secret-management
+PASS  flat 93 want service-documentation    opened document
+PASS  flat 94 want service-documentation    opened service-documentation
+PASS  flat 95 want simplicity               opened simplicity
+PASS  flat 96 want simplicity               opened simplicity
+PASS  flat 97 want simplicity               opened simplicity
+PASS  flat 98 want skill-evals              opened skill-evals
+PASS  flat 99 want skill-evals              opened skill-evals
+PASS  flat 100 want sqlserver-patterns       opened sqlserver-patterns
+PASS  flat 101 want sqlserver-patterns       opened sqlserver-patterns
+PASS  flat 102 want story-engine             opened story-engine
+PASS  flat 103 want story-engine             opened stories
+FAIL  flat 104 want story-review             opened story-check
+PASS  flat 105 want story-review             opened story-review
+PASS  flat 106 want test-coverage            opened coverage
+PASS  flat 107 want test-coverage            opened coverage
+PASS  flat 108 want testing-architecture     opened testing-architecture
+PASS  flat 109 want testing-architecture     opened testing-architecture
+PASS  flat 110 want testing-integration      opened testing-integration
+PASS  flat 111 want testing-integration      opened testing-integration
+PASS  flat 112 want testing-tdd              opened testing-tdd
+PASS  flat 113 want testing-tdd              opened tdd
+PASS  flat 114 want worker-patterns          opened worker-patterns
+PASS  flat 115 want worker-patterns          opened worker-patterns
+PASS  flat 116 want zero-vulns               opened zero-vulns
+PASS  flat 117 want zero-vulns               opened zero-vulns
+PASS  flat 118 want test-design              opened test-design
+PASS  flat 119 want test-design              opened test-design
+PASS  flat 120 want mutation-testing         opened mutation-testing
+PASS  flat 121 want mutation-testing         opened mutation-testing
+PASS  flat 122 want story-check              opened story-check
+PASS  flat 123 want story-check              opened story-check
+PASS  flat 124 want business-rules           opened business-rules
+PASS  flat 125 want business-rules           opened business-rules
+PASS  flat 126 want problem-analysis         opened problem-analysis
+PASS  flat 127 want problem-analysis         opened problem-analysis
+PASS  flat 128 want api-contract-evolution   opened api-contract-evolution
+PASS  hubs  1 want api-contract-evolution   opened apis-and-security > api-contract-evolution
+PASS  hubs  2 want api-contract-evolution   opened apis-and-security > api-contract-evolution
+PASS  hubs  3 want api-design               opened apis-and-security > api-design
+PASS  hubs  4 want api-design               opened apis-and-security > api-design
+PASS  hubs  5 want aspire-patterns          opened build-and-run > aspire-patterns
+PASS  hubs  6 want aspire-patterns          opened build-and-run > aspire-patterns
+PASS  hubs  7 want auth-patterns            opened apis-and-security > auth-patterns
+PASS  hubs  8 want auth-patterns            opened apis-and-security > auth-patterns
+PASS  hubs  9 want azure-deployment         opened build-and-run > azure-deployment
+FAIL  hubs 10 want azure-deployment         opened apis-and-security > secret-management
+PASS  hubs 11 want caching                  opened data-access > caching
+PASS  hubs 12 want caching                  opened data-access > caching
+PASS  hubs 13 want code-health              opened health-check
+PASS  hubs 14 want code-health              opened health-check
+PASS  hubs 15 want code-quality             opened quality-gate
+PASS  hubs 16 want code-quality             opened code-health-and-the-harness > code-quality
+PASS  hubs 17 want cqrs-eventsourcing       opened design-and-architecture > cqrs-eventsourcing
+PASS  hubs 18 want cqrs-eventsourcing       opened design-and-architecture > cqrs-eventsourcing
+PASS  hubs 19 want cronjob-patterns         opened scaffold
+PASS  hubs 20 want cronjob-patterns         opened scaffold
+PASS  hubs 21 want dapper-patterns          opened data-access > dapper-patterns
+PASS  hubs 22 want dapper-patterns          opened data-access > dapper-patterns
+PASS  hubs 23 want ddd-patterns             opened design-and-architecture > ddd-patterns
+PASS  hubs 24 want ddd-patterns             opened design-and-architecture > ddd-patterns
+PASS  hubs 25 want design-patterns          opened patterns
+PASS  hubs 26 want design-patterns          opened patterns
+PASS  hubs 27 want doc-review               opened writing > doc-review
+PASS  hubs 28 want doc-review               opened writing > doc-review
+PASS  hubs 29 want docker-dotnet            opened docker-build
+PASS  hubs 30 want docker-dotnet            opened docker-build
+PASS  hubs 31 want dotnet-core              opened design-and-architecture > dotnet-core
+PASS  hubs 32 want dotnet-core              opened design-and-architecture > dotnet-core
+PASS  hubs 33 want dotnet-upgrade           opened build-and-run > dotnet-upgrade
+PASS  hubs 34 want dotnet-upgrade           opened build-and-run > dotnet-upgrade
+PASS  hubs 35 want efcore-patterns          opened data-access > efcore-patterns
+PASS  hubs 36 want efcore-patterns          opened migrate
+PASS  hubs 37 want encryption-patterns      opened apis-and-security > encryption-patterns
+PASS  hubs 38 want encryption-patterns      opened apis-and-security > encryption-patterns
+PASS  hubs 39 want file-uploads             opened apis-and-security > file-uploads
+PASS  hubs 40 want file-uploads             opened apis-and-security > file-uploads
+FAIL  hubs 41 want grpc-patterns            opened design-and-architecture > polly-resilience
+PASS  hubs 42 want grpc-patterns            opened apis-and-security > grpc-patterns
+PASS  hubs 43 want handover                 opened writing > handover
+PASS  hubs 44 want handover                 opened writing > handover
+PASS  hubs 45 want hangfire-patterns        opened messaging-and-jobs > hangfire-patterns
+PASS  hubs 46 want hangfire-patterns        opened messaging-and-jobs > hangfire-patterns
+PASS  hubs 47 want healthcare-compliance    opened apis-and-security > healthcare-compliance
+PASS  hubs 48 want healthcare-compliance    opened apis-and-security > healthcare-compliance
+PASS  hubs 49 want k6-load-testing          opened testing > k6-load-testing
+PASS  hubs 50 want k6-load-testing          opened testing > k6-load-testing
+PASS  hubs 51 want kafka-patterns           opened messaging-and-jobs > kafka-patterns
+PASS  hubs 52 want kafka-patterns           opened messaging-and-jobs > kafka-patterns
+PASS  hubs 53 want known-traps              opened build-and-run > known-traps
+PASS  hubs 54 want known-traps              opened build-and-run > known-traps
+PASS  hubs 55 want kubernetes-dotnet        opened build-and-run > kubernetes-dotnet
+PASS  hubs 56 want kubernetes-dotnet        opened build-and-run > kubernetes-dotnet
+PASS  hubs 57 want lessons                  opened code-health-and-the-harness > lessons
+PASS  hubs 58 want lessons                  opened code-health-and-the-harness > lessons
+PASS  hubs 59 want localization             opened design-and-architecture > localization
+PASS  hubs 60 want localization             opened design-and-architecture > localization
+PASS  hubs 61 want mongodb-patterns         opened data-access > mongodb-patterns
+PASS  hubs 62 want mongodb-patterns         opened data-access > mongodb-patterns
+PASS  hubs 63 want msbuild                  opened build-and-run > msbuild
+PASS  hubs 64 want msbuild                  opened build-and-run > msbuild
+PASS  hubs 65 want nginx                    opened build-and-run > nginx
+PASS  hubs 66 want nginx                    opened build-and-run > nginx
+PASS  hubs 67 want openiddict-server        opened apis-and-security > openiddict-server
+PASS  hubs 68 want openiddict-server        opened apis-and-security > openiddict-server
+PASS  hubs 69 want outbox                   opened messaging-and-jobs > outbox
+PASS  hubs 70 want outbox                   opened messaging-and-jobs > outbox
+PASS  hubs 71 want owasp-aspnetcore         opened security-scan
+PASS  hubs 72 want owasp-aspnetcore         opened security-scan
+PASS  hubs 73 want pii-masking              opened apis-and-security > pii-masking
+PASS  hubs 74 want pii-masking              opened apis-and-security > pii-masking
+PASS  hubs 75 want polly-resilience         opened design-and-architecture > polly-resilience
+PASS  hubs 76 want polly-resilience         opened design-and-architecture > polly-resilience
+PASS  hubs 77 want postgresql-patterns      opened data-access > postgresql-patterns
+PASS  hubs 78 want postgresql-patterns      opened data-access > postgresql-patterns
+PASS  hubs 79 want production-diagnostics   opened build-and-run > production-diagnostics
+PASS  hubs 80 want production-diagnostics   opened build-and-run > production-diagnostics
+PASS  hubs 81 want quartz-scheduling        opened messaging-and-jobs > quartz-scheduling
+PASS  hubs 82 want quartz-scheduling        opened messaging-and-jobs > quartz-scheduling
+PASS  hubs 83 want redis-patterns           opened data-access > redis-patterns
+PASS  hubs 84 want redis-patterns           opened data-access > redis-patterns
+PASS  hubs 85 want remediation-parity       opened testing > remediation-parity
+PASS  hubs 86 want remediation-parity       opened testing > remediation-parity
+PASS  hubs 87 want retrospective            opened code-health-and-the-harness > retrospective
+PASS  hubs 88 want retrospective            opened code-health-and-the-harness > retrospective
+PASS  hubs 89 want scaffold-from-sql        opened data-access > scaffold-from-sql
+PASS  hubs 90 want scaffold-from-sql        opened data-access > scaffold-from-sql
+PASS  hubs 91 want secret-management        opened apis-and-security > secret-management
+PASS  hubs 92 want secret-management        opened apis-and-security > secret-management
+PASS  hubs 93 want service-documentation    opened document
+PASS  hubs 94 want service-documentation    opened document
+PASS  hubs 95 want simplicity               opened writing > simplicity
+PASS  hubs 96 want simplicity               opened writing > simplicity
+PASS  hubs 97 want simplicity               opened writing > simplicity
+PASS  hubs 98 want skill-evals              opened code-health-and-the-harness > skill-evals
+PASS  hubs 99 want skill-evals              opened code-health-and-the-harness > skill-evals
+PASS  hubs 100 want sqlserver-patterns       opened data-access > sqlserver-patterns
+PASS  hubs 101 want sqlserver-patterns       opened data-access > sqlserver-patterns
+PASS  hubs 102 want story-engine             opened stories
+PASS  hubs 103 want story-engine             opened stories
+FAIL  hubs 104 want story-review             opened story-work > story-check
+PASS  hubs 105 want story-review             opened story-work > story-review
+PASS  hubs 106 want test-coverage            opened coverage
+PASS  hubs 107 want test-coverage            opened coverage
+PASS  hubs 108 want testing-architecture     opened architecture-check
+PASS  hubs 109 want testing-architecture     opened architecture-check
+PASS  hubs 110 want testing-integration      opened testing > testing-integration
+PASS  hubs 111 want testing-integration      opened testing > testing-integration
+PASS  hubs 112 want testing-tdd              opened testing > testing-tdd
+PASS  hubs 113 want testing-tdd              opened tdd
+PASS  hubs 114 want worker-patterns          opened messaging-and-jobs > worker-patterns
+PASS  hubs 115 want worker-patterns          opened messaging-and-jobs > worker-patterns
+PASS  hubs 116 want zero-vulns               opened build-and-run > zero-vulns
+PASS  hubs 117 want zero-vulns               opened build-and-run > zero-vulns
+PASS  hubs 118 want test-design              opened testing > test-design
+PASS  hubs 119 want test-design              opened testing > test-design
+PASS  hubs 120 want mutation-testing         opened testing > mutation-testing
+PASS  hubs 121 want mutation-testing         opened testing > mutation-testing
+PASS  hubs 122 want story-check              opened story-work > story-check
+PASS  hubs 123 want story-check              opened story-work > story-check
+PASS  hubs 124 want business-rules           opened testing > business-rules
+PASS  hubs 125 want business-rules           opened testing > business-rules
+PASS  hubs 126 want problem-analysis         opened design-and-architecture > problem-analysis
+PASS  hubs 127 want problem-analysis         opened design-and-architecture > problem-analysis
+FAIL  hubs 128 want api-contract-evolution   opened writing > simplicity
+{
+ "flat": {
+  "right": 127,
+  "of": 128,
+  "not_run": 0,
+  "hub_first": 0,
+  "mean_turns": 3.0
+ },
+ "hubs": {
+  "right": 124,
+  "of": 128,
+  "not_run": 0,
+  "hub_first": 107,
+  "mean_turns": 3.8
+ }
+}

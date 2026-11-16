@@ -1,0 +1,110 @@
+{
+  "data-access": {
+    "description": "Data access in .NET: EF Core, Dapper, PostgreSQL, SQL Server, MongoDB, Redis, caching, a service layer from SQL. Points to the skill for the job.",
+    "members": [
+      "efcore-patterns",
+      "dapper-patterns",
+      "postgresql-patterns",
+      "sqlserver-patterns",
+      "mongodb-patterns",
+      "redis-patterns",
+      "caching",
+      "scaffold-from-sql"
+    ]
+  },
+  "messaging-and-jobs": {
+    "description": "Messages and background work: Kafka, the outbox, workers and queues, Quartz, Hangfire, cron jobs. Points to the skill for the job.",
+    "members": [
+      "kafka-patterns",
+      "outbox",
+      "worker-patterns",
+      "quartz-scheduling",
+      "hangfire-patterns",
+      "cronjob-patterns"
+    ]
+  },
+  "apis-and-security": {
+    "description": "APIs and their security: REST and gRPC endpoints, contracts old apps call, tokens and auth servers, OWASP, uploads, encryption, secrets, PII, healthcare rules. Points to the skill for the job.",
+    "members": [
+      "api-design",
+      "api-contract-evolution",
+      "grpc-patterns",
+      "auth-patterns",
+      "openiddict-server",
+      "owasp-aspnetcore",
+      "file-uploads",
+      "encryption-patterns",
+      "secret-management",
+      "pii-masking",
+      "healthcare-compliance"
+    ]
+  },
+  "design-and-architecture": {
+    "description": "Design in .NET: DDD, CQRS and events, design patterns, the host and DI, resilience with Polly, Arabic and English, root causes and trade-offs. Points to the skill for the job.",
+    "members": [
+      "ddd-patterns",
+      "cqrs-eventsourcing",
+      "design-patterns",
+      "dotnet-core",
+      "polly-resilience",
+      "localization",
+      "problem-analysis"
+    ]
+  },
+  "testing": {
+    "description": "Tests in .NET: TDD, integration tests, architecture tests, designing a story's cases, coverage, mutation, load tests, business rules, proving a refactor changed nothing. Points to the skill for the job.",
+    "members": [
+      "testing-tdd",
+      "testing-integration",
+      "testing-architecture",
+      "test-design",
+      "test-coverage",
+      "mutation-testing",
+      "k6-load-testing",
+      "business-rules",
+      "remediation-parity"
+    ]
+  },
+  "build-and-run": {
+    "description": "Building and running .NET services: Docker, Kubernetes, Azure, Aspire, nginx, production problems, MSBuild and packages, vulnerable packages, upgrading .NET, known library traps. Points to the skill for the job.",
+    "members": [
+      "docker-dotnet",
+      "kubernetes-dotnet",
+      "azure-deployment",
+      "aspire-patterns",
+      "nginx",
+      "production-diagnostics",
+      "msbuild",
+      "zero-vulns",
+      "dotnet-upgrade",
+      "known-traps"
+    ]
+  },
+  "code-health-and-the-harness": {
+    "description": "Code health and the harness itself: the A-F report card, analyzers and quality gates, auditing the harness, evaluating a skill, lessons from a session. Points to the skill for the job.",
+    "members": [
+      "code-health",
+      "code-quality",
+      "retrospective",
+      "skill-evals",
+      "lessons"
+    ]
+  },
+  "writing": {
+    "description": "Writing others read: plain voice for docs, emails and commits, service docs from the code, checking a doc against the code, a vacation handover. Points to the skill for the job.",
+    "members": [
+      "simplicity",
+      "service-documentation",
+      "doc-review",
+      "handover"
+    ]
+  },
+  "story-work": {
+    "description": "Stories: checking a story before building it, turning requirements or code into epics and stories, reviewing a story map. Points to the skill for the job.",
+    "members": [
+      "story-check",
+      "story-engine",
+      "story-review"
+    ]
+  }
+}

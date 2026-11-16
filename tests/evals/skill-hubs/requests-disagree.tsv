@@ -1,0 +1,4 @@
+# the three requests round one's arms disagreed on (10, 41, 128)
+azure-deployment	read the connection string from Key Vault in App Service
+grpc-patterns	client deadline for a gRPC call between two services
+api-contract-evolution	write up for the mobile developers what changed in our endpoints this release, with request and response examples

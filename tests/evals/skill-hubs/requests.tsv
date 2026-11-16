@@ -1,0 +1,19 @@
+# skill	request (the first one tests/routing/requests.tsv has for the skill; two per hub, the stories hub one)
+efcore-patterns	EF Core query is slow, N+1 on the order lines, use split query
+redis-patterns	distributed lock with StackExchange.Redis that checks its token
+outbox	publish the event only if the database write commits, the dual-write problem
+quartz-scheduling	Quartz cron trigger in a time zone with a clustered job store
+api-contract-evolution	can I add a new value to the status enum in the response without breaking old app versions
+file-uploads	the endpoint saves the PDF using the name the client sent, is that a path traversal risk
+pii-masking	mask mobile numbers and national ids in the Serilog logs
+ddd-patterns	design the aggregate root and value objects for an appointment
+polly-resilience	add retry with backoff and a circuit breaker to the HTTP client
+test-design	what test cases do we need for this story before I write the code
+mutation-testing	would our tests notice if this comparison were wrong, run Stryker on the change
+nginx	504 gateway timeout, is it the proxy or Kestrel, align the timeouts
+zero-vulns	dotnet list package --vulnerable shows a CVE, which version fixes it
+code-health	give me a grade for this codebase, how healthy is it
+lessons	capture what went wrong this session so the mistake isn't repeated
+simplicity	make the release note shorter and lead with the verb
+handover	I'm going on vacation, write the handover for my three repos
+story-check	before we build this story, what cases does it leave open that we need to ask the product owner about
