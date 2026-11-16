@@ -1,0 +1,129 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "testhost | v1",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost/"
+    }
+  ],
+  "paths": {
+    "/visits/{id}": {
+      "get": {
+        "tags": [
+          "testhost"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Visit"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visits": {
+      "post": {
+        "tags": [
+          "testhost"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewVisit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NewVisit": {
+        "required": [
+          "patientId",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Visit": {
+        "required": [
+          "id",
+          "status",
+          "doctor"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/VisitStatus"
+          },
+          "doctor": {
+            "type": "string"
+          }
+        }
+      },
+      "VisitStatus": {
+        "enum": [
+          "Booked",
+          "Done"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "testhost"
+    }
+  ]
+}

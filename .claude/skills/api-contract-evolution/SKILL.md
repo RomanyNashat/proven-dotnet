@@ -1,7 +1,7 @@
 ---
 name: api-contract-evolution
-description: "Change an API installed mobile apps call without breaking old versions: new enum values, removed or required fields, sunset, oasdiff in CI."
-version: 1.0.0
+description: "Change an API installed mobile apps call without breaking them: enums, removed or required fields, oasdiff, changes for the mobile team."
+version: 1.1.0
 ---
 
 # Changing an API that installed apps call
@@ -87,6 +87,28 @@ but fails on warnings that don't matter to an app.
 To get the documents: generate them at build time (`Microsoft.Extensions.ApiDescription.Server`), or start
 the app in a test host and fetch `/openapi/v1.json`, as the tests do. Where the check runs (each service's
 pipeline, or wherever the documents are collected) is the team's call.
+
+## Telling the mobile team what changed
+
+Before a release that touches what an app calls, the mobile team gets a handoff: each endpoint that
+changed, an example request and response, its errors and headers, and what an installed app will see.
+Build it from the same two documents oasdiff compares:
+
+```bash
+python ~/.claude/skills/api-contract-evolution/scripts/api_handoff.py main.json branch.json \
+  --headers App-Version --out handoff.md
+```
+
+It judges each change by the table above: `breaks`, `risky` (a blank where a value was, or a field that
+may now be missing), `safe`, or `note` (a new status code, a field the server stops reading, a deprecated
+endpoint). What breaks comes first, each with the line an app developer needs ("send `Cancelled` only to
+app versions that know it"). `--headers` names what every call already sends. Examples come from the
+document's own `example` where it has one, and from the schema otherwise. On the two releases above it
+puts `GET /visits/{id}` first, broken by `Cancelled`, with the room as safe and the new cancel endpoint's
+404 and 409 as ProblemDetails. `--fail-on-break` exits 1 when anything breaks.
+
+Send it through `simplicity` before it goes out: the tables stay, and the sentences around them get
+shorter.
 
 ## Rules
 - Every response stays readable by the oldest app version you support; every request it sends stays valid.

@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,15 @@ public static class VisitsApi
     {
         app.MapGet("/visits/{id:int}", (int id) => TypedResults.Ok(new V2.Visit(id, id == 2 ? V2.VisitStatus.Cancelled : V2.VisitStatus.Booked, "Dr Sara", "B12")))
             .Deprecated(DeprecatedSince, Sunset, "/v2/visits/{id}");
+        // A new endpoint: cancelling a visit, with its errors as ProblemDetails.
+        app.MapDelete("/visits/{id:int}", Results<NoContent, ProblemHttpResult> (int id) => id switch
+            {
+                404 => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "No such visit"),
+                409 => TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "The visit has started"),
+                _ => TypedResults.NoContent(),
+            })
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
         if (newRequiredField)
         {
             app.MapPost("/visits", (NewVisitWithReason visit) => TypedResults.Created($"/visits/{visit.PatientId}"));
