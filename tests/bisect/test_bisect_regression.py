@@ -83,6 +83,18 @@ class Stories(unittest.TestCase):
         self.assertIn(f"- {broken} start moving the build", result.stdout)
         self.assertIn(f"- {culprit} tidy the refund comparison, finish the build", result.stdout)
 
+    def test_production_both_ways_git_writes_its_log(self):
+        # git 2.43 writes "first bad commit", 2.56 (CI's) "first 'bad' commit": the result is read either way
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("bisect_regression", SCRIPT)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        sha = "a" * 40
+        for line in (f"# first bad commit: [{sha}] x", f"# first 'bad' commit: [{sha}] x"):
+            self.assertEqual(sha, mod.FIRST_BAD.search(line).group(1))
+        for line in (f"# possible first bad commit: [{sha}] x", f"# possible first 'bad' commit: [{sha}] x"):
+            self.assertEqual([sha], mod.POSSIBLE_BAD.findall(line))
+
     def test_a_test_that_passes_today_has_nothing_to_bisect(self):
         result = self.bisect("--bad", self.good)
         self.assertEqual(1, result.returncode)

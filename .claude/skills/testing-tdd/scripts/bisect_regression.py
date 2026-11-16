@@ -25,6 +25,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+# git 2.43 writes "first bad commit"; 2.56 quotes it: "first 'bad' commit".
+FIRST_BAD = re.compile(r"^# first '?bad'? commit: \[([0-9a-f]{40})\]", re.M)
+POSSIBLE_BAD = re.compile(r"^# possible first '?bad'? commit: \[([0-9a-f]{40})\]", re.M)
+
 
 def git(*args: str, cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=check)
@@ -83,12 +87,12 @@ def main(argv=None) -> int:
         cfg.write_text(json.dumps({"build": a.build, "test": test}), encoding="utf-8")
         git("bisect", "run", sys.executable, str(Path(__file__).resolve()), "--step", str(cfg), cwd=tree, check=False)
         # The result is read from git's own log, not from `bisect run`'s output, whose wording and stream
-        # changed between git versions (2.43 and 2.56 differ).
+        # changed between git versions; the log's own wording differs too (FIRST_BAD).
         log = git("bisect", "log", cwd=tree, check=False).stdout
         skipped = sorted(set(re.findall(r"^git bisect skip ([0-9a-f]{40})", log, re.M)))
-        found = re.search(r"^# first bad commit: \[([0-9a-f]{40})\]", log, re.M)
+        found = FIRST_BAD.search(log)
         if not found:
-            possible = re.findall(r"^# possible first bad commit: \[([0-9a-f]{40})\]", log, re.M)
+            possible = POSSIBLE_BAD.findall(log)
             if not possible:
                 print("git bisect didn't finish; its log:\n" + log)
                 return 2

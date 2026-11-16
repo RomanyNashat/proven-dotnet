@@ -9,8 +9,9 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   changes never move and nothing is left behind. A commit whose build fails is skipped, not blamed; when
   skipped commits sit right before the break, it names every commit the break could be in. It checks first
   that the test fails on the bad commit and passes on the good one. `build-error-resolver` points to it.
-- **It reads the result from `git bisect log`**, not from `git bisect run`'s output: CI's git 2.56 printed
-  it differently from 2.43, and the first version found nothing there. The build and test commands reach
+- **It reads the result from `git bisect log`**, not from `git bisect run`'s output, and takes both ways
+  git writes it: 2.43 logs `# first bad commit`, 2.56 (CI's) `# first 'bad' commit`. The first version
+  read the run's output, which also differs, and found nothing on CI; a test now checks both forms. The build and test commands reach
   each step through a small JSON file, so quotes and spaces survive git and a Windows shell.
 - **Tested** on a throwaway repo with a refund regression among seven commits: the culprit named; the
   developer's checkout untouched; a broken build right before the break leaving both named; a test that
