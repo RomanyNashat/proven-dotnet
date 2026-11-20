@@ -11,8 +11,7 @@ Claude Opus 5.5, graded with the hidden tests (PostgreSQL 16 here).
 | high | 7 / 8 | 6 / 6 | K08 (clock skew) | about $6.20 | stopped by the usage limit, resumed from its transcript |
 
 - **Low loses a finding on its first run**, so by the bar every agent keeps the session's effort. The low
-  run skipped the outbox as "a design change" and left the token's clock skew at the default; the medium
-  run fixed both.
+  run left the token's clock skew at the default (K08); the medium run fixed it.
 - **The cost is not the reason to lower it either:** low saved $1.53 on a $5 run, and lost a finding a
   reviewer would have to catch later.
 - **High is no better here, and costs more.** It also missed K08, at about $6.20 against medium's $5.02.
