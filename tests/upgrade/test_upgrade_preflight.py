@@ -85,6 +85,9 @@ CASES = {
     "framework-package-reference": (
         {"Api.csproj": PROJECT.format(ref("System.Text.Json", "8.0.5"))},
         {"Api.csproj": PROJECT.format("")}),
+    "config-json-null": (
+        {"Api.csproj": PROJECT.format(""), "appsettings.Production.json": '{ "Reminders": { "Retries": null } }'},
+        {"Api.csproj": PROJECT.format(""), "appsettings.Production.json": '{ "Reminders": { "Sender": "Visits" } }'}),
     "image-tag": (
         {"Api.csproj": PROJECT.format(""), "Dockerfile": "FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine\n"},
         {"Api.csproj": PROJECT.format(""), "Dockerfile": "FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine\n"}),

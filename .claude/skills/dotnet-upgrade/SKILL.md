@@ -1,7 +1,7 @@
 ---
 name: dotnet-upgrade
 description: "Move a service from .NET 8 or 9 to .NET 10 and turn on nullable reference types: the order of work, the breaking changes that bite, proving nothing changed."
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Upgrading to .NET 10
@@ -176,6 +176,51 @@ as the scheme. `KnownNetworks` and its `IPNetwork` are obsolete on 10: name the 
 defaults the app sees the proxy and `http`; configured, it sees the client and `https`, and a client's own
 `X-Forwarded-For` isn't believed.
 
+### Defaults that no compiler error points at
+
+Tested on .NET 10 (`Upgrade/UpgradeDefaultsTests.cs`):
+- **A JSON `null` is a value.** `"Retries": null` in `appsettings.Production.json` binds as `0` over an earlier
+  file's `3` and over the property's default, and `"Sender": null` as `null`. An environment variable set
+  to `""` is a value too, and wins over the JSON. Validate the options at start-up, so the deploy stops:
+
+<!-- sample: tests/SkillSamples.Tests/Upgrade/ReminderSettings.cs -->
+```csharp
+// On .NET 10 a JSON null is a value: "Retries": null in appsettings.Production.json binds as 0, not as the
+// default below, and "Sender": null as null. An environment variable set to "" is a value too, and wins
+// over the JSON. The defaults don't protect a setting; the validation does.
+public sealed class ReminderSettings
+{
+    public const string Section = "Reminders";
+
+    [Required(AllowEmptyStrings = false)]
+    public string Sender { get; set; } = "Clinic";
+
+    [Range(1, 10)]
+    public int Retries { get; set; } = 3;
+}
+
+public static class ReminderSetup
+{
+    public static IServiceCollection AddReminders(this IServiceCollection services)
+    {
+        services.AddOptions<ReminderSettings>()
+            .BindConfiguration(ReminderSettings.Section)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();   // a null or empty setting stops the deploy, not the first reminder
+        return services;
+    }
+}
+```
+
+- **EF Core 10 names the application on SQL Server.** A connection string with no `Application Name` gets
+  `EFCore/10…` added, so EF Core and a `SqlConnection` (Dapper) built from the same setting get different
+  strings, two connection pools, and the DBA sees EF instead of the service. Put `Application Name=<service>`
+  in the setting: EF keeps it.
+- **Npgsql 9+ closes a pooled connection after an hour** (`Connection Lifetime=3600`). Set it in the
+  connection string if the service relied on connections living longer.
+- **`HttpClientFactory` logs hide the query string and header values** (`?*`, `X-Api-Key: *`). A national
+  id in a query string no longer reaches the logs; don't turn the redaction off to debug a call.
+
 ### What the preflight scan finds
 
 These come from Microsoft's breaking-change lists for .NET 9 and 10, ASP.NET Core 9 and 10 and EF Core 9
@@ -196,16 +241,16 @@ only points at the line. Worst first:
 | `framework-package-reference` | obsolete | SDK 10 | `NU1510` for a package the framework provides (above) |
 | `forwarded-headers-trust` | behaviour | ASP.NET Core 9 | `X-Forwarded-*` from a proxy not named as trusted is ignored: behind nginx the client IP and scheme are lost (tested, above) |
 | `exception-handler-diagnostics` | behaviour | ASP.NET Core 10 | an `IExceptionHandler` returning `true` emits no exception diagnostics, so the error can drop out of logs and APM (tested, above) |
-| `npgsql-connection-lifetime` | behaviour | Npgsql 9 | `Connection Lifetime` defaults to an hour |
-| `sqlserver-application-name` | behaviour | EF Core 10 | EF adds an `Application Name` to a SQL Server connection string that has none |
+| `config-json-null` | behaviour | .NET 10 | a `null` in appsettings binds over the default (tested, above) |
+| `npgsql-connection-lifetime` | behaviour | Npgsql 9 | `Connection Lifetime` defaults to an hour (tested, above) |
+| `sqlserver-application-name` | behaviour | EF Core 10 | EF adds an `Application Name` to a SQL Server connection string that has none (tested, above) |
 | `azure-sql-json` | behaviour | EF Core 10 | with `UseAzureSql`, JSON maps to the `json` type, and existing columns get an `ALTER` |
 | `background-service-start` | behaviour | .NET 10 | all of `ExecuteAsync` runs as a Task, so code before the first `await` no longer runs before the host has started (tested, above) |
 | `npgsql-date-read` | check | Npgsql 10 | untyped reads return `date` as `DateOnly` and `time` as `TimeOnly` (tested, above) |
 | `image-tag` | check | .NET 10 | the tag moves to 10.0; the default images are Ubuntu since 10, and 9 dropped zlib |
 
 Not found by the scan, so read them in the lists when the service uses the area:
-- configuration keeps keys whose value is null (10), and an empty environment variable is a value (9);
-- `HttpClientFactory` redacts header values and the query string in its logs, and uses `SocketsHttpHandler` (9);
+- `HttpClientFactory` uses `SocketsHttpHandler` (9);
 - the default trace propagator is W3C (10), and `ActivitySource` sampling changed;
 - System.Text.Json fails on conflicting property names (10);
 - `dotnet` CLI: `--interactive` is on in a terminal, `dotnet new sln` writes `.slnx`, and the terminal logger
