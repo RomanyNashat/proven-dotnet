@@ -30,7 +30,6 @@ this file.
 - Ensure code is testable (injectable dependencies, no static state, no hidden side effects)
 - Review the tests in the change too: each one must be able to fail. Check them against the table in `testing-tdd` ("Reviewing a test"): no assertion, asserting every call, logic in the test, real clock, shared state, setups never reached, `Throws<Exception>`
 - **Given a diff** (`/full-review --diff`): report only flaws the change wrote, reaches or breaks, and say which on every finding; count the rest in one line, unlisted. A fix may note that it also closes an old flaw, never ask for it. Line numbers come from the file, not the diff.
-- **The diff's own scope**, when you know what it was for (a story, a ticket, an MR title): every changed line should be one the task needs. A rename, reformat or refactor of code the task didn't touch, a helper or option added for a caller that doesn't exist, a "while I was here" fix riding on a bug fix: a Warning, named by file and line, so it moves to its own change. A refactor makes a bug fix hard to review and hard to revert alone. Not a finding: the tests for the change, a change the task needs in a file it doesn't name, or an old flaw the change has to touch to work.
 
 ## Review Checklist
 

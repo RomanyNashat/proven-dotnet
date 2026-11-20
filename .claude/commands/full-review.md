@@ -19,9 +19,7 @@ mode:
 2. **The scan takes the diff:** add `--diff change.diff`. It marks each finding `changed` or `touched` and
    only counts the rest.
 3. **Each reviewer gets the diff and the list of changed files.** It reads the changed files whole, and
-   whatever the change calls or is called by (`find_callers` for a changed signature). Pass what the
-   change is for too, when there's one to pass (the story, the ticket, the branch or MR title), so
-   `code-reviewer` can name the lines the task didn't need.
+   whatever the change calls or is called by (`find_callers` for a changed signature).
 4. **A finding needs the change to take part in it.** Report a flaw only when the change
    - **wrote it:** the flawed line is one the change adds or edits;
    - **reaches it:** the change makes an existing flaw reachable or worse (a new caller of an unsafe
