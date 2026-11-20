@@ -3,9 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace SkillSamples.Upgrade;
 
-// On .NET 10 a JSON null is a value: "Retries": null in appsettings.Production.json binds as 0, not as the
-// default below, and "Sender": null as null. An environment variable set to "" is a value too, and wins
-// over the JSON. The defaults don't protect a setting; the validation does.
+// On 8 and 9 a JSON null was read as "", so "Retries": null failed the bind and the service didn't start.
+// On 10 it is null: "Retries" binds as 0 and "Sender" as null, over an earlier file and the defaults
+// below, and the service starts. An environment variable set to "" is a value too, and wins over the
+// JSON. The defaults don't protect a setting; the validation does.
 public sealed class ReminderSettings
 {
     public const string Section = "Reminders";

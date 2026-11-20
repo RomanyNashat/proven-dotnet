@@ -179,15 +179,18 @@ defaults the app sees the proxy and `http`; configured, it sees the client and `
 ### Defaults that no compiler error points at
 
 Tested on .NET 10 (`Upgrade/UpgradeDefaultsTests.cs`):
-- **A JSON `null` is a value.** `"Retries": null` in `appsettings.Production.json` binds as `0` over an earlier
-  file's `3` and over the property's default, and `"Sender": null` as `null`. An environment variable set
-  to `""` is a value too, and wins over the JSON. Validate the options at start-up, so the deploy stops:
+- **A JSON `null` stops failing.** On 8 and 9 the configuration read it as `""`, so `"Retries": null` failed
+  the bind at start-up. On 10 it is `null`: `Retries` binds as `0` over an earlier file's `3` and the
+  property's default, `"Sender": null` as `null`, and the service starts (measured with
+  `Microsoft.Extensions.Configuration` 8.0.1, 9.0.0 and 10.0.0). An environment variable set to `""` is a
+  value too, and wins over the JSON. Validate the options at start-up, so the deploy stops:
 
 <!-- sample: tests/SkillSamples.Tests/Upgrade/ReminderSettings.cs -->
 ```csharp
-// On .NET 10 a JSON null is a value: "Retries": null in appsettings.Production.json binds as 0, not as the
-// default below, and "Sender": null as null. An environment variable set to "" is a value too, and wins
-// over the JSON. The defaults don't protect a setting; the validation does.
+// On 8 and 9 a JSON null was read as "", so "Retries": null failed the bind and the service didn't start.
+// On 10 it is null: "Retries" binds as 0 and "Sender" as null, over an earlier file and the defaults
+// below, and the service starts. An environment variable set to "" is a value too, and wins over the
+// JSON. The defaults don't protect a setting; the validation does.
 public sealed class ReminderSettings
 {
     public const string Section = "Reminders";
