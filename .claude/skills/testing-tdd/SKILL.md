@@ -1,7 +1,7 @@
 ---
 name: testing-tdd
 description: "TDD for .NET: write the failing test first, red-green-refactor, unit tests with xUnit, Moq, FluentAssertions 7 and AutoFixture, test names, a fixed clock."
-version: 2.5.0
+version: 2.5.1
 ---
 
 # TDD & Unit Testing Patterns
@@ -108,6 +108,8 @@ public sealed class BookingTests
 
 - **Time comes from a `FakeTimeProvider`**, never the real clock: a test pinned to a date passes today
   and fails once that date is past. `SetUtcNow` only moves forward.
+  Move it by the step the code waits for, never on a real-time timer: Polly's timeouts read it too, and a
+  clock ticking while a real call runs turns that call into a timeout (`polly-resilience`).
 - **Theories at the edges:** exactly at a limit and just past it, not three values in the middle.
 - **Events:** assert the event and its data (`ContainSingle().Which.Should().Be(...)` with a record).
 - **TheoryData of simple types** (`int`, `bool`, `string`). xUnit can't list each row of other types as

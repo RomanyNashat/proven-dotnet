@@ -1,7 +1,7 @@
 ---
 name: polly-resilience
 description: "Resilience with Polly v8: retry with backoff, circuit breaker, timeouts, and the standard HTTP handler that doesn't retry a POST."
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Polly v8 Resilience Patterns
@@ -134,6 +134,66 @@ cancelling that token; a call that ignores it can't be cut.
 (`MessageSendMaxRetries`), and a second retry layer around `ProduceAsync` sends duplicates unless the
 producer is idempotent (`EnableIdempotence = true`). For reliable publishing use the outbox
 (`outbox`), not retries.
+
+## Testing a pipeline with a fake clock
+
+Register the test's `FakeTimeProvider` as `TimeProvider` in DI and Polly reads it: timeouts, retry delays
+and break durations all move when the test moves the clock. That is the point, and also the trap.
+
+**Never move a fake clock on a real-time timer while a real call is in flight.** A helper that advances
+the clock a second every 50 ms makes a one-second call look like twenty to the pipeline, so the timeout
+fires in the test and never in production. The test then fails a correct fix, or passes a wrong one that
+dropped the timeout. Make the slow thing wait on the same clock and move it by the step you mean, or wait
+in real time and leave the clock alone.
+
+<!-- sample: tests/SkillSamples.Tests/Resilience/FakeClockTests.cs -->
+```csharp
+    // The trap: a helper that "waits" by moving the fake clock a second every 50 ms of real time, while a
+    // real one-second call is in flight. To the pipeline it took twenty seconds, so the 5-second
+    // timeout fires after a quarter of a second, in the test only.
+    private static async Task<T> WaitTickingAsync<T>(FakeTimeProvider clock, Task<T> work)
+    {
+        while (!work.IsCompleted)
+        {
+            clock.Advance(TimeSpan.FromSeconds(1));
+            await Task.WhenAny(work, Task.Delay(50));
+        }
+        return await work;
+    }
+
+    [Fact]
+    public async Task Trap_ClockMovedOnARealTimer_TimesOutACallThatTakesOneSecond()
+    {
+        var clock = new FakeTimeProvider(Start);
+        var (pipeline, sp) = PipelineOn(clock);
+        using var _ = sp;
+        var api = new SlowDownstream(TimeSpan.FromSeconds(1));
+        var watch = Stopwatch.StartNew();
+
+        var call = pipeline.ExecuteAsync(async token => await api.GetAsync(token)).AsTask();
+
+        await Assert.ThrowsAsync<TimeoutRejectedException>(() => WaitTickingAsync(clock, call));
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5), $"real time was only {watch.Elapsed}");
+    }
+
+    [Fact]
+    public async Task SlowCallOnTheSameClock_PassesUnderTheTimeout_AndFailsOverIt()
+    {
+        // The fix: the slow thing waits on the clock the test moves, and the test moves it by the step it
+        // means. 4 seconds is under the 5-second timeout, 6 is over, whatever the machine's speed.
+        var clock = new FakeTimeProvider(Start);
+        var (pipeline, sp) = PipelineOn(clock);
+        using var _ = sp;
+
+        var quick = pipeline.ExecuteAsync(async token => await new SlowDownstream(TimeSpan.FromSeconds(4), clock).GetAsync(token)).AsTask();
+        clock.Advance(TimeSpan.FromSeconds(4));
+        Assert.Equal("ok", await quick);
+
+        var slow = pipeline.ExecuteAsync(async token => await new SlowDownstream(TimeSpan.FromSeconds(6), clock).GetAsync(token)).AsTask();
+        clock.Advance(TimeSpan.FromSeconds(5));
+        await Assert.ThrowsAsync<TimeoutRejectedException>(() => slow);
+    }
+```
 
 ## Strategy order, in one rule
 
