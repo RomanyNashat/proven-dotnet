@@ -12,5 +12,7 @@ can show a lower effort losing findings, or a cost changing, but not a higher ef
   at most 70% of the medium runs. A loss in any run keeps medium for every agent.
 - **High: one run**, for its cost only. It can't score higher here, so no agent moves to high on this
   fixture; that needs a fixture the arm doesn't already pass.
-- Noise floor: the medium runs already vary from $8.70 to $10.60; a cost inside that spread is "no
-  difference shown".
+- **Same harness on both sides.** Round five's medium runs were on 0.3.4; the harness has changed since, so
+  medium gets one run on the same ref as the low and high runs, for cost.
+- Noise floor: round five's medium runs varied from $8.70 to $10.60; a cost difference inside that spread
+  is "no difference shown".
