@@ -4,7 +4,7 @@
 #
 #   bash tests/evals/tools/run-round.sh <fixture> <arm> <ref> <run folder>
 #     fixture   a folder under tests/evals with task.md and fixture.json (fix-sync, fix-labs, ...)
-#     arm       with-proven | rules-only
+#     arm       with-proven | rules-only | no-rules
 #     ref       the git ref whose .claude/ is installed (main, a branch, a commit)
 #     run folder an empty folder outside the repo; the service copy, the transcript and usage land there
 #
@@ -30,7 +30,10 @@ if [ "$ARM" = rules-only ]; then
 import json, sys
 p = sys.argv[1]; s = json.load(open(p)); s.pop("hooks", None); json.dump(s, open(p, "w"), indent=2)
 PY
-elif [ "$ARM" != with-proven ]; then echo "arm must be with-proven or rules-only"; exit 1; fi
+elif [ "$ARM" = no-rules ]; then
+  # Nothing of the harness: an empty home, the model alone.
+  rm -rf "$RUN/home/.claude"
+elif [ "$ARM" != with-proven ]; then echo "arm must be with-proven, rules-only or no-rules"; exit 1; fi
 git -C "$REPO" rev-parse "$REF" > "$RUN/ref.txt"
 
 cp -R "$SRC/$SERVICE" "$RUN/work/$SERVICE"
