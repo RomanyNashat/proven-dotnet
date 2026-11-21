@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.47 — a fake clock moved on a timer
+- **`polly-resilience`:** with the test's `FakeTimeProvider` in DI, Polly's timeouts, delays and break
+  durations read it. A helper that moves the clock a second every 50 ms while a real call runs makes a
+  one-second call look like twenty, and the timeout fires in the test only (round five's K05 lesson). The
+  section shows the trap and the fix: the slow thing waits on the same clock, moved by the step meant.
+  Tested, with a story test and a production test.
+- **`testing-tdd`:** the fixed-clock line points to it.
+
 ## 0.3.46 — counts in Arabic text
 - **`localization`:** "لديك {0} مواعيد" is right only from 3 to 10. Arabic has six plural forms (zero, one,
   two, few, many, other) where English has two. `Plurals.For` picks CLDR's category by arithmetic, so it
