@@ -42,9 +42,11 @@ by the person it grades proves less.
 2. Read the code the story touches. A case the code already handles still gets a test; a case the code
    makes impossible doesn't.
 3. Rank the risks (likelihood times harm). A wrong patient, a record shown to the wrong person, a skipped
-   consent or money is harm 3.
+   consent or money is harm 3. For likelihood, `risk_map.py` (`test-design`, section 2) names the files
+   changed and fixed most lately; a change in one of them gets its edge cases first.
 4. Design the cases by technique (decision table, boundaries, every pair of states, pairwise), plus the
-   cases that go wrong most often here. Pick the lowest level that can fail for the right reason. Write
+   cases that go wrong most often here and the questions every change gets asked (section 3a). Where the
+   criterion doesn't give the expected answer, say which other source does (section 3b). Pick the lowest level that can fail for the right reason. Write
    every edge case as an `EC` line in `story.md` (`EC1: AC2, boundary: ...`), so it is traced on its own.
 5. Write them as tests in the project's own style (`testing-tdd`, `testing-integration`), each
    `MethodName_Scenario_ExpectedBehavior` with its AC trait. Every high risk gets a story test, written as
