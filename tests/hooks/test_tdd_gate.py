@@ -127,6 +127,85 @@ class Stories(unittest.TestCase):
         self.assertEqual(0, stop.returncode)  # finishing doesn't
 
 
+FORMAT = os.path.join(HERE, "..", "..", ".claude", "hooks", "post-edit-format.py")
+
+
+class MainSession(Session):
+    """The developer's own session: no agent id, the Stop event from settings.json, and edits recorded by
+    the format hook (the one launch per edit) instead of the agent's own post."""
+
+    def __init__(self, folder):
+        super().__init__(folder)
+
+    def send(self, mode, event, env=None):
+        event = {"session_id": "s-2", "cwd": self.cwd, **event}
+        environment = dict(env or os.environ, PROVEN_TDD_GATE_DIR=self.folder, PROVEN_HOOK_PROFILE="minimal")
+        script = FORMAT if mode == "format" else GATE
+        args = [sys.executable, script] + ([] if mode == "format" else [mode])
+        return subprocess.run(args, input=json.dumps(event), capture_output=True, text=True, encoding="utf-8",
+                              env=environment)
+
+    def edit(self, path, tool="Edit"):
+        tool_input = {"file_path": path, "old_string": "a", "new_string": "b"}
+        return self.send("format", {"hook_event_name": "PostToolUse", "tool_name": tool, "tool_input": tool_input,
+                                    "tool_response": {"filePath": path}})
+
+    def done(self, active=False):
+        return self.send("done", {"hook_event_name": "Stop", "stop_hook_active": active})
+
+
+class DoneGate(unittest.TestCase):
+    def setUp(self):
+        self.folder = tempfile.mkdtemp(prefix="done gate ")
+        self.s = MainSession(self.folder)
+
+    def tearDown(self):
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    def test_story_a_fix_with_no_test_run_is_sent_back_once_then_the_developer_decides(self):
+        # Given the developer asks for a quick fix and the handler is changed with no test run
+        self.s.edit(f"{REPO}/src/Visits.Application/CancelVisit.cs")
+        # When the turn would end, it is sent back once, saying what to do
+        first = self.s.done()
+        self.assertEqual(2, first.returncode)
+        self.assertIn("C# changed and no test has run since", first.stderr)
+        # Then the answer it gives ends the turn, whatever it says: the developer is there to judge it
+        self.assertEqual(0, self.s.done(active=True).returncode)
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_story_a_change_whose_tests_ran_green_ends_without_a_word(self):
+        self.s.edit(f"{REPO}/src/Visits.Application/CancelVisit.cs")
+        self.s.test_run(PASSED, failed=False)
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_story_a_red_run_is_named_and_the_next_edit_asks_again(self):
+        self.s.edit(f"{REPO}/src/Visits.Application/CancelVisit.cs")
+        self.s.test_run(FAILED, failed=True)
+        red = self.s.done()
+        self.assertEqual(2, red.returncode)
+        self.assertIn("the last `dotnet test` was red", red.stderr)
+        self.assertEqual(0, self.s.done().returncode)
+        # A later edit is a new change: the gate asks again
+        self.s.edit(f"{REPO}/src/Visits.Application/CancelVisit.cs")
+        self.assertEqual(2, self.s.done().returncode)
+
+    def test_a_turn_that_changed_no_production_code_is_never_held(self):
+        self.assertEqual(0, self.s.done().returncode)
+        self.s.edit(f"{REPO}/tests/Visits.Tests/CancelVisitTests.cs")
+        self.s.edit(f"{REPO}/README.md")
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_settings_wire_the_gate_for_the_main_session(self):
+        settings = json.load(open(os.path.join(HERE, "..", "..", ".claude", "settings.json"), encoding="utf-8"))
+        hooks = settings["hooks"]
+        commands = lambda event: [(m.get("matcher"), h.get("if"), h["command"], h.get("async", False))
+                                  for m in hooks.get(event, []) for h in m["hooks"]]
+        self.assertIn(("*", None, "{PYTHON} {HOOKS}/tdd-gate.py done", False), commands("Stop"))
+        for event in ("PostToolUse", "PostToolUseFailure"):
+            self.assertIn(("Bash", "Bash(dotnet *)", "{PYTHON} {HOOKS}/tdd-gate.py post", False), commands(event))
+        self.assertIn(("Edit|Write|MultiEdit", None, "{PYTHON} {HOOKS}/post-edit-format.py", True), commands("PostToolUse"))
+
+
 class Production(unittest.TestCase):
     def test_a_windows_session_with_backslash_paths_and_dotnet_exe(self):
         folder = tempfile.mkdtemp(prefix="tdd gate win ")

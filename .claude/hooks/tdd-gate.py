@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """The TDD gate for tdd-guide: production code waits for a failing test, and the work ends green. Wired in
-the agent's own frontmatter, so it runs inside that agent and nowhere else.
+the agent's own frontmatter, so it runs inside that agent and nowhere else. Its `done` mode is the lighter
+gate for the main session, wired in settings.json.
 
     {PYTHON} {HOOKS}/tdd-gate.py pre     PreToolUse  Write|Edit|MultiEdit
     {PYTHON} {HOOKS}/tdd-gate.py post    PostToolUse Bash|Write|Edit|MultiEdit, PostToolUseFailure Bash
     {PYTHON} {HOOKS}/tdd-gate.py stop    Stop (in an agent's frontmatter Claude Code runs it as SubagentStop)
+    {PYTHON} {HOOKS}/tdd-gate.py done    Stop, in the main session (settings.json), with post on its edits and runs
 
 - pre: an edit to a production `.cs` file is refused until a `dotnet test` run in this agent has gone red
   (a failing test, or a test that doesn't compile yet). Tests, `story.md`, projects and settings are
@@ -12,6 +14,9 @@ the agent's own frontmatter, so it runs inside that agent and nowhere else.
 - post: records each `dotnet test` result, and each production edit (which makes the last result stale).
 - stop: once production code was edited, the agent can't finish until the last test run after the last
   edit is green. It asks three times, then lets the agent finish so it can report what is still red.
+- done: the main session, where the developer is there to judge. When production code changed since the
+  last green test run, the turn is sent back once, to run the tests or say why not; then it ends. The next
+  edit or test run makes it ask again. Nothing is held back before the code is written.
 
 State lives in the temp folder, one file per agent run. pre fails closed on input it can't read; post
 and stop let it through, since they guard nothing on their own.
@@ -51,7 +56,7 @@ def load(path: Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return {"unlocked": False, "edited": False, "stale": False, "last": None, "stops": 0}
+        return {"unlocked": False, "edited": False, "stale": False, "last": None, "stops": 0, "reminded": False}
 
 
 def save(path: Path, state: dict) -> None:
@@ -95,11 +100,11 @@ def pre(event: dict, state: dict) -> int:
 def post(event: dict, state: dict) -> None:
     tool = event.get("tool_name")
     if tool in EDITS and production_file(event):
-        state["edited"], state["stale"] = True, True
+        state["edited"], state["stale"], state["reminded"] = True, True, False
     elif tool == "Bash" and DOTNET_TEST.search((event.get("tool_input") or {}).get("command") or ""):
         text = output_of(event)
         if RED.search(text):
-            state["last"], state["unlocked"], state["stale"] = "red", True, False
+            state["last"], state["unlocked"], state["stale"], state["reminded"] = "red", True, False, False
         elif GREEN.search(text):
             state["last"], state["stale"] = "green", False
 
@@ -113,6 +118,18 @@ def stop(event: dict, state: dict) -> int:
     why = "production code changed after the last test run" if state["stale"] else "the last test run is red"
     print(f"TDD gate: {why}. Run `dotnet test` and finish green, or say which test is still red and why.",
           file=sys.stderr)
+    return 2
+
+
+def done(event: dict, state: dict) -> int:
+    if not state["edited"] or (state["last"] == "green" and not state["stale"]):
+        return 0
+    if state.get("reminded") or event.get("stop_hook_active"):
+        return 0  # said once: the developer reads the answer and decides
+    state["reminded"] = True
+    why = ("C# changed and no test has run since" if state["stale"] else "the last `dotnet test` was red")
+    print(f"Done gate: {why}. Run the tests that cover the change (`dotnet test`) before calling it done, "
+          "or say in your answer which tests you didn't run and why.", file=sys.stderr)
     return 2
 
 
@@ -135,11 +152,11 @@ def main() -> int:
         post(event, state)
         save(path, state)
         return 0
-    if mode == "stop":
-        code = stop(event, state)
+    if mode in ("stop", "done"):
+        code = stop(event, state) if mode == "stop" else done(event, state)
         save(path, state)
         return code
-    print(f"TDD gate: unknown mode '{mode}' (pre, post or stop)", file=sys.stderr)
+    print(f"TDD gate: unknown mode '{mode}' (pre, post, stop or done)", file=sys.stderr)
     return 2 if mode == "" else 0
 
 
