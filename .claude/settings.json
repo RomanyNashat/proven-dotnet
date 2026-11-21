@@ -31,12 +31,22 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|MultiEdit",
         "hooks": [
           {
             "type": "command",
             "command": "{PYTHON} {HOOKS}/post-edit-format.py",
             "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(dotnet *)",
+            "command": "{PYTHON} {HOOKS}/tdd-gate.py post"
           }
         ]
       }
@@ -61,6 +71,15 @@
             "type": "command",
             "command": "{PYTHON} {HOOKS}/stop.py",
             "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{PYTHON} {HOOKS}/tdd-gate.py done"
           }
         ]
       }
@@ -96,6 +115,18 @@
             "type": "command",
             "command": "{PYTHON} {HOOKS}/subagent-log.py",
             "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(dotnet *)",
+            "command": "{PYTHON} {HOOKS}/tdd-gate.py post"
           }
         ]
       }
