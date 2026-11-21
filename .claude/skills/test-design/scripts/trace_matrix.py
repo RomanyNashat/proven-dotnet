@@ -17,8 +17,19 @@ story doesn't have are listed too: a typo there would hide a gap.
 
 --require-all exits 1 unless every criterion is covered (proven, with --trx).
 
+Edge cases are traced one by one, the same way: each case designed for a criterion is an `EC1: ...` line,
+starting with the criterion it belongs to (`EC1: AC2, boundary: booked exactly two hours before`), and its
+test carries `[Trait("EC", "EC1")]`. An edge case with no test fails --require-all like a criterion with
+none, instead of hiding under a criterion its main-path test already covers. AC and EC lines are both
+traced by default.
+
+A criterion written without a story, from the request, the code and the diff, starts with `(inferred)`:
+`AC1: (inferred) a cancelled visit frees its slot`. It is traced like any other, and marked so that a
+reader knows it is an assumption to confirm, not an agreed criterion.
+
 --prefix and --trait trace other numbered lines the same way: `business-rules` traces `R1: ...` rules to
-`[Trait("Rule", "R1")]` with `--prefix R --trait Rule`.
+`[Trait("Rule", "R1")]` with `--prefix R --trait Rule`. --prefix takes a comma-separated list, each line
+traced to a trait of its own name.
 """
 from __future__ import annotations
 
@@ -29,13 +40,21 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-def patterns(prefix: str = "AC", trait: str = "AC") -> tuple[re.Pattern, re.Pattern]:
-    p, t = re.escape(prefix), re.escape(trait)
-    return (re.compile(rf"^\s*(?:[-*+]|\d+[.)])?\s*\**\s*({p}\d+)\s*\**\s*[:.)–—-]\s*\**\s*(.+?)\s*$"),
-            re.compile(rf'Trait\(\s*"{t}"\s*,\s*"({p}\d+)"\s*\)'))
+DEFAULT_PREFIXES = "AC,EC"
+
+
+def patterns(prefixes: str = DEFAULT_PREFIXES, trait: str | None = None) -> tuple[re.Pattern, re.Pattern]:
+    names = [x.strip() for x in prefixes.split(",") if x.strip()]
+    if trait and len(names) > 1:
+        raise ValueError("--trait names one trait, so it goes with one --prefix")
+    p = "|".join(re.escape(n) for n in names)
+    t = re.escape(trait) if trait else rf"(?:{p})"
+    return (re.compile(rf"^\s*(?:[-*+]|\d+[.)])?\s*\**\s*((?:{p})\d+)\s*\**\s*[:.)–—-]\s*\**\s*(.+?)\s*$"),
+            re.compile(rf'Trait\(\s*"{t}"\s*,\s*"((?:{p})\d+)"\s*\)'))
 
 
 CRITERION, TRAIT = patterns()
+BELONGS_TO = re.compile(r"^\s*(AC\d+)\b")
 NAMESPACE = re.compile(r"^\s*namespace\s+([\w.]+)")
 CLASS = re.compile(r"\b(?:class|record)\s+(\w+)")
 METHOD = re.compile(r"\b(?:public|internal|private|protected)\s+(?:static\s+)?(?:async\s+)?[\w<>\[\],.? ]+?\s+(\w+)\s*\(")
@@ -132,11 +151,19 @@ def matrix(story: Path, folder: Path, trx: Path | None) -> dict:
             seen = [o for n in names for o in ran.get(n, [])]
             status = "not run" if not seen else "failing" if any(o != "Passed" for o in seen) else "proven"
         row = {"criterion": ac, "text": text, "status": status, "tests": names}
+        if text.lower().startswith("(inferred)"):
+            row["inferred"] = True
+        if ac.startswith("EC"):
+            parent = BELONGS_TO.match(text)
+            row["of"] = parent.group(1) if parent else None
         if ran is not None:
             row["not_run"] = [n for n in names if n not in ran]
         rows.append(row)
     unknown = sorted({ac for named in tests.values() for ac in named} - set(acs))
-    return {"criteria": rows, "unknown": [{"criterion": ac, "tests": sorted(t for t, n in tests.items() if ac in n)} for ac in unknown]}
+    orphans = sorted(r["criterion"] for r in rows if "of" in r and r["of"] not in acs)
+    return {"criteria": rows,
+            "unknown": [{"criterion": ac, "tests": sorted(t for t, n in tests.items() if ac in n)} for ac in unknown],
+            "orphans": orphans}
 
 
 def main(argv=None) -> int:
@@ -146,14 +173,18 @@ def main(argv=None) -> int:
     p.add_argument("--trx", type=Path)
     p.add_argument("--require-all", action="store_true")
     p.add_argument("--json", action="store_true")
-    p.add_argument("--prefix", default="AC", help="the numbered lines to trace (AC, or R for rules)")
-    p.add_argument("--trait", default=None, help="the trait the tests use (default: the prefix)")
+    p.add_argument("--prefix", default=DEFAULT_PREFIXES,
+                   help="the numbered lines to trace, comma-separated (default AC,EC; R for rules)")
+    p.add_argument("--trait", default=None, help="the trait the tests use, with one --prefix (default: the prefix)")
     a = p.parse_args(argv)
     global CRITERION, TRAIT
-    CRITERION, TRAIT = patterns(a.prefix, a.trait or a.prefix)
+    try:
+        CRITERION, TRAIT = patterns(a.prefix, a.trait)
+    except ValueError as e:
+        p.error(str(e))
     result = matrix(a.story, a.tests, a.trx)
     if not result["criteria"]:
-        print(f"no {a.prefix}1: ... lines found in {a.story}", file=sys.stderr)
+        print(f"no {a.prefix.split(',')[0]}1: ... lines found in {a.story}", file=sys.stderr)
         return 2
     if a.json:
         print(json.dumps(result, indent=2))
@@ -164,8 +195,10 @@ def main(argv=None) -> int:
             print(f"| {row['criterion']}: {row['text']} | {row['status']} | {', '.join(short) or '-'} |")
         for u in result["unknown"]:
             print(f"\nTests name {u['criterion']}, which the story doesn't have: {', '.join(u['tests'])}")
+        for o in result["orphans"]:
+            print(f"\n{o} doesn't start with a criterion the story has (EC1: AC2, ...)")
     good = {"proven"} if a.trx else {"covered", "proven"}
-    if a.require_all and any(row["status"] not in good for row in result["criteria"]):
+    if a.require_all and (any(row["status"] not in good for row in result["criteria"]) or result["orphans"]):
         return 1
     return 0
 

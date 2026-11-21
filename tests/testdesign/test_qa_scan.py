@@ -144,6 +144,32 @@ class Verdict(unittest.TestCase):
         self.assertEqual(1, result.returncode)
         self.assertIn("- AC6 is uncovered", result.stdout)
 
+    def test_story_an_edge_case_with_no_test_keeps_the_branch_from_shipping(self):
+        # Given every criterion proven, and an edge designed for AC2 that no test names
+        story = self.tmp / "story.md"
+        story.write_text((SAMPLE / "story.md").read_text(encoding="utf-8")
+                         + "- EC1: AC2, boundary: the visit at exactly 00:00 in Riyadh on the birthday\n", encoding="utf-8")
+        trace = run(TRACE, story, SAMPLE, "--trx", TRX, "--json")
+        (self.tmp / "trace.json").write_text(trace.stdout, encoding="utf-8")
+        accept = self.tmp / "accepted.txt"
+        accept.write_text("RefillWindow.cs:16 x\nRefillWindow.cs:19 y\n", encoding="utf-8")
+        # When the verdict is asked for
+        result = self.verdict("--mutation", self.tmp / "mutation.json", "--accept", accept)
+        # Then it is NO, naming the edge
+        self.assertEqual(1, result.returncode, result.stdout)
+        self.assertIn("- EC1 is uncovered", result.stdout)
+
+    def test_inferred_criteria_are_counted_on_the_verdict_line(self):
+        story = self.tmp / "story.md"
+        story.write_text((SAMPLE / "story.md").read_text(encoding="utf-8").replace("AC1: ", "AC1: (inferred) ", 1), encoding="utf-8")
+        trace = run(TRACE, story, SAMPLE, "--trx", TRX, "--json")
+        (self.tmp / "trace.json").write_text(trace.stdout, encoding="utf-8")
+        accept = self.tmp / "accepted.txt"
+        accept.write_text("RefillWindow.cs:16 x\nRefillWindow.cs:19 y\n", encoding="utf-8")
+        result = self.verdict("--mutation", self.tmp / "mutation.json", "--accept", accept)
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assertIn("Ship: YES  (criteria proven 5/5; 1 inferred, to confirm;", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,6 @@
 ---
 name: qa-scan
-description: "Check a finished story branch: criteria proven by passing tests, mutation on changed lines, what else to retest, a ship verdict."
+description: "Check a finished branch, story or not: criteria and edges proven by tests, mutation on changed lines, what to retest, a verdict."
 argument-hint: "[path to story.md] [--base origin/main]"
 allowed-tools: Read, Grep, Glob, Bash, mcp__proven-roslyn__workspace_status, mcp__proven-roslyn__find_callers, mcp__proven-roslyn__find_tests_for_symbol
 ---
@@ -10,8 +10,12 @@ branch on evidence, with the scripts of `test-design` and `mutation-testing`. `S
 `~/.claude/skills/test-design/scripts`, and `M` is `~/.claude/skills/mutation-testing/scripts`.
 
 1. **Find the story and its tests.** `story.md` is the argument. Without one, look for a `story.md` the
-   branch changed (`git diff --name-only <base>`), then one in the test projects. If none has `AC1:` lines,
-   stop: there is nothing to trace to, and `qa-engineer` writes it first.
+   branch changed (`git diff --name-only <base>`), then one in the test projects. **No story at all** is
+   not a stop: infer the branch's criteria from its diff and what the code around it enforces
+   (`test-design`, section 1), list them in the report marked inferred, and run steps 3 to 5 on the
+   branch. The verdict is CAN'T SAY, since no test names an inferred criterion yet: hand the list to
+   `qa-engineer`, which writes them into `story.md` with their tests. Edge cases (`EC` lines) are traced
+   with the criteria.
 2. **Are the criteria proven?**
    ```bash
    dotnet test <test project> --logger "trx;LogFileName=qa.trx" --results-directory .qa

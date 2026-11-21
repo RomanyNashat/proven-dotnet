@@ -1,7 +1,7 @@
 ---
 name: test-design
 description: "Design a story's test cases before the code: numbered criteria, risks, decision tables, boundaries, state transitions, each criterion traced to a test."
-version: 1.2.1
+version: 1.3.0
 ---
 
 # Test design: the cases before the code
@@ -10,8 +10,9 @@ A test written after the code tests what the code does. A case designed from the
 story asks for, and it is the contract the implementation has to meet. This skill turns a story into
 those cases, by technique rather than by guesswork, and proves every criterion has a test that passed.
 
-Use it before `tdd-guide` or `/tdd` starts on any story with acceptance criteria. The tested sample is `tests/SkillSamples.Tests/TestDesign/`: the story, the rules and the tests
-below.
+Use it before `tdd-guide` or `/tdd` starts on any change: a story with acceptance criteria, or a request
+with no story at all (section 1). The tested sample is `tests/SkillSamples.Tests/TestDesign/`: the story,
+the rules and the tests below.
 
 ## 1. Number the criteria
 
@@ -19,6 +20,17 @@ Put the story next to the tests as `story.md`, its criteria as `AC1: ...` lines,
 A criterion that can't be tested as written ("fast", "user friendly", "handles errors") is not guessed at:
 write the question it leaves open and ask it before designing. The cases the story leaves open altogether
 (empty, failure, duplicates, existing data) are found before this, by `story-check`.
+
+**No story?** A request ("add an endpoint that cancels a visit") still has criteria; they are just not
+written down. Write them from three places, each line starting `(inferred)`:
+- the request's own words;
+- what the code around it already enforces: its validations, limits and states (`business-rules` finds
+  them), which a change must keep;
+- what the diff changes, when there is one: every behaviour it adds, removes or moves.
+
+`AC1: (inferred) a visit can be cancelled up to two hours before it starts`. Ask only what the code can't
+answer. The marker stays until the developer confirms the line, so a reader knows it is an assumption, and
+`/qa-scan` counts the inferred ones on its verdict line.
 
 ## 2. Rank the risks
 
@@ -66,6 +78,11 @@ The lowest level that can fail for the right reason:
 A unique index that stops a double booking can't be proven with a mock.
 
 ## 5. Write the cases as tests, each naming its criteria
+
+**Every edge case you designed is a line of its own** in `story.md`, after the criteria: `EC1: AC2,
+boundary: booked exactly two hours before, it is allowed`. It starts with the criterion it belongs to and
+the technique that found it, and its test carries `[Trait("EC", "EC1")]` beside the criterion's. A
+criterion's main-path test makes it "covered"; only the edge's own line shows that the edge has a test.
 
 `MethodName_Scenario_ExpectedBehavior` (`testing-tdd`). `[Trait("AC", "AC2")]` on the method, or on the
 class for all of its tests. The decision table for who may book a visit:
@@ -151,8 +168,11 @@ It prints criterion, status and tests:
 - **failing:** one of them failed;
 - **not run:** none of its tests are in the results.
 
-It also lists tests that name a criterion the story doesn't have, since a typo there hides a gap.
-`--require-all` exits 1 unless every criterion is covered, or proven with `--trx`, so it can gate CI.
+Edge cases (`EC` lines) are traced the same way, by default, and an edge that doesn't start with a
+criterion the story has is listed: it belongs to nothing. It also lists tests that name a criterion the
+story doesn't have, since a typo there hides a gap.
+`--require-all` exits 1 unless every criterion and every edge case is covered, or proven with `--trx`, so
+it can gate CI.
 `--json` is for a tool that reads it. It handles CRLF, a BOM, attributes on the method's line and class
 traits; `bin` and `obj` are skipped. Tested in `tests/testdesign` against the sample and a real TRX.
 
@@ -166,7 +186,9 @@ retest from `changed_members.py --since origin/main` and Roslyn's callers. `qa_v
 
 ## Rules
 - Cases come from the story, before the code, and the developer writes them failing first.
-- Every criterion has at least one test that names it; every high risk has a story test.
+- Every criterion has at least one test that names it; every edge case designed is an `EC` line with a
+  test of its own; every high risk has a story test.
+- No story is no reason to skip this: the criteria are inferred, marked `(inferred)`, and confirmed.
 - The technique fits the shape: a table for rules, edges for ranges, every pair for states.
 - A criterion that can't be tested as written becomes a question, never a guess.
 - A test is kept only once it has been seen to fail for the right reason.

@@ -4,9 +4,10 @@ description: "Work test-first: write the failing tests, implement the minimum, r
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
-Delegate to the **tdd-guide** agent. On a story with acceptance criteria, delegate to **qa-engineer**
-first: it writes `story.md` and the failing tests (`test-design`), and tdd-guide makes them pass without
-editing them.
+Delegate to **qa-engineer** first, for a story or a plain request alike: it writes `story.md` (the
+criteria, inferred and marked when there's no story, and every edge case as an `EC` line) and the failing
+tests (`test-design`). Then delegate to the **tdd-guide** agent, which makes them pass without editing
+them. Skip qa-engineer only for a change with no behaviour (a rename, a comment, a package bump).
 
 Follow the Red-Green-Refactor cycle strictly:
 
