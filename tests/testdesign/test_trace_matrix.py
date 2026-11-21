@@ -64,6 +64,50 @@ class Stories(unittest.TestCase):
         self.assertEqual("failing", rows["AC5"])
         self.assertEqual("proven", rows["AC4"])
 
+    def _edge_story(self, with_edge_test: bool) -> tuple[Path, Path]:
+        story = self.tmp / "story.md"
+        story.write_text("# Cancelling a visit\n\n"
+                         "- AC1: A patient can cancel a visit up to two hours before it.\n"
+                         "- EC1: AC1, boundary: cancelled exactly two hours before, it is allowed\n"
+                         "- EC2: AC1, boundary: cancelled one minute later, it is refused\n", encoding="utf-8")
+        tests = self.tmp / "Visits.Tests"
+        tests.mkdir()
+        edge = ('    [Fact, Trait("AC", "AC1"), Trait("EC", "EC2")]\n'
+                '    public void Cancel_OneMinuteInsideTheWindow_IsRefused() { }\n') if with_edge_test else ""
+        (tests / "CancelTests.cs").write_text(
+            "namespace Visits.Tests;\n\npublic sealed class CancelTests\n{\n"
+            '    [Fact, Trait("AC", "AC1"), Trait("EC", "EC1")]\n'
+            "    public void Cancel_ExactlyTwoHoursBefore_IsAllowed() { }\n" + edge + "}\n", encoding="utf-8")
+        return story, tests
+
+    def test_story_a_criterion_covered_by_its_main_path_still_fails_while_an_edge_has_no_test(self):
+        # Given a criterion whose main-path test exists, and two edges designed for it, one with no test
+        story, tests = self._edge_story(with_edge_test=False)
+        # When the matrix is required to be complete
+        result = run(story, tests, "--require-all", "--json")
+        # Then the criterion shows covered, the edge without a test shows uncovered, and the build stops
+        self.assertEqual(1, result.returncode)
+        rows = {r["criterion"]: r for r in json.loads(result.stdout)["criteria"]}
+        self.assertEqual("covered", rows["AC1"]["status"])
+        self.assertEqual("covered", rows["EC1"]["status"])
+        self.assertEqual(("uncovered", "AC1"), (rows["EC2"]["status"], rows["EC2"]["of"]))
+
+    def test_story_once_every_edge_has_its_test_the_matrix_passes(self):
+        story, tests = self._edge_story(with_edge_test=True)
+        self.assertEqual(0, run(story, tests, "--require-all").returncode)
+
+    def test_an_edge_that_names_no_criterion_of_the_story_fails_the_build(self):
+        story, tests = self._edge_story(with_edge_test=True)
+        story.write_text(story.read_text(encoding="utf-8").replace("EC2: AC1,", "EC2: AC7,"), encoding="utf-8")
+        result = run(story, tests, "--require-all")
+        self.assertEqual(1, result.returncode)
+        self.assertIn("EC2 doesn't start with a criterion the story has", result.stdout)
+
+    def test_trait_with_two_prefixes_is_refused(self):
+        result = run(SAMPLE / "story.md", SAMPLE, "--prefix", "AC,EC", "--trait", "AC")
+        self.assertEqual(2, result.returncode)
+        self.assertIn("--trait names one trait", result.stderr)
+
     def test_a_test_that_names_a_criterion_the_story_lacks_is_listed(self):
         tests = self.tmp / "Tests"
         tests.mkdir()

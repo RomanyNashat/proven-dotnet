@@ -1,0 +1,1 @@
+Use the qa-engineer agent to design and write the tests (it follows the test-design skill; there is no story, so it infers the criteria from the request and the code), and check its report. Write your final list to report.md.
