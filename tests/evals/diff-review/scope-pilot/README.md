@@ -18,8 +18,8 @@ copy of `../../fix-lab/HomeReadings` with the diff applied, the prompt in `promp
 don't do them): writing the change is where the extra lines come from, and this pilot doesn't measure it.
 One run per arm, so no noise floor: the result is "no difference shown", not "no difference".
 
-**Found on the way:** `../change.diff` no longer applies where it was written. It is a `-U0` diff, and
-`HomeReadings` has changed since 0.2.20, so `git apply` puts the endpoints after the class's closing brace
-and the registration after `public partial class Program;`. Every run here reported the build errors.
-They don't touch the scope findings, but the diff-review eval needs its diff regenerated before it is
-run again.
+**Found on the way:** `../change.diff` was a `-U0` diff (no context lines), and a plain `git apply` puts
+zero-context hunks at the end of the file instead of at their line numbers: the endpoints landed after the
+class's closing brace and the registration after `public partial class Program;`. Every run here reported
+the build errors. They don't touch the scope findings. The base hadn't changed; the diff is regenerated
+with context in 0.3.49, and `change.diff` in this folder (also `-U0`) needs `git apply --unidiff-zero`.
