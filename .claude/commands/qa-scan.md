@@ -14,12 +14,13 @@ branch on evidence, with the scripts of `test-design` and `mutation-testing`. `S
    not a stop: infer the branch's criteria from its diff and what the code around it enforces
    (`test-design`, section 1), list them in the report marked inferred, and run steps 3 to 5 on the
    branch. The verdict is CAN'T SAY, since no test names an inferred criterion yet: hand the list to
-   `qa-engineer`, which writes them into `story.md` with their tests. Edge cases (`EC` lines) are traced
-   with the criteria.
+   `qa-engineer`, which writes them into `story.md` with their tests. Edge cases (`EC` lines) and abuse
+   cases (`AB` lines in `abuse.md`) are traced with the criteria.
 2. **Are the criteria proven?**
    ```bash
    dotnet test <test project> --logger "trx;LogFileName=qa.trx" --results-directory .qa
    python "$S/trace_matrix.py" story.md <test folder> --trx .qa/qa.trx --json > .qa/trace.json
+   # with the adversary's file, when the branch has one beside the story: add --also abuse.md
    ```
 3. **Would the tests notice a wrong line?** Stryker on the branch, scored on the lines it changed
    (`mutation-testing`):
@@ -28,7 +29,8 @@ branch on evidence, with the scripts of `test-design` and `mutation-testing`. `S
    python "$M/mutation_report.py" .qa/stryker/reports/mutation-report.json --since <base> --json > .qa/mutation.json
    ```
    If Stryker can't be installed or run here, say so and go on without it: the verdict will be CAN'T SAY,
-   never YES.
+   never YES. Stryker is the slow part: once step 2's tests have run, start it in the background and do
+   steps 4 and 5 while it works (they only read). Not beside step 2: both build the same project.
 4. **What else to retest.** `python "$S/changed_members.py" --since <base>` lists the members the branch
    changed. For each one, `find_callers` gives the code that depends on it, and `find_tests_for_symbol`
    the tests that already cover those callers (text search only if Roslyn isn't there, as `core.md` says).

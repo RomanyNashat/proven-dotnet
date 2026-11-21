@@ -25,7 +25,7 @@ teammate would read to understand it — grounded in the **real code**, in plain
   │
   ├── Step 3: WRITE the page         (Markdown, plain language, real names)
   │
-  └── Step 4: REVIEW — the self-check gate   (doc-review skill, always runs)
+  └── Step 4: REVIEW — the gate   (the doc-reviewer agent, with the doc-review skill; always runs)
         ├── A. Groundedness — trace EVERY claim (endpoints, deps, config, jobs) back to source;
         │      an untraceable claim is a fabrication → remove or correct it
         ├── B. Completeness — reverse sweep: what exists in code but is missing from the doc
@@ -47,6 +47,7 @@ consumers).
 - **Adapts to the service** — drops sections that don't apply; doesn't pad. A shorter true page beats
   a long templated one.
 - **Plan-first** — presents the doc; the developer decides where it goes.
-- **Always reviewed** — the `doc-review` gate runs before you see the page. A wiki page is trusted by
-  whoever reads it, so a confidently-stated endpoint that doesn't exist is the worst failure mode; the
-  gate verifies every claim against source rather than judging its own prose.
+- **Always reviewed** — before you see the page, the `doc-reviewer` agent checks it against the code
+  (`doc-review`). It gets only the page's path and the service's: it didn't write the page and starts with
+  none of the reasoning behind it. A wiki page is trusted by whoever reads it, so a confidently-stated
+  endpoint that doesn't exist is the worst failure mode; the reviewer verifies every claim against source.

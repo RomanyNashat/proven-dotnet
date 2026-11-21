@@ -222,6 +222,53 @@ jobs:
             results/
             scores-fix-qa.json
 
+  grade-abuse:
+    name: Abuse eval (a run's desk against what a cheater, thief or forger tries)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - name: Grade every copy
+        run: |
+          base=tests/evals/fix-abuse
+          copies="original=$base reference=$base/reference naive=$base/naive"
+          for d in "$base"/runs/*/; do [ -d "$d/Clinic/VisitDesk" ] && copies="$copies $(basename "$d")=${d%/}"; done
+          mkdir -p results results-domain
+          for c in $copies; do
+            name=${c%%=*}; src=${c#*=}
+            echo "::group::$name"
+            docker run --rm -v "$PWD:/w" -w /w mcr.microsoft.com/dotnet/sdk:10.0-noble \
+              bash "$base/tools/grade-one.sh" "$src" "$name" /w/results
+            echo "::endgroup::"
+          done
+      - name: Grade round two (abuse that turns on the data)
+        run: |
+          base=tests/evals/fix-abuse-domain
+          copies="original=$base reference=$base/reference naive=$base/naive"
+          for d in "$base"/runs/*/; do [ -d "$d/Clinic/VisitDesk" ] && copies="$copies $(basename "$d")=${d%/}"; done
+          for c in $copies; do
+            name=${c%%=*}; src=${c#*=}
+            echo "::group::$name"
+            docker run --rm -v "$PWD:/w" -w /w mcr.microsoft.com/dotnet/sdk:10.0-noble \
+              bash "$base/tools/grade-one.sh" "$src" "$name" /w/results-domain
+            echo "::endgroup::"
+          done
+      - name: Results
+        shell: bash
+        run: |
+          python3 tests/evals/tools/grade.py tests/evals/fix-abuse results --json scores-fix-abuse.json | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 tests/evals/tools/grade.py tests/evals/fix-abuse-domain results-domain --json scores-fix-abuse-domain.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Test logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fix-eval-abuse-results
+          path: |
+            results/
+            results-domain/
+            scores-fix-abuse.json
+            scores-fix-abuse-domain.json
+
   grade-upgrade:
     name: Upgrade eval (hidden tests on .NET 10, PostgreSQL)
     runs-on: ubuntu-26.04

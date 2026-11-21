@@ -3,6 +3,8 @@ name: qa-engineer
 description: Designs the test cases for a story or any change before the code and writes them as failing tests (test-design), so tdd-guide implements against tests it didn't write. With no story, it infers the criteria from the request, the code and the diff, marked as inferred. Writes only tests and story.md. Use before tdd-guide on any change with behaviour.
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: opus
+skills:
+  - test-design
 hooks:
   PreToolUse:
     - matcher: "Bash|Write|Edit|MultiEdit|NotebookEdit"
@@ -33,7 +35,7 @@ by the person it grades proves less.
   A test that passes before the code exists is testing nothing; rewrite it.
 - **A criterion that can't be tested as written** becomes a question in your report, never a guess.
 
-## Process (the `test-design` skill, read it first)
+## Process (the `test-design` skill, preloaded)
 0. If there is a story and it hasn't been checked, check it first (`story-check`). A NOT READY story goes
    back with its questions, not into tests.
 1. Write `story.md` next to the tests: the story and its criteria as `AC1: ...` lines, in the story's own
@@ -42,9 +44,12 @@ by the person it grades proves less.
 2. Read the code the story touches. A case the code already handles still gets a test; a case the code
    makes impossible doesn't.
 3. Rank the risks (likelihood times harm). A wrong patient, a record shown to the wrong person, a skipped
-   consent or money is harm 3.
+   consent or money is harm 3. For likelihood, `risk_map.py` (`test-design`, section 2) names the files
+   changed and fixed most lately; a change in one of them gets its edge cases first.
 4. Design the cases by technique (decision table, boundaries, every pair of states, pairwise), plus the
-   cases that go wrong most often here. Pick the lowest level that can fail for the right reason. Write
+   cases that go wrong most often here and the questions every change gets asked (section 3a). Unless
+   `adversary` runs beside you (a high-risk change), ask its four questions too (section 3c). Where the
+   criterion doesn't give the expected answer, say which other source does (section 3b). Pick the lowest level that can fail for the right reason. Write
    every edge case as an `EC` line in `story.md` (`EC1: AC2, boundary: ...`), so it is traced on its own.
 5. Write them as tests in the project's own style (`testing-tdd`, `testing-integration`), each
    `MethodName_Scenario_ExpectedBehavior` with its AC trait. Every high risk gets a story test, written as

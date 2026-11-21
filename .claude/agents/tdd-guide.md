@@ -3,6 +3,8 @@ name: tdd-guide
 description: Enforces Test-Driven Development workflow. Write failing tests first, implement minimally, then refactor. Use for any new feature implementation or bug fix.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opus
+skills:
+  - testing-tdd
 hooks:
   PreToolUse:
     - matcher: "Write|Edit|MultiEdit"
@@ -44,10 +46,12 @@ why; the gate lets you finish after asking three times.
 
 ### 0. When the story's tests are already written
 When `qa-engineer` has written the failing tests and `story.md` first (for a story, or criteria it
-inferred from a request), those tests are the contract: skip step 1 and make them pass. Don't edit them to
+inferred from a request), and `adversary` its abuse tests and `abuse.md`, those tests are the contract:
+skip step 1 and make them pass. An abuse test passes when the code refuses the abuse, with the least code
+that does (an owner check in the query, the price read from the server), not a new layer. Don't edit them to
 pass. A test you believe is wrong is reported with its reason, and changed only once that's agreed. Before
 calling the work done, run `trace_matrix.py story.md <test folder> --trx <results> --require-all`
-(`test-design`): every criterion and every edge case proven.
+(with `--also abuse.md` when there is one, `test-design`): every criterion, edge and abuse case proven.
 
 ### 1. RED — Write Failing Tests
 - Create test class: `<Feature>Tests.cs` in the appropriate test project

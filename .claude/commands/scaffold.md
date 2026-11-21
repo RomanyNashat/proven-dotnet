@@ -1,7 +1,7 @@
 ---
 name: scaffold
 description: "Generate a new microservice, worker, job or cronjob: simple, clean or CQRS, minimal API or controllers, PostgreSQL or SQL Server."
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 ---
 
 ## Scaffold
@@ -542,7 +542,10 @@ Reference skills: `worker-patterns`, `quartz-scheduling`, `hangfire-patterns`, `
 4. For `--simple`: run `dotnet ef migrations add Initial`
    Then `/migrate script` for the up and down scripts. The app never runs `Migrate()`.
 5. Run `/architecture-check` (for `--clean` and `--cqrs` only)
-6. Start implementing with `/tdd`
+6. Have the new service read by eyes that didn't write it: start `code-reviewer` and `security-reviewer`
+   in one message, so they run at once, on the generated folder. Fix what they find before any feature
+   builds on it; a slip in a template is copied into every service made from it.
+7. Start implementing with `/tdd`
 
 ### Auth services
 Scaffolding a service that **issues** tokens (an OAuth2/OIDC authorization server — login, token,

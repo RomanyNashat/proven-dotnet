@@ -171,5 +171,20 @@ class Verdict(unittest.TestCase):
         self.assertIn("Ship: YES  (criteria proven 5/5; 1 inferred, to confirm;", result.stdout)
 
 
+    def test_story_an_abuse_case_the_tests_dont_prove_is_a_no(self):
+        # Given every criterion proven, and adversary's abuse.md with a forger case no test covers
+        abuse = self.tmp / "abuse.md"
+        abuse.write_text("- AB1: forger: sends a refill date in the past to skip the waiting time\n", encoding="utf-8")
+        trace = run(TRACE, SAMPLE / "story.md", SAMPLE, "--trx", TRX, "--also", abuse, "--json")
+        (self.tmp / "trace.json").write_text(trace.stdout, encoding="utf-8")
+        accept = self.tmp / "accepted.txt"
+        accept.write_text("RefillWindow.cs:16 x\nRefillWindow.cs:19 y\n", encoding="utf-8")
+        # When the verdict is asked for
+        result = self.verdict("--mutation", self.tmp / "mutation.json", "--accept", accept)
+        # Then it is NO, with the abuse case named and counted
+        self.assertEqual(1, result.returncode, result.stdout)
+        self.assertIn("- AB1 is uncovered", result.stdout)
+        self.assertIn("1 abuse cases", result.stdout)
+
 if __name__ == "__main__":
     unittest.main()

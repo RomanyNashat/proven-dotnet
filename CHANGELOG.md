@@ -3,6 +3,64 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.54 — agents load their skills, and independent parts run at once
+- **Eleven agents preload the skill they follow** (`skills:` in their frontmatter), instead of a line asking
+  them to read it first: qa-engineer and adversary (`test-design`), tdd-guide (`testing-tdd`), story-reviewer,
+  coverage-analyst, health-analyst, business-analyst, code-analyst, pattern-analyst, doc-updater and
+  handover-agent. The content check fails on a preload that doesn't exist or that the model may not invoke.
+- **New agent `doc-reviewer`:** `/document`'s check against the code now runs in an agent that didn't write
+  the page (`doc-review`), as `story-reviewer` does for `/stories`.
+- **`/scaffold` ends with `code-reviewer` and `security-reviewer` at once** on the new service, before any
+  feature builds on it.
+- **`/security-scan` starts its agents in one message** and runs the package scan beside them; it can now run
+  `dotnet list package --vulnerable`, which it had no permission for. **`/qa-scan` runs Stryker in the
+  background** while the steps that only read go on. `/tdd` and `/scaffold` may start agents.
+
+## 0.3.53 — the abuse eval
+- **`tests/evals/fix-abuse`:** a clinic's visit desk to build from a request that says nothing about misuse,
+  graded by hidden tests: 2 regressions, 6 for what was asked, 8 abuses (a thief by id, a forger by price or
+  patient, a cheater by racing a code or a slot, a slot that has started). The reference passes all 16; a
+  naive copy that keeps every stated rule refuses 2 of the 8. The race tests hold each store read a moment
+  through a proxy, so a desk with no lock fails every time, not now and then. CI grades every copy
+  (`fix-evals.yml`, job `grade-abuse`).
+- **Pilot:** no rules, rules only and the harness all refused 8 of 8. Opus 5.5 refuses these abuses by
+  habit, so the fixture can't show what `adversary` adds; its run named all 8 in `abuse.md` before the code,
+  at five times the cost. The bar's falsifier held, and the README says so.
+- **Round two, `tests/evals/fix-abuse-domain`:** the same desk with misuse that turns on facts the data
+  carries and the request never names (a guardian link that ended, a code's clinic and end date, the stored
+  code, a refund of what was paid). Round one's reference refuses 1 of its 8; every arm, no rules included,
+  refused all 8.
+- **adversary runs on high-risk changes only** (a risk of 6 or more: a patient, another person's data,
+  consent, money), as the bar set before the runs said. On other changes `qa-engineer` asks the four
+  questions itself (`test-design` section 3c). `/tdd`, the pipeline rule, `planner` and the agent say so.
+
+## 0.3.52 — adversary: the user who wants to misuse it
+- **New agent `adversary`** (Opus). It plays a cheater, a thief, a forger and a vandal against a change, and
+  writes each abuse worth a test (a risk of 4 or more) as an `AB` line in `abuse.md` with a test that fails
+  until the code refuses it. It writes only tests and `abuse.md` (the read-only guard holds it there), and
+  never `story.md`, so it runs at the same time as `qa-engineer`.
+- **`/tdd` starts both at once** when a person can misuse the change, then `tdd-guide` makes every test
+  pass with the least code that refuses the abuse. The pipeline rule and `planner` say the same.
+- **`test-design` 1.5.0**, section 3c: the four abusers and what each tries. `trace_matrix.py` traces `AB`
+  lines by default, reads `abuse.md` with `--also`, and fails `--require-all` on an abuse case with no test
+  or one that doesn't say who abuses it; `qa_verdict.py` counts abuse cases and says NO while one is
+  unproven. `/qa-scan` traces `abuse.md` when the branch has one.
+
+## 0.3.51 — how a tester thinks, and strength in proportion to risk
+- **`test-design` 1.4.0:**
+  - **Questions every change gets asked** (section 3a): none, one and many; some, none and all; interrupted,
+    twice, at once and out of order; the data followed from create to delete; broken rules; the other
+    language, an old app, the time zone, a dependency down.
+  - **How a test knows the answer is wrong** (section 3b): when the criterion doesn't give the expected
+    answer, the test says which source does (the same thing elsewhere, the old behaviour, the data's own
+    rules, the contract, the regulation), or it becomes a question.
+  - **Strength follows the risk score:** a guard is there because a risk of 6 or more asks for it; one no
+    risk asks for is over-engineering. `code-reviewer` names both, and `rules/architecture.md` says it in
+    two lines.
+  - **`risk_map.py`** ranks a repo's files by changes and fixes in the git history (changes + 2 x fixes),
+    for where to look first when there's no story or the change is wide. `qa-engineer` uses it for
+    likelihood. Tested in `tests/testdesign`, with an Arabic file name and a path with spaces.
+
 ## 0.3.50 — QA without a story, and every edge case traced
 - **`qa-engineer` and `/qa-scan` work with no story.** The criteria are inferred from the request, the code
   and the diff, each marked `(inferred)` for the team to confirm (`test-design` 1.3.0, section 1). `/qa-scan`

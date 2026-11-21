@@ -1,0 +1,1 @@
+Work test-first, the /tdd way: start the qa-engineer agent and the adversary agent at the same time, so qa-engineer writes story.md with the criteria and their failing tests and adversary writes abuse.md with the abuse cases and theirs. Then use the tdd-guide agent to build Desk.cs until they all pass, and check their reports. Write report.md.

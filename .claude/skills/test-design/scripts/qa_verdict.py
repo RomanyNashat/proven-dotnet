@@ -6,7 +6,7 @@
 trace.json is `trace_matrix.py ... --trx results.trx --json`; mutation.json is `mutation_report.py ...
 --since REF --json`. accepted.txt lists survivors judged harmless, one per line: `File.cs:19 why`.
 
-Edge cases (EC lines) count as criteria here. A criterion marked `(inferred)` counts too, and the verdict
+Edge cases (EC lines) and abuse cases (AB lines) count as criteria here. A criterion marked `(inferred)` counts too, and the verdict
 line says how many are inferred, so a YES on assumptions reads as one.
 
 YES (exit 0): every criterion is proven (each of its tests ran and passed), no test names a criterion the
@@ -47,6 +47,8 @@ def verdict(trace: dict, mutation: dict | None, accepts: dict[str, str]) -> dict
         reasons.append(f"tests name {u['criterion']}, which the story doesn't have")
     for o in trace.get("orphans", []):
         reasons.append(f"{o} doesn't start with a criterion the story has")
+    for u in trace.get("unnamed", []):
+        reasons.append(f"{u} doesn't say who abuses it")
     if mutation is None:
         notes.append("the tests' strength wasn't measured (no mutation report)")
     else:
@@ -63,6 +65,7 @@ def verdict(trace: dict, mutation: dict | None, accepts: dict[str, str]) -> dict
     return {"verdict": result, "reasons": reasons, "notes": notes,
             "proven": sum(s == "proven" for s in statuses.values()), "criteria": len(statuses),
             "inferred": sum(1 for r in trace["criteria"] if r.get("inferred")),
+            "abuse": sum(1 for r in trace["criteria"] if r["criterion"].startswith("AB")),
             "mutation_score": mutation["score"] if mutation else None}
 
 
@@ -81,6 +84,7 @@ def main(argv=None) -> int:
     else:
         score = "not measured" if r["mutation_score"] is None else f"{r['mutation_score']}% on the changed lines"
         inferred = f"; {r['inferred']} inferred, to confirm" if r["inferred"] else ""
+        inferred += f"; {r['abuse']} abuse cases" if r["abuse"] else ""
         print(f"Ship: {r['verdict']}  (criteria proven {r['proven']}/{r['criteria']}{inferred}; mutation {score})")
         for line in r["reasons"]:
             print(f"- {line}")
