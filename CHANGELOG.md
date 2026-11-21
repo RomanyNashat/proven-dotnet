@@ -13,6 +13,13 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
 - **Pilot:** no rules, rules only and the harness all refused 8 of 8. Opus 5.5 refuses these abuses by
   habit, so the fixture can't show what `adversary` adds; its run named all 8 in `abuse.md` before the code,
   at five times the cost. The bar's falsifier held, and the README says so.
+- **Round two, `tests/evals/fix-abuse-domain`:** the same desk with misuse that turns on facts the data
+  carries and the request never names (a guardian link that ended, a code's clinic and end date, the stored
+  code, a refund of what was paid). Round one's reference refuses 1 of its 8; every arm, no rules included,
+  refused all 8.
+- **adversary runs on high-risk changes only** (a risk of 6 or more: a patient, another person's data,
+  consent, money), as the bar set before the runs said. On other changes `qa-engineer` asks the four
+  questions itself (`test-design` section 3c). `/tdd`, the pipeline rule, `planner` and the agent say so.
 
 ## 0.3.52 — adversary: the user who wants to misuse it
 - **New agent `adversary`** (Opus). It plays a cheater, a thief, a forger and a vandal against a change, and

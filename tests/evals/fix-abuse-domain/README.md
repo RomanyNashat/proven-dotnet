@@ -43,3 +43,22 @@ misuse that only those facts make possible:
   too, and adversary runs only where the harm is high.
 - **Also reported:** cost and time per run, and which D cases each run's own `abuse.md` or tests named.
 - One run per arm: a difference of 1 is noise.
+
+## The pilot (2026-11-21, at 1404be5)
+
+| Run | D refused | N, R | Tests written | Cost | Time |
+|---|---|---|---|---|---|
+| `runs/norules-1` (no rules) | 8 / 8 | 10 / 10 | 36 | $0.53 | 2.8 min |
+| `runs/rules-1` (rules only) | 8 / 8 | 10 / 10 | 36 | $0.57 | 2.7 min |
+| `runs/proven-1` (`qa-engineer` + `adversary`, then `tdd-guide`) | 8 / 8 | 10 / 10 | 83 | $3.14 | 4.6 min |
+
+**Against the bar:** the falsifier held again. Every arm refused all 8, the no-rules run included: on its
+own it checked the link's end date in every access, the code's clinic and end date, the stored code per
+patient, and refunded what was charged under a lock. The harness run's `abuse.md` named all eight before the
+code (AB3, AB5, AB7, AB8, AB10, AB11, AB13), at 5.5 times the cost.
+
+**What the bar says to do:** adversary is kept for high-risk changes only (a risk of 6 or more: a patient,
+another person's data, consent, money), and that is what 0.3.53 changes. On other changes `qa-engineer` asks
+the four questions itself. Two rounds, three arms each: Opus 5.5 refuses textbook and data-driven misuse
+alike when the facts are in front of it. What adversary adds is the abuse named in a file, with its test,
+for the next reader; that is worth paying for where a slip would hurt someone.
