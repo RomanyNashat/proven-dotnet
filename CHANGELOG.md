@@ -3,6 +3,34 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.51 — how a tester thinks, and strength in proportion to risk
+- **`test-design` 1.4.0:**
+  - **Questions every change gets asked** (section 3a): none, one and many; some, none and all; interrupted,
+    twice, at once and out of order; the data followed from create to delete; broken rules; the other
+    language, an old app, the time zone, a dependency down.
+  - **How a test knows the answer is wrong** (section 3b): when the criterion doesn't give the expected
+    answer, the test says which source does (the same thing elsewhere, the old behaviour, the data's own
+    rules, the contract, the regulation), or it becomes a question.
+  - **Strength follows the risk score:** a guard is there because a risk of 6 or more asks for it; one no
+    risk asks for is over-engineering. `code-reviewer` names both, and `rules/architecture.md` says it in
+    two lines.
+  - **`risk_map.py`** ranks a repo's files by changes and fixes in the git history (changes + 2 x fixes),
+    for where to look first when there's no story or the change is wide. `qa-engineer` uses it for
+    likelihood. Tested in `tests/testdesign`, with an Arabic file name and a path with spaces.
+
+## 0.3.50 — QA without a story, and every edge case traced
+- **`qa-engineer` and `/qa-scan` work with no story.** The criteria are inferred from the request, the code
+  and the diff, each marked `(inferred)` for the team to confirm (`test-design` 1.3.0, section 1). `/qa-scan`
+  no longer stops without a `story.md`: it lists the inferred criteria and says CAN'T SAY until they have
+  tests. `/tdd` starts qa-engineer for any change with behaviour.
+- **Edge cases are traced one by one.** Each is an `EC` line that starts with its criterion
+  (`EC1: AC2, boundary: ...`), with `[Trait("EC", "EC1")]` on its test. `trace_matrix.py` traces AC and EC
+  lines by default, fails `--require-all` on an edge with no test or one that names no criterion the story
+  has, and `qa_verdict.py` counts the inferred criteria on its verdict line.
+- **`tests/evals/fix-qa-nostory`:** the QA eval's service with no story. Pilot: both arms caught 8 of 8; the
+  harness run inferred and marked 14 criteria and traced 57 edge cases, at 2.7 times the cost. The mode
+  works; no difference between the arms is shown on this fixture.
+
 ## 0.3.49 — the diff-review diff applies where it was written
 - **`tests/evals/diff-review/change.diff`** is regenerated with context lines. It was a `-U0` diff, and a
   plain `git apply` puts zero-context hunks at the end of the file, so the export's endpoints landed after
