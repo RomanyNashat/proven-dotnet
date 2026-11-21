@@ -14,12 +14,13 @@ branch on evidence, with the scripts of `test-design` and `mutation-testing`. `S
    not a stop: infer the branch's criteria from its diff and what the code around it enforces
    (`test-design`, section 1), list them in the report marked inferred, and run steps 3 to 5 on the
    branch. The verdict is CAN'T SAY, since no test names an inferred criterion yet: hand the list to
-   `qa-engineer`, which writes them into `story.md` with their tests. Edge cases (`EC` lines) are traced
-   with the criteria.
+   `qa-engineer`, which writes them into `story.md` with their tests. Edge cases (`EC` lines) and abuse
+   cases (`AB` lines in `abuse.md`) are traced with the criteria.
 2. **Are the criteria proven?**
    ```bash
    dotnet test <test project> --logger "trx;LogFileName=qa.trx" --results-directory .qa
    python "$S/trace_matrix.py" story.md <test folder> --trx .qa/qa.trx --json > .qa/trace.json
+   # with the adversary's file, when the branch has one beside the story: add --also abuse.md
    ```
 3. **Would the tests notice a wrong line?** Stryker on the branch, scored on the lines it changed
    (`mutation-testing`):

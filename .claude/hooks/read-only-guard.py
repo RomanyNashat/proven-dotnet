@@ -9,7 +9,7 @@ repo-reader (handover-repo-analyst): git read commands, file reads and searches,
 scripts. health (health-analyst): the same, plus `dotnet build`/`test`/`list`/`restore`, and writes only
 into a `coverage/` folder (the report card's results, `build.log`, `health-history.json`). qa
 (qa-engineer): the same shell as health, and Write/Edit only in a test project (a `*.Tests` folder or
-`tests/`) and on `story.md`; production code is the implementer's.
+`tests/`) and on `story.md` and `abuse.md`; production code is the implementer's. adversary uses it too.
 
 A command is allowed when every command in it, including those inside `$( )` and backticks, is on the
 list for the policy and no redirect writes outside what the policy allows. Anything else, or anything
@@ -54,7 +54,7 @@ def is_test_path(path: str) -> bool:
     parts = [p for p in path.replace("\\", "/").split("/") if p not in ("", ".")]
     if not parts or ".." in parts:
         return False
-    if parts[-1] == "story.md":
+    if parts[-1] in ("story.md", "abuse.md"):
         return True
     return any(p.endswith((".Tests", ".Test", ".UnitTests", ".IntegrationTests")) or p.lower() in ("tests", "test")
                for p in parts[:-1])
@@ -257,7 +257,7 @@ def main() -> int:
         path = (event.get("tool_input") or {}).get("file_path") or (event.get("tool_input") or {}).get("notebook_path") or ""
         if policy == "qa" and is_test_path(relative_to(path, event.get("cwd") or "")):
             return 0
-        print(f"read-only agent: refused ({tool} on {path}: this agent writes only tests and story.md). "
+        print(f"read-only agent: refused ({tool} on {path}: this agent writes only tests, story.md and abuse.md). "
               "Production code is the implementer's.", file=sys.stderr)
         return 2
     if tool != "Bash":

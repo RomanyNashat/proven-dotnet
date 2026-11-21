@@ -1,7 +1,7 @@
 ---
 name: test-design
 description: "Design a story's test cases before the code: numbered criteria, risks, decision tables, boundaries, state transitions, each criterion traced to a test."
-version: 1.4.0
+version: 1.5.0
 ---
 
 # Test design: the cases before the code
@@ -102,6 +102,27 @@ says what's right, and write down which one the test uses:
 - the regulation (consent, retention, who may see what).
 
 When none of them settles it, the answer is a question in the report, never a guess written into a test.
+
+## 3c. The user who wants to misuse it
+
+The criteria describe a user who wants the feature to work. Some don't: they want more than their share,
+someone else's data, or to spoil it for others. `adversary` plays them beside `qa-engineer`, and each case
+worth a test becomes an `AB` line in `abuse.md`, starting with who:
+- **cheater:** their own account, the rules bent: twice, out of order, late, past a limit, a step skipped;
+- **thief:** someone else's record or field: a changed id, a list too wide, a response that says too much;
+- **forger:** what the client shouldn't decide: a price, a role, an owner, a status, a date, a hidden field;
+- **vandal:** spoiling it for others: an input too big, a request too often, a slot held, data that breaks
+  the next screen.
+
+An abuse case is scored like any risk (section 2), and only one of 4 or more becomes a test. Its test
+fails until the code refuses it, carries `[Trait("AB", "AB1")]`, and goes through the entry the user has
+(the endpoint, with a second user, for a thief). What the code should answer is part of the case: a 404
+where even knowing the record exists is a leak.
+
+```markdown
+- AB1: thief: a guardian reads another family's visit by changing the id; 404, nothing about it
+- AB2: forger: the booking request carries a price; the price is the clinic's, whatever was sent
+```
 
 ## 4. Pick the level
 
@@ -205,10 +226,11 @@ It prints criterion, status and tests:
 - **failing:** one of them failed;
 - **not run:** none of its tests are in the results.
 
-Edge cases (`EC` lines) are traced the same way, by default, and an edge that doesn't start with a
-criterion the story has is listed: it belongs to nothing. It also lists tests that name a criterion the
+Edge cases (`EC` lines) and abuse cases (`AB` lines) are traced the same way, by default; `--also abuse.md`
+reads the adversary's file beside the story, and an `AB` line that doesn't start with who abuses it is
+listed, as is an edge that doesn't start with a criterion the story has: it belongs to nothing. It also lists tests that name a criterion the
 story doesn't have, since a typo there hides a gap.
-`--require-all` exits 1 unless every criterion and every edge case is covered, or proven with `--trx`, so
+`--require-all` exits 1 unless every criterion, edge and abuse case is covered, or proven with `--trx`, so
 it can gate CI.
 `--json` is for a tool that reads it. It handles CRLF, a BOM, attributes on the method's line and class
 traits; `bin` and `obj` are skipped. Tested in `tests/testdesign` against the sample and a real TRX.
@@ -225,6 +247,8 @@ retest from `changed_members.py --since origin/main` and Roslyn's callers. `qa_v
 - Cases come from the story, before the code, and the developer writes them failing first.
 - Every criterion has at least one test that names it; every edge case designed is an `EC` line with a
   test of its own; every high risk has a story test.
+- A change a person can misuse gets its abuse cases (section 3c), scored like any risk; only a case of 4 or
+  more becomes a test.
 - No story is no reason to skip this: the criteria are inferred, marked `(inferred)`, and confirmed.
 - The technique fits the shape: a table for rules, edges for ranges, every pair for states.
 - A criterion that can't be tested as written becomes a question, never a guess.

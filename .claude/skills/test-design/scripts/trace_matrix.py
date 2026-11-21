@@ -2,7 +2,7 @@
 """Traces a story's acceptance criteria to the tests that prove them.
 
     python trace_matrix.py <story.md> <test folder> [--trx results.trx] [--require-all] [--json]
-                           [--prefix AC] [--trait AC]
+                           [--also abuse.md] [--prefix AC] [--trait AC]
 
 The story lists its criteria as `AC1: ...` lines (a list item, bold or plain). Tests name the criteria
 they prove with xUnit traits, on the method or on the class:
@@ -20,8 +20,12 @@ story doesn't have are listed too: a typo there would hide a gap.
 Edge cases are traced one by one, the same way: each case designed for a criterion is an `EC1: ...` line,
 starting with the criterion it belongs to (`EC1: AC2, boundary: booked exactly two hours before`), and its
 test carries `[Trait("EC", "EC1")]`. An edge case with no test fails --require-all like a criterion with
-none, instead of hiding under a criterion its main-path test already covers. AC and EC lines are both
-traced by default.
+none, instead of hiding under a criterion its main-path test already covers.
+
+Abuse cases are traced the same way: `AB1: thief: a guardian reads another family's visit by changing the
+id`, with `[Trait("AB", "AB1")]` on its test. The line starts with who is abusing it (cheater, thief,
+forger, vandal). `adversary` writes them to `abuse.md`, which `--also abuse.md` reads beside the story, so
+the two agents can work at once without writing the same file. AC, EC and AB lines are traced by default.
 
 A criterion written without a story, from the request, the code and the diff, starts with `(inferred)`:
 `AC1: (inferred) a cancelled visit frees its slot`. It is traced like any other, and marked so that a
@@ -40,7 +44,8 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-DEFAULT_PREFIXES = "AC,EC"
+DEFAULT_PREFIXES = "AC,EC,AB"
+ABUSERS = ("cheater", "thief", "forger", "vandal")
 
 
 def patterns(prefixes: str = DEFAULT_PREFIXES, trait: str | None = None) -> tuple[re.Pattern, re.Pattern]:
@@ -64,12 +69,13 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8-sig", errors="replace")
 
 
-def criteria(story: Path) -> dict[str, str]:
+def criteria(*stories: Path) -> dict[str, str]:
     found = {}
-    for line in read_text(story).splitlines():
-        m = CRITERION.match(line)
-        if m:
-            found.setdefault(m.group(1), m.group(2))
+    for story in stories:
+        for line in read_text(story).splitlines():
+            m = CRITERION.match(line)
+            if m:
+                found.setdefault(m.group(1), m.group(2))
     return found
 
 
@@ -136,8 +142,8 @@ def outcomes(trx: Path) -> dict[str, list[str]]:
     return results
 
 
-def matrix(story: Path, folder: Path, trx: Path | None) -> dict:
-    acs = criteria(story)
+def matrix(story: Path, folder: Path, trx: Path | None, also: list[Path] | None = None) -> dict:
+    acs = criteria(story, *(also or []))
     tests = traced_tests(folder)
     ran = outcomes(trx) if trx else None
     rows = []
@@ -156,14 +162,18 @@ def matrix(story: Path, folder: Path, trx: Path | None) -> dict:
         if ac.startswith("EC"):
             parent = BELONGS_TO.match(text)
             row["of"] = parent.group(1) if parent else None
+        if ac.startswith("AB"):
+            who = re.match(r"\s*(\w+)", text)
+            row["abuser"] = who.group(1).lower() if who and who.group(1).lower() in ABUSERS else None
         if ran is not None:
             row["not_run"] = [n for n in names if n not in ran]
         rows.append(row)
     unknown = sorted({ac for named in tests.values() for ac in named} - set(acs))
     orphans = sorted(r["criterion"] for r in rows if "of" in r and r["of"] not in acs)
+    unnamed = sorted(r["criterion"] for r in rows if "abuser" in r and r["abuser"] is None)
     return {"criteria": rows,
             "unknown": [{"criterion": ac, "tests": sorted(t for t, n in tests.items() if ac in n)} for ac in unknown],
-            "orphans": orphans}
+            "orphans": orphans, "unnamed": unnamed}
 
 
 def main(argv=None) -> int:
@@ -171,10 +181,12 @@ def main(argv=None) -> int:
     p.add_argument("story", type=Path)
     p.add_argument("tests", type=Path)
     p.add_argument("--trx", type=Path)
+    p.add_argument("--also", type=Path, action="append", default=[],
+                   help="another file of numbered lines to trace with the story (abuse.md)")
     p.add_argument("--require-all", action="store_true")
     p.add_argument("--json", action="store_true")
     p.add_argument("--prefix", default=DEFAULT_PREFIXES,
-                   help="the numbered lines to trace, comma-separated (default AC,EC; R for rules)")
+                   help="the numbered lines to trace, comma-separated (default AC,EC,AB; R for rules)")
     p.add_argument("--trait", default=None, help="the trait the tests use, with one --prefix (default: the prefix)")
     a = p.parse_args(argv)
     global CRITERION, TRAIT
@@ -182,7 +194,10 @@ def main(argv=None) -> int:
         CRITERION, TRAIT = patterns(a.prefix, a.trait)
     except ValueError as e:
         p.error(str(e))
-    result = matrix(a.story, a.tests, a.trx)
+    missing = [f for f in a.also if not f.is_file()]
+    if missing:
+        p.error(f"--also: no such file: {', '.join(map(str, missing))}")
+    result = matrix(a.story, a.tests, a.trx, a.also)
     if not result["criteria"]:
         print(f"no {a.prefix.split(',')[0]}1: ... lines found in {a.story}", file=sys.stderr)
         return 2
@@ -197,8 +212,11 @@ def main(argv=None) -> int:
             print(f"\nTests name {u['criterion']}, which the story doesn't have: {', '.join(u['tests'])}")
         for o in result["orphans"]:
             print(f"\n{o} doesn't start with a criterion the story has (EC1: AC2, ...)")
+        for u in result["unnamed"]:
+            print(f"\n{u} doesn't say who abuses it ({', '.join(ABUSERS)}): AB1: thief: ...")
     good = {"proven"} if a.trx else {"covered", "proven"}
-    if a.require_all and (any(row["status"] not in good for row in result["criteria"]) or result["orphans"]):
+    if a.require_all and (any(row["status"] not in good for row in result["criteria"]) or result["orphans"]
+                          or result["unnamed"]):
         return 1
     return 0
 
