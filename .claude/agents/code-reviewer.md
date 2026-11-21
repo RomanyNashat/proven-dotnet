@@ -43,6 +43,12 @@ this file.
 - [ ] Silent failures: each candidate from `silent_failures.py` (`skills/code-quality/`) judged silent or fine, with why; a catch that logs and carries on, or a fallback that returns a normal-looking value for a failed call, is a Warning at least, and Critical when it shows a patient wrong data
 - [ ] Aggregates: loaded whole before a method changes them (`skills/ddd-patterns/` §7); no `Equals` on `Id`; no Kafka call in a domain-event handler
 
+### Strength in proportion to risk
+- A risk of harm 3 (a wrong patient, a record shown to the wrong person, a skipped consent, money) with no
+  guard or no test for its worst case: **Critical**.
+- A guard, retry, cache, interface or layer that no risk or requirement asks for: a **Suggestion**,
+  marked over-engineered, with the simpler shape named. Robust and over-engineered are different things.
+
 ### C# Patterns
 - [ ] Modern C# features used appropriately (records, primary constructors, pattern matching)
 - [ ] Nullable reference types respected — no `!` (null-forgiving) without justification

@@ -32,3 +32,7 @@ What goes in each layer is in `ddd-patterns` ("The layers").
 - Expected failures are results (OneOf, ErrorOr); exceptions are for the unexpected, and a broken
   business rule is a domain exception (`OrderCannotBeCancelledException`).
 - Log exceptions structured, with a correlation id.
+
+## Proportion
+- Strength follows risk: guards, checks and tests where harm is high (a patient, privacy, consent,
+  money), the plain code where it is low. A guard no risk asks for is over-engineering (`test-design`).
