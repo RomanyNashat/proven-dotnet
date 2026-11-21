@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.50 — QA without a story, and every edge case traced
+- **`qa-engineer` and `/qa-scan` work with no story.** The criteria are inferred from the request, the code
+  and the diff, each marked `(inferred)` for the team to confirm (`test-design` 1.3.0, section 1). `/qa-scan`
+  no longer stops without a `story.md`: it lists the inferred criteria and says CAN'T SAY until they have
+  tests. `/tdd` starts qa-engineer for any change with behaviour.
+- **Edge cases are traced one by one.** Each is an `EC` line that starts with its criterion
+  (`EC1: AC2, boundary: ...`), with `[Trait("EC", "EC1")]` on its test. `trace_matrix.py` traces AC and EC
+  lines by default, fails `--require-all` on an edge with no test or one that names no criterion the story
+  has, and `qa_verdict.py` counts the inferred criteria on its verdict line.
+- **`tests/evals/fix-qa-nostory`:** the QA eval's service with no story. Pilot: both arms caught 8 of 8; the
+  harness run inferred and marked 14 criteria and traced 57 edge cases, at 2.7 times the cost. The mode
+  works; no difference between the arms is shown on this fixture.
+
 ## 0.3.49 — the diff-review diff applies where it was written
 - **`tests/evals/diff-review/change.diff`** is regenerated with context lines. It was a `-U0` diff, and a
   plain `git apply` puts zero-context hunks at the end of the file, so the export's endpoints landed after
