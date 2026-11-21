@@ -230,6 +230,14 @@ def exception_handler_diagnostics(service):
                 yield rel, line
 
 
+@check("config-json-null", "behaviour", ".NET 10", "A null in appsettings binds over the default",
+       "On 8 and 9 a null failed the bind at start-up; on 10 \"Retries\": null binds as 0 and a string as null, and the service starts. Remove the key to fall back, and validate the options at start-up.")
+def config_json_null(service):
+    for rel, text in service.of(".json"):
+        for line, _ in lines(text, r'"[^"]*"\s*:\s*null\b'):
+            yield rel, line
+
+
 @check("npgsql-connection-lifetime", "behaviour", "Npgsql 9", "Npgsql connections now close after an hour",
        "Connection Lifetime defaults to 3600 s. Keep it, or set it in the connection string on purpose.")
 def npgsql_connection_lifetime(service):

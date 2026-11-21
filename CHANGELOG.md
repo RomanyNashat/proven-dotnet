@@ -3,6 +3,21 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.48 — the upgrade's defaults that no compiler error points at, tested
+- **`dotnet-upgrade` 1.3.0:** a tested section for what changes quietly on .NET 10:
+  - a JSON `null` in appsettings failed the bind on 8 and 9 (read as `""`), and on 10 binds `0` or `null`
+    over an earlier file and the defaults, so the service starts and sends with no retries. Measured with
+    `Microsoft.Extensions.Configuration` 8.0.1, 9.0.0 and 10.0.0; the sample validates the options at
+    start-up so the deploy stops instead;
+  - an environment variable set to `""` is a value and wins over the JSON;
+  - EF Core 10 adds its own `Application Name` on SQL Server, so EF and Dapper on one setting get two
+    connection strings and two pools; with the service named in the setting EF keeps it;
+  - Npgsql closes a pooled connection after an hour;
+  - `HttpClientFactory` logs hide the query string and header values.
+- **The preflight scan** gains `config-json-null` (a `null` in a JSON settings file).
+- **SQL Server:** EF and Dapper writing in one `TransactionScope` on a setting with no `Application Name`
+  need a distributed transaction; named, both rows commit locally (`MsSql/SharedTransactionTests.cs`).
+
 ## 0.3.47 — a fake clock moved on a timer
 - **`polly-resilience`:** with the test's `FakeTimeProvider` in DI, Polly's timeouts, delays and break
   durations read it. A helper that moves the clock a second every 50 ms while a real call runs makes a
