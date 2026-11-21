@@ -10,13 +10,19 @@ diff --git a/HomeReadings/Api/ReadingEndpoints.cs b/HomeReadings/Api/ReadingEndp
 index 8efc7e0..2d5a168 100644
 --- a/HomeReadings/Api/ReadingEndpoints.cs
 +++ b/HomeReadings/Api/ReadingEndpoints.cs
-@@ -25,0 +26,6 @@ public static class ReadingEndpoints
+@@ -23,6 +23,12 @@ public static class ReadingEndpoints
+         readings.MapGet("/latest", async Task<IResult> (ReadingQueries queries, CancellationToken ct) =>
+             await queries.LatestAsync(ct) is { } reading ? TypedResults.Ok(reading) : TypedResults.NotFound());
+ 
 +        readings.MapGet("/export", async (DateTime from, DateTime to, ReadingExport export, CancellationToken ct) =>
 +            TypedResults.Text(await export.AllAsync(from, to, ct), "text/csv"));
 +
 +        readings.MapGet("/{id:int}/export", async Task<IResult> (int id, ReadingExport export, CancellationToken ct) =>
 +            await export.OneAsync(id, ct) is { } csv ? TypedResults.Text(csv, "text/csv") : TypedResults.NotFound());
 +
+         readings.MapPost("/{id:int}/photo", async Task<IResult> (int id, IFormFile photo, ReadingService service, CancellationToken ct) =>
+             await service.AttachPhotoAsync(id, photo, ct) ? TypedResults.NoContent() : TypedResults.NotFound())
+             .DisableAntiforgery();
 diff --git a/HomeReadings/Application/ReadingExport.cs b/HomeReadings/Application/ReadingExport.cs
 new file mode 100644
 index 0000000..a2e5036
@@ -65,5 +71,11 @@ diff --git a/HomeReadings/Program.cs b/HomeReadings/Program.cs
 index 8e8fe18..bbdaa6e 100644
 --- a/HomeReadings/Program.cs
 +++ b/HomeReadings/Program.cs
-@@ -17,0 +18 @@ builder.Services.AddScoped<ReadingQueries>();
+@@ -15,6 +15,7 @@ builder.Services.AddHttpContextAccessor();
+ builder.Services.AddScoped<ICurrentPatient, HttpCurrentPatient>();
+ builder.Services.AddScoped<ReadingService>();
+ builder.Services.AddScoped<ReadingQueries>();
 +builder.Services.AddScoped<ReadingExport>();
+ builder.Services.AddSingleton<PhotoStore>();
+ 
+ builder.Services.AddHttpClient<CareTeamClient>(c => c.BaseAddress = new Uri(builder.Configuration["CareTeam:BaseAddress"]!))

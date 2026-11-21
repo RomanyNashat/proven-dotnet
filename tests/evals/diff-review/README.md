@@ -4,7 +4,8 @@
 rest. This eval checks that on a change made for it.
 
 - The base is `../fix-lab/HomeReadings`, as it is: thirteen planted flaws the change doesn't touch.
-- `change.diff` (apply with `git apply` in a copy of the base) adds a CSV export for the doctor, with
+- `change.diff` (apply with `git apply` in a copy of the base; it carries context lines since 0.3.49, so a
+  plain `git apply` puts each hunk where it was written) adds a CSV export for the doctor, with
   three flaws of its own: unescaped CSV fields (formula injection), the national ID in a log line, and a
   "share one reading" route that calls the old query with no owner check (the change reaches an old IDOR).
 - `key.md` is the answer key, which no run sees.

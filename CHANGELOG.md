@@ -3,6 +3,12 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.49 — the diff-review diff applies where it was written
+- **`tests/evals/diff-review/change.diff`** is regenerated with context lines. It was a `-U0` diff, and a
+  plain `git apply` puts zero-context hunks at the end of the file, so the export's endpoints landed after
+  the class and the service didn't build. 0.3.44 put this down to the base having changed; it hadn't. The
+  scope pilot's README says so, and that its own `-U0` diff needs `git apply --unidiff-zero`.
+
 ## 0.3.48 — the upgrade's defaults that no compiler error points at, tested
 - **`dotnet-upgrade` 1.3.0:** a tested section for what changes quietly on .NET 10:
   - a JSON `null` in appsettings failed the bind on 8 and 9 (read as `""`), and on 10 binds `0` or `null`
