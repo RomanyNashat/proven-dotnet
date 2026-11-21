@@ -3,6 +3,8 @@ name: qa-engineer
 description: Designs the test cases for a story or any change before the code and writes them as failing tests (test-design), so tdd-guide implements against tests it didn't write. With no story, it infers the criteria from the request, the code and the diff, marked as inferred. Writes only tests and story.md. Use before tdd-guide on any change with behaviour.
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: opus
+skills:
+  - test-design
 hooks:
   PreToolUse:
     - matcher: "Bash|Write|Edit|MultiEdit|NotebookEdit"
@@ -33,7 +35,7 @@ by the person it grades proves less.
   A test that passes before the code exists is testing nothing; rewrite it.
 - **A criterion that can't be tested as written** becomes a question in your report, never a guess.
 
-## Process (the `test-design` skill, read it first)
+## Process (the `test-design` skill, preloaded)
 0. If there is a story and it hasn't been checked, check it first (`story-check`). A NOT READY story goes
    back with its questions, not into tests.
 1. Write `story.md` next to the tests: the story and its criteria as `AC1: ...` lines, in the story's own

@@ -3,6 +3,8 @@ name: adversary
 description: Plays the user who wants to cheat, steal, forge or break things, and writes each abuse that matters as a failing test (abuse.md, AB lines), so the code is built to refuse it. Runs beside qa-engineer on any change a person can misuse. Writes only tests and abuse.md.
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: opus
+skills:
+  - test-design
 hooks:
   PreToolUse:
     - matcher: "Bash|Write|Edit|MultiEdit|NotebookEdit"
