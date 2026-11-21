@@ -1,5 +1,24 @@
 # Eval results: the fix eval, round five
 
+## 2026-11-20: the no-rules arm, rerun on Opus
+
+Round five's no-rules runs had taken Sonnet by default (see Disclosures). The same three runs again, with
+the model named (`claude-opus-5-5`, confirmed in each run's usage record) and medium effort like the other
+arms. `run-round.sh` has a `no-rules` arm for it now: an empty home. Graded with the hidden tests.
+
+| | With proven | Rules only | No rules (Opus) | No rules (Sonnet, before) |
+|---|---|---|---|---|
+| **Findings fixed** (3 runs × 8) | 24 / 24 | 20 / 24 | **19 / 24** | 10 / 24 |
+| Regressions kept (3 runs × 6) | 18 / 18 | 18 / 18 | **18 / 18** | 12 / 18 |
+| Missed | none | K05 in all three, K03 in one | **K08 in all three, K05 in two** | K05 and K08 in all three, K03 and K07 in one |
+| Cost per run | $8.70 to $10.60 | $1.50 to $1.80 | **$1.17 to $1.46** | $0.33 to $0.37 |
+
+- **Most of the old gap was the model.** On the same model the rules add one finding over nothing: K08
+  (clock skew), which every run with the rules fixed and no run without them did.
+- **K05 is not the skills' alone any more.** One no-rules run moved the queued texts out of memory, which
+  no rules-only run did. With proven still fixed it in all three; the others in one of six.
+- Copies in `runs/no-rules-opus-*`. They were graded on PostgreSQL 16 here and CI grades them again on 17.
+
 ## 2026-10-29: a task that doesn't hand over the setting, three runs per arm (proven-dotnet 0.3.4)
 
 Held out: `LabResults` was written after the skills, and nothing in the harness changed for it. Each run
@@ -68,8 +87,8 @@ and passed every regression, and both references passed all 14 tests.
   took the CLI's default in their empty home, the rules-only runs and the consolidations took Opus in
   theirs, and the reviewers and fixers took it from their agent files (`model: opus`). So no rules
   10/24 against rules only 20/24 measures the model and the rules together. With proven against rules
-  only (24/24 and 20/24, K05 the difference) is the same model on both sides. Not rerun: evals are
-  paused.
+  only (24/24 and 20/24, K05 the difference) is the same model on both sides. Rerun on Opus on
+  2026-11-20 (top of this file): 19/24.
 - **Every step ran at medium effort**, the CLI's default, because the clean environment didn't carry
   the session's effort setting. The same for all arms.
 - **Each run had the same short list of allowed tools** (read, edit, write, search, `dotnet`, `ls`,
