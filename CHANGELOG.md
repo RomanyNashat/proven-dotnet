@@ -3,6 +3,26 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.45 — round five's no-rules arm on Opus, and effort per agent
+- **Round five's no-rules arm, rerun on Opus** (`tests/evals/fix-labs`): 19/24 findings and 18/18
+  regressions, against 10/24 and 12/18 when those runs had taken Sonnet by default. Most of the old gap was
+  the model. On the same model the rules add one finding over no harness (K08, clock skew), and one
+  no-rules run fixed K05, so it is no longer the skills' alone. `run-round.sh` has a `no-rules` arm.
+- **Effort per agent, measured** (`tests/evals/effort`, bar written first): with the subagents at low the
+  with-proven arm missed K08 ($3.49), at medium it fixed all 8 ($5.02), at high it missed K08 again (about
+  $6.20). No agent names its own effort; they keep the session's. `run-round.sh` takes
+  `EVAL_SUBAGENT_EFFORT` for runs like these.
+
+## 0.3.44 — a change holds only what its task needs
+- **`tdd-guide`:** the refactor step cleans up the code the task wrote, not the code around it. What it
+  notices outside the task (a bug next door, a name, dead code) goes in its report as a follow-up, not into
+  the change: a bug fix that carries a refactor can't be reviewed or reverted on its own.
+- **No reviewer rule, by measurement** (`tests/evals/diff-review/scope-pilot`): a planted rename that also
+  doubled a batch size, and an option no caller passes, were both named as outside the story by
+  `code-reviewer` as it is. With a rule added it did the same, so the rule isn't added.
+- **Found on the way:** `tests/evals/diff-review/change.diff` no longer applies where it was written (a
+  `-U0` diff against a base that has changed). It needs regenerating before that eval runs again.
+
 ## 0.3.43 — the skill-hub eval
 - **`tests/evals/skill-hubs`:** the eval the listing-budget ADR waited for. Nine hubs are listed instead of
   the 63 skills, in a third of the room, against today's flat listing. The bar was written first.

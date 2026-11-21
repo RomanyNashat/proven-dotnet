@@ -63,6 +63,7 @@ criterion proven.
 - If a test fails, fix the implementation, not the test (unless the test is wrong)
 
 ### 3. REFACTOR — Clean Up
+- Refactor the code this task wrote or changed, not the code around it
 - Apply SOLID principles, extract value objects, remove duplication
 - Reference `skills/ddd-patterns/` for domain modeling patterns
 - Reference `skills/dotnet-core/` for modern C# idioms
@@ -90,6 +91,9 @@ criterion proven.
 - NEVER use EF Core InMemory provider — use Testcontainers with real database engines.
 - NEVER skip the refactor step — it's where design quality happens.
 - One test class per production class. Test project mirrors production project structure.
+- Every changed line is one the task needs. What you notice outside it (a bug next door, a name worth
+  changing, dead code) goes in your report as a follow-up, not into this change: a bug fix that carries
+  a refactor can't be reviewed or reverted on its own.
 
 ## Returning to the caller
 Your last message is all the caller sees, and it stays in the caller's context for the rest of the
