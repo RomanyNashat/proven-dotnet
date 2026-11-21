@@ -121,6 +121,15 @@ def tool_hook(tool, path, policy="qa", cwd="/repo"):
 
 
 class QaEngineer(unittest.TestCase):
+    def test_story_the_adversary_writes_its_abuse_cases_and_their_tests_but_not_the_fix(self):
+        # Given the adversary working beside the QA engineer on the same story
+        for path in ["/repo/tests/Clinic.Tests/story.md", "/repo/tests/Clinic.Tests/abuse.md",
+                     "/repo/tests/Clinic.Tests/Booking/BookingAbuseTests.cs"]:
+            self.assertEqual(0, tool_hook("Write", path).returncode, path)
+        # When it would patch the hole it found, then it is refused: the fix is the implementer's
+        self.assertEqual(2, tool_hook("Edit", "/repo/src/Clinic/Booking/BookingEndpoints.cs").returncode)
+        self.assertEqual(2, tool_hook("Write", "/repo/src/Clinic/abuse.md.cs").returncode)
+
     def test_story_the_qa_engineer_writes_the_tests_and_the_story_but_not_the_code(self):
         # Given the QA engineer designing a booking story's tests
         for path in ["/repo/tests/Clinic.Tests/Booking/BookingTests.cs", "/repo/src/Clinic.Tests/story.md",
@@ -130,7 +139,7 @@ class QaEngineer(unittest.TestCase):
         # When it would write the code the tests are for, then it is refused, with who writes it
         result = tool_hook("Edit", "/repo/src/Clinic/Booking/BookingPolicy.cs")
         self.assertEqual(2, result.returncode)
-        self.assertIn("this agent writes only tests and story.md", result.stderr)
+        self.assertIn("this agent writes only tests, story.md and abuse.md", result.stderr)
         # And a path that climbs out of the test project is refused too
         self.assertEqual(2, tool_hook("Write", "/repo/tests/Clinic.Tests/../../src/Clinic/Booking.cs").returncode)
 
@@ -204,7 +213,7 @@ class Installed(unittest.TestCase):
             subprocess.run([sys.executable, os.path.join(repo, "tools", "layer.py"), "--claude-dir", claude,
                             "install", os.path.join(repo, ".claude")], check=True, capture_output=True)
             for agent, write in (("handover-repo-analyst", "git commit -m x"), ("health-analyst", "touch src/a.cs"),
-                                 ("qa-engineer", "touch src/a.cs")):
+                                 ("qa-engineer", "touch src/a.cs"), ("adversary", "touch src/a.cs")):
                 text = open(os.path.join(claude, "agents", f"{agent}.md"), encoding="utf-8").read()
                 command = re.search(r'command: "(.*read-only-guard\.py [a-z-]+)"', text).group(1)
                 self.assertNotIn("{", command)

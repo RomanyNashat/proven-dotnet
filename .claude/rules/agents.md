@@ -15,6 +15,7 @@ User request
   → planner (decompose into tasks with acceptance criteria)
   → architect (if design decisions needed: service boundaries, DB schema, ADRs)
   → qa-engineer (the failing tests and their edge cases, from the story or criteria inferred from the request)
+    + adversary, at the same time (abuse cases as failing tests, when a person can misuse the change)
   → tdd-guide (write tests first, then implement; against qa-engineer's tests when there are any)
   → [parallel review]:
       code-reviewer (quality, patterns, C# idioms)

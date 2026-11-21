@@ -103,6 +103,46 @@ class Stories(unittest.TestCase):
         self.assertEqual(1, result.returncode)
         self.assertIn("EC2 doesn't start with a criterion the story has", result.stdout)
 
+    def _abuse(self, lines: str, with_test: bool) -> tuple[Path, Path, Path]:
+        story, tests = self._edge_story(with_edge_test=True)
+        abuse = self.tmp / "abuse.md"
+        abuse.write_text("# Abuse cases\n\n" + lines, encoding="utf-8")
+        if with_test:
+            self._abuse_test(tests)
+        return story, tests, abuse
+
+    @staticmethod
+    def _abuse_test(tests: Path) -> None:
+        (tests / "CancelAbuseTests.cs").write_text(
+            "namespace Visits.Tests;\n\npublic sealed class CancelAbuseTests\n{\n"
+            '    [Fact, Trait("AB", "AB1")]\n'
+            "    public void Cancel_AnotherPatientsVisitById_IsNotFound() { }\n}\n", encoding="utf-8")
+
+    def test_story_a_thief_case_with_no_test_keeps_the_matrix_from_passing(self):
+        # Given qa-engineer's story is all proven, and adversary wrote a thief case beside it with no test yet
+        story, tests, abuse = self._abuse("- AB1: thief: cancels another patient's visit by changing the id\n", with_test=False)
+        # When both files are traced together
+        result = run(story, tests, "--also", abuse, "--require-all", "--json")
+        # Then the abuse case is a row like any criterion, uncovered, and the build stops
+        self.assertEqual(1, result.returncode)
+        rows = {r["criterion"]: r for r in json.loads(result.stdout)["criteria"]}
+        self.assertEqual(("uncovered", "thief"), (rows["AB1"]["status"], rows["AB1"]["abuser"]))
+        # And once its test is written, the matrix passes
+        self._abuse_test(tests)
+        self.assertEqual(0, run(story, tests, "--also", abuse, "--require-all").returncode)
+
+    def test_an_abuse_case_that_doesnt_say_who_abuses_it_fails_the_build(self):
+        story, tests, abuse = self._abuse("- AB1: cancels another patient's visit by changing the id\n", with_test=True)
+        result = run(story, tests, "--also", abuse, "--require-all")
+        self.assertEqual(1, result.returncode)
+        self.assertIn("AB1 doesn't say who abuses it", result.stdout)
+
+    def test_also_with_a_missing_file_is_an_error(self):
+        story, tests = self._edge_story(with_edge_test=True)
+        result = run(story, tests, "--also", self.tmp / "abuse.md")
+        self.assertEqual(2, result.returncode)
+        self.assertIn("no such file", result.stderr)
+
     def test_trait_with_two_prefixes_is_refused(self):
         result = run(SAMPLE / "story.md", SAMPLE, "--prefix", "AC,EC", "--trait", "AC")
         self.assertEqual(2, result.returncode)
