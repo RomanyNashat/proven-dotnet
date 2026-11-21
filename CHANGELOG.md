@@ -3,6 +3,17 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.53 — the abuse eval
+- **`tests/evals/fix-abuse`:** a clinic's visit desk to build from a request that says nothing about misuse,
+  graded by hidden tests: 2 regressions, 6 for what was asked, 8 abuses (a thief by id, a forger by price or
+  patient, a cheater by racing a code or a slot, a slot that has started). The reference passes all 16; a
+  naive copy that keeps every stated rule refuses 2 of the 8. The race tests hold each store read a moment
+  through a proxy, so a desk with no lock fails every time, not now and then. CI grades every copy
+  (`fix-evals.yml`, job `grade-abuse`).
+- **Pilot:** no rules, rules only and the harness all refused 8 of 8. Opus 5.5 refuses these abuses by
+  habit, so the fixture can't show what `adversary` adds; its run named all 8 in `abuse.md` before the code,
+  at five times the cost. The bar's falsifier held, and the README says so.
+
 ## 0.3.52 — adversary: the user who wants to misuse it
 - **New agent `adversary`** (Opus). It plays a cheater, a thief, a forger and a vandal against a change, and
   writes each abuse worth a test (a risk of 4 or more) as an `AB` line in `abuse.md` with a test that fails

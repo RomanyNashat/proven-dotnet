@@ -49,3 +49,28 @@ eight times.
   cost on this kind of change, and that is the result.
 - **Also reported:** cost and time per run, and how many abuse tests each wrote.
 - One run per arm: "no difference shown", not "no difference".
+
+## The pilot (2026-11-21, at 1404be5)
+
+| Run | Abuses refused | N, R | Tests written | Cost | Time |
+|---|---|---|---|---|---|
+| `runs/norules-1` (no rules) | 8 / 8 | 8 / 8 | 35 | $0.53 | 2.3 min |
+| `runs/rules-1` (rules only) | 8 / 8 | 8 / 8 | 35 | $0.49 | 2.4 min |
+| `runs/proven-1` (`qa-engineer` + `adversary`, then `tdd-guide`) | 8 / 8 | 8 / 8 | 73 | $2.63 | 2.7 min |
+
+Graded locally with `tools/grade-one.sh`; CI grades the three copies again (job `grade-abuse`).
+
+**Against the bar:** the falsifier held. The harness arm refused no more than rules only, and no more than
+the model with no rules at all: every run refused all 8. On their own, the no-rules and rules-only runs
+checked access in all four methods, took the price from the slot, and locked booking and cancelling.
+Opus 5.5 refuses these classic abuses unprompted, so this fixture can't show what `adversary` adds.
+
+What the harness run did differently: `adversary` wrote 14 `AB` lines (7 cheater, 4 thief, 2 vandal,
+1 forger) that named all 8 hidden abuses before any code existed, each with a test, and
+`trace_matrix.py --also abuse.md --require-all` passes on them. The other runs' tests cover the same guards
+without saying which abuse each one stops. That is worth something to the next reader, and it cost five
+times as much.
+
+One run per arm: no difference shown. A second round would need abuses the model doesn't refuse by
+habit: ones that turn on a domain fact the request doesn't state (a dependent who has turned 18, a refund
+on a cancel, a code shared across a family), not on a textbook check.
