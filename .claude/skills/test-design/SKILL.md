@@ -106,8 +106,10 @@ When none of them settles it, the answer is a question in the report, never a gu
 ## 3c. The user who wants to misuse it
 
 The criteria describe a user who wants the feature to work. Some don't: they want more than their share,
-someone else's data, or to spoil it for others. `adversary` plays them beside `qa-engineer`, and each case
-worth a test becomes an `AB` line in `abuse.md`, starting with who:
+someone else's data, or to spoil it for others. On a high-risk change (6 or more) `adversary` plays them
+beside `qa-engineer`, and each case worth a test becomes an `AB` line in `abuse.md`; on any other change
+`qa-engineer` asks the same four and writes a case worth a test as an `EC` line under its criterion. The four
+(an `AB` line starts with which one):
 - **cheater:** their own account, the rules bent: twice, out of order, late, past a limit, a step skipped;
 - **thief:** someone else's record or field: a changed id, a list too wide, a response that says too much;
 - **forger:** what the client shouldn't decide: a price, a role, an owner, a status, a date, a hidden field;

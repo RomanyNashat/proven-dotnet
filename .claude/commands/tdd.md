@@ -6,11 +6,13 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 
 Delegate to **qa-engineer** first, for a story or a plain request alike: it writes `story.md` (the
 criteria, inferred and marked when there's no story, and every edge case as an `EC` line) and the failing
-tests (`test-design`). When a person can misuse the change (it takes an id, money, a limit, a role, input
-others will see), start **adversary** in the same message, so the two run at once: it writes `abuse.md`
-and the failing abuse tests, never `story.md`. Then delegate to the **tdd-guide** agent, which makes them
+tests (`test-design`). When the change carries a high risk (a risk of 6 or more: a patient, another person's
+data, consent, money), start **adversary** in the same message, so the two run at once: it writes
+`abuse.md` and the failing abuse tests, never `story.md`. On other changes qa-engineer asks its four
+questions itself (`test-design`, section 3c): the model refuses ordinary misuse unprompted, so the extra
+agent pays only where a slip would hurt someone (`tests/evals/fix-abuse*`). Then delegate to the **tdd-guide** agent, which makes them
 all pass without editing them. Skip qa-engineer only for a change with no behaviour (a rename, a comment,
-a package bump), and adversary for a change nobody can misuse (an internal job's logging, a refactor).
+a package bump).
 
 Follow the Red-Green-Refactor cycle strictly:
 
