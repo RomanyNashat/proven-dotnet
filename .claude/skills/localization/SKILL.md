@@ -390,6 +390,76 @@ every engine.
 - Mixed Arabic text with Latin digits or codes reads right-to-left with left-to-right runs. Check how the
   final text renders on a phone before shipping a template.
 
+### Counts in Arabic text
+
+"لديك {0} مواعيد" is right only from 3 to 10. Arabic has six forms where English has two: لا مواعيد,
+موعد واحد, موعدان, 5 مواعيد, 11 موعدًا, 100 موعد. Neither resx nor a JSON file picks the form, so keep one
+text per form (`Sms.Upcoming.zero` … `.other`) and choose it by CLDR's rules, which are arithmetic and need
+no ICU. A form a language doesn't have falls back to `.other`.
+
+<!-- sample: tests/SkillSamples.Tests/Localization/Plurals.cs -->
+```csharp
+/// <summary>CLDR's plural categories. Arabic uses all six; English uses One and Other.</summary>
+public enum PluralCategory
+{
+    Zero,
+    One,
+    Two,
+    Few,
+    Many,
+    Other,
+}
+
+/// <summary>
+/// Which plural form a count takes, by CLDR's rules for whole numbers. Arithmetic only, no culture, so it
+/// works on an image without ICU.
+/// </summary>
+public static class Plurals
+{
+    public static PluralCategory For(string language, long count) => language switch
+    {
+        LanguageHeader.Arabic => Arabic(count),
+        _ => count == 1 ? PluralCategory.One : PluralCategory.Other,
+    };
+
+    // لا مواعيد (zero) · موعد واحد (one) · موعدان (two) · 3-10 مواعيد (few) · 11-99 موعدًا (many) ·
+    // 100, 101, 102 موعد (other). From 103 on the last two digits decide: 103 is few, 111 is many.
+    private static PluralCategory Arabic(long count)
+    {
+        var n = Math.Abs(count);
+        var lastTwo = n % 100;
+        return n switch
+        {
+            0 => PluralCategory.Zero,
+            1 => PluralCategory.One,
+            2 => PluralCategory.Two,
+            _ when lastTwo is >= 3 and <= 10 => PluralCategory.Few,
+            _ when lastTwo is >= 11 and <= 99 => PluralCategory.Many,
+            _ => PluralCategory.Other,
+        };
+    }
+}
+
+public static class PluralTranslations
+{
+    /// <summary>
+    /// The text for a count: the key with the category added (<c>Sms.Appointments.few</c>), then the key's
+    /// <c>.other</c>, then English as for any key. The count is filled in invariant, as every placeholder is.
+    /// </summary>
+    public static async Task<string> GetCountAsync(this TranslationCatalog catalog, string key, string language, long count,
+        CancellationToken cancellationToken = default)
+    {
+        var category = Plurals.For(language, count).ToString().ToLowerInvariant();
+        var exact = $"{key}.{category}";
+        var text = await catalog.GetAsync(exact, language, cancellationToken);
+        if (text == exact) text = await catalog.GetAsync($"{key}.other", language, cancellationToken);
+        return string.Format(System.Globalization.CultureInfo.InvariantCulture, text, count);
+    }
+}
+```
+
+A resx service keeps the same keys and calls `Plurals.For` itself.
+
 ## 11. Logs and OpenAPI
 
 - **Logs are never localized**: English messages, invariant values. With the culture split in §4 the
@@ -462,3 +532,4 @@ public void BuildReference_UnderArabicCulture_StaysGregorianAndLatin()
 - resx in a service whose runtime has no ICU, without the guard.
 - A bilingual column without `HasMaxLength`, or both languages returned when the caller wanted one.
 - Arabic search on the raw column instead of a normalized one.
+- A count in Arabic text with one template for every number, instead of a text per plural form.

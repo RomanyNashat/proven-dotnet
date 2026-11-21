@@ -4,12 +4,13 @@
 #
 #   bash tests/evals/tools/run-round.sh <fixture> <arm> <ref> <run folder>
 #     fixture   a folder under tests/evals with task.md and fixture.json (fix-sync, fix-labs, ...)
-#     arm       with-proven | rules-only
+#     arm       with-proven | rules-only | no-rules
 #     ref       the git ref whose .claude/ is installed (main, a branch, a commit)
 #     run folder an empty folder outside the repo; the service copy, the transcript and usage land there
 #
 # Model and effort are named, never taken from the CLI's defaults (round five's lesson): EVAL_MODEL
-# (default claude-opus-5-5) and EVAL_EFFORT (default medium, as rounds four and five ran).
+# (default claude-opus-5-5) and EVAL_EFFORT (default medium, as rounds four and five ran); EVAL_SUBAGENT_EFFORT
+# optionally sets the subagents' effort apart from the session's.
 set -euo pipefail
 FIXTURE="$1"; ARM="$2"; REF="$3"; RUN="$4"
 REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -30,7 +31,10 @@ if [ "$ARM" = rules-only ]; then
 import json, sys
 p = sys.argv[1]; s = json.load(open(p)); s.pop("hooks", None); json.dump(s, open(p, "w"), indent=2)
 PY
-elif [ "$ARM" != with-proven ]; then echo "arm must be with-proven or rules-only"; exit 1; fi
+elif [ "$ARM" = no-rules ]; then
+  # Nothing of the harness: an empty home, the model alone.
+  rm -rf "$RUN/home/.claude"
+elif [ "$ARM" != with-proven ]; then echo "arm must be with-proven, rules-only or no-rules"; exit 1; fi
 git -C "$REPO" rev-parse "$REF" > "$RUN/ref.txt"
 
 cp -R "$SRC/$SERVICE" "$RUN/work/$SERVICE"
@@ -55,8 +59,13 @@ fi
 TOOLS='Read,Edit,Write,Glob,Grep,TodoWrite,Bash(dotnet *),Bash(python3 *),Bash(ls *),Bash(mkdir *),Bash(cat *),Bash(find *),Bash(grep *),Bash(rm *),Bash(cp *),Bash(mv *)'
 [ "$ARM" = with-proven ] && TOOLS="$TOOLS,Skill,Agent,Task"
 
+# EVAL_SUBAGENT_EFFORT, when set, gives the subagents their own effort (CLAUDE_CODE_SUBAGENT_EFFORT); unset,
+# they take the session's, as every round before E4 ran.
+SUBAGENT=()
+[ -n "${EVAL_SUBAGENT_EFFORT:-}" ] && SUBAGENT=(CLAUDE_CODE_SUBAGENT_EFFORT="$EVAL_SUBAGENT_EFFORT")
+
 cd "$RUN/work"
-env -i PATH="$PATH" HOME="$RUN/home" DOTNET_CLI_HOME="$RUN/home" NUGET_PACKAGES="$RUN/home/.nuget/packages" \
+env -i "${SUBAGENT[@]}" PATH="$PATH" HOME="$RUN/home" DOTNET_CLI_HOME="$RUN/home" NUGET_PACKAGES="$RUN/home/.nuget/packages" \
   ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" HTTP_PROXY="${HTTP_PROXY:-}" \
   NO_PROXY="${NO_PROXY:-}" SSL_CERT_FILE="${SSL_CERT_FILE:-}" NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-}" \
   REQUESTS_CA_BUNDLE="${REQUESTS_CA_BUNDLE:-}" \
