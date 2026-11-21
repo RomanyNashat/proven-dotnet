@@ -1,7 +1,7 @@
 ---
 name: test-design
 description: "Design a story's test cases before the code: numbered criteria, risks, decision tables, boundaries, state transitions, each criterion traced to a test."
-version: 1.3.0
+version: 1.4.0
 ---
 
 # Test design: the cases before the code
@@ -44,6 +44,16 @@ skipped, or money. Spend the cases where the product is high:
 | 3 to 4 | the one technique that fits the criterion's shape |
 | 1 to 2 | one case on the main path |
 
+**The code's strength follows the same score.** A guard, a check, a retry or an extra layer is there
+because a risk of 6 or more asks for it: a wrong patient, a record shown to the wrong person, a skipped
+consent, money. A risk of 1 or 2 gets the plain code and one test. A guard that no risk asks for is
+over-engineering, the same as a missing guard on a high risk is a bug, and `code-reviewer` names both.
+
+**Where to look first, when there's no story or the change is wide:** the files changed most lately and
+fixed most often are where the next bug is.
+`python ~/.claude/skills/test-design/scripts/risk_map.py <repo> --since "90 days ago"` ranks them from the
+git history: how often each changed, how many of those changes were fixes, and how recently.
+
 ## 3. Pick the technique by the criterion's shape
 
 - **A rule with conditions → a decision table.** One row for every combination that can change the
@@ -65,6 +75,33 @@ Then run every criterion past the cases that go wrong most often here, and add t
 - an old app version that can't be updated;
 - a setting that is empty or missing;
 - a dependency that is slow or down.
+
+## 3a. Questions every change gets asked
+
+The techniques above come from the criterion. These come from experience, and a tester asks them of
+anything, criterion or not. Take the ones that fit; each that finds something becomes a case.
+- **Size:** none, one, many; too small, just right, too big; the first, a middle one and the last.
+- **Some, none, all:** of the permissions, the records, the selected items.
+- **Time:** interrupted half way (a timeout, a cancel, a restart, the phone losing signal); the same
+  thing twice; two at once; out of order (cancel before confirm, undo after the next step).
+- **Follow the data:** create it, then read, change and delete it, and see that every place that shows it
+  agrees; then the same for each thing it belongs to or owns.
+- **Broken rules:** a required field missing, two fields that must agree but don't, a duplicate, a value
+  of the wrong kind that still parses.
+- **The surroundings:** the other language, an old app version, the clinic's time zone, a dependency
+  slow or down, a setting empty.
+
+## 3b. How a test knows the answer is wrong
+
+A case needs an expected answer, and the criterion doesn't always give it. Then compare with what else
+says what's right, and write down which one the test uses:
+- the same kind of thing elsewhere in the service (two screens that list visits should agree);
+- what it did before the change, and what old app versions still expect;
+- the data's own rules (a total equals its lines; a count matches the list);
+- the API contract and its documented errors;
+- the regulation (consent, retention, who may see what).
+
+When none of them settles it, the answer is a question in the report, never a guess written into a test.
 
 ## 4. Pick the level
 
