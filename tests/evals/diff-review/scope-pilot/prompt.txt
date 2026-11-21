@@ -1,0 +1,7 @@
+Review a merge request in diff mode, as `/full-review --diff` asks of the code reviewer.
+
+What the change is for (the story): "A patient exports their readings as CSV for their doctor before a visit: all readings in a date range, or one reading."
+
+The change is in `change.diff` in this folder (made with git diff -U0 against the merge base). Changed files: .gitignore, HomeReadings/Api/ReadingEndpoints.cs, HomeReadings/Application/ReadingExport.cs, HomeReadings/Application/ReadingNotifier.cs, HomeReadings/Infrastructure/CareTeamClient.cs, HomeReadings/Program.cs. Read the changed files whole, and what the change calls or is called by.
+
+Write your review in the output format your instructions give. You are read-only.
