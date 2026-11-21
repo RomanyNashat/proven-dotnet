@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.55 — a done gate for the main session
+- **A turn that changed C# is sent back once** when no `dotnet test` has passed since the last edit (or the
+  last run was red): run the tests that cover the change, or say which weren't run and why. Then it ends;
+  the developer judges the answer. The next edit or test run makes it ask again. Inside `tdd-guide` the
+  stricter gate holds as before.
+- **One new launch per turn, at its end.** Edits are recorded inside the format hook that already runs on
+  each edit (`post-edit-format.py`, now also on `MultiEdit`), and test runs only when the command starts
+  with `dotnet` (`if: "Bash(dotnet *)"`). It is `tdd-gate.py done`, wired in `settings.json`.
+
 ## 0.3.54 — agents load their skills, and independent parts run at once
 - **Eleven agents preload the skill they follow** (`skills:` in their frontmatter), instead of a line asking
   them to read it first: qa-engineer and adversary (`test-design`), tdd-guide (`testing-tdd`), story-reviewer,
