@@ -3,6 +3,18 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.52 — adversary: the user who wants to misuse it
+- **New agent `adversary`** (Opus). It plays a cheater, a thief, a forger and a vandal against a change, and
+  writes each abuse worth a test (a risk of 4 or more) as an `AB` line in `abuse.md` with a test that fails
+  until the code refuses it. It writes only tests and `abuse.md` (the read-only guard holds it there), and
+  never `story.md`, so it runs at the same time as `qa-engineer`.
+- **`/tdd` starts both at once** when a person can misuse the change, then `tdd-guide` makes every test
+  pass with the least code that refuses the abuse. The pipeline rule and `planner` say the same.
+- **`test-design` 1.5.0**, section 3c: the four abusers and what each tries. `trace_matrix.py` traces `AB`
+  lines by default, reads `abuse.md` with `--also`, and fails `--require-all` on an abuse case with no test
+  or one that doesn't say who abuses it; `qa_verdict.py` counts abuse cases and says NO while one is
+  unproven. `/qa-scan` traces `abuse.md` when the branch has one.
+
 ## 0.3.51 — how a tester thinks, and strength in proportion to risk
 - **`test-design` 1.4.0:**
   - **Questions every change gets asked** (section 3a): none, one and many; some, none and all; interrupted,
