@@ -3,6 +3,8 @@ name: tdd-guide
 description: Enforces Test-Driven Development workflow. Write failing tests first, implement minimally, then refactor. Use for any new feature implementation or bug fix.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opus
+skills:
+  - testing-tdd
 hooks:
   PreToolUse:
     - matcher: "Write|Edit|MultiEdit"

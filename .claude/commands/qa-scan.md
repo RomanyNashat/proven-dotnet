@@ -29,7 +29,8 @@ branch on evidence, with the scripts of `test-design` and `mutation-testing`. `S
    python "$M/mutation_report.py" .qa/stryker/reports/mutation-report.json --since <base> --json > .qa/mutation.json
    ```
    If Stryker can't be installed or run here, say so and go on without it: the verdict will be CAN'T SAY,
-   never YES.
+   never YES. Stryker is the slow part: once step 2's tests have run, start it in the background and do
+   steps 4 and 5 while it works (they only read). Not beside step 2: both build the same project.
 4. **What else to retest.** `python "$S/changed_members.py" --since <base>` lists the members the branch
    changed. For each one, `find_callers` gives the code that depends on it, and `find_tests_for_symbol`
    the tests that already cover those callers (text search only if Roslyn isn't there, as `core.md` says).

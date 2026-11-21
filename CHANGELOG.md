@@ -3,6 +3,19 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.54 — agents load their skills, and independent parts run at once
+- **Eleven agents preload the skill they follow** (`skills:` in their frontmatter), instead of a line asking
+  them to read it first: qa-engineer and adversary (`test-design`), tdd-guide (`testing-tdd`), story-reviewer,
+  coverage-analyst, health-analyst, business-analyst, code-analyst, pattern-analyst, doc-updater and
+  handover-agent. The content check fails on a preload that doesn't exist or that the model may not invoke.
+- **New agent `doc-reviewer`:** `/document`'s check against the code now runs in an agent that didn't write
+  the page (`doc-review`), as `story-reviewer` does for `/stories`.
+- **`/scaffold` ends with `code-reviewer` and `security-reviewer` at once** on the new service, before any
+  feature builds on it.
+- **`/security-scan` starts its agents in one message** and runs the package scan beside them; it can now run
+  `dotnet list package --vulnerable`, which it had no permission for. **`/qa-scan` runs Stryker in the
+  background** while the steps that only read go on. `/tdd` and `/scaffold` may start agents.
+
 ## 0.3.53 — the abuse eval
 - **`tests/evals/fix-abuse`:** a clinic's visit desk to build from a request that says nothing about misuse,
   graded by hidden tests: 2 regressions, 6 for what was asked, 8 abuses (a thief by id, a forger by price or

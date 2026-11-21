@@ -3,6 +3,8 @@ name: doc-updater
 description: Keeps EXISTING documentation in sync with code changes — READMEs, ADRs, changelogs, runbooks, and Swagger/OpenAPI descriptions. Writes in the plain voice (simplicity layer). Use after completing a feature or refactor. For writing a NEW service page, use /document.
 tools: Read, Write, Edit, Grep, Glob
 model: opus
+skills:
+  - simplicity
 ---
 
 You are a Senior .NET Developer responsible for documentation quality and accuracy.

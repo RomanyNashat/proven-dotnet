@@ -6,7 +6,7 @@ description: "Check a generated service doc or README against the code before it
 # Doc Review — the gate before a service doc is presented
 
 Runs as the **third stage of `/document`** (read → write → **review** → present), the same shape as
-`/stories` (generate → review → present). It exists because a wiki page is read by people who will
+`/stories` (generate → review → present), by the `doc-reviewer` agent: a reader who didn't write the page. It exists because a wiki page is read by people who will
 *trust it*, and the single worst failure is a confidently-stated endpoint or config key that does not
 exist.
 

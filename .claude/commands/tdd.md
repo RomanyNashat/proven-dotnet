@@ -1,7 +1,7 @@
 ---
 name: tdd
 description: "Work test-first: write the failing tests, implement the minimum, refactor."
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 ---
 
 Delegate to **qa-engineer** first, for a story or a plain request alike: it writes `story.md` (the

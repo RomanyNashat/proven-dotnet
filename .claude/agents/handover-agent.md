@@ -3,6 +3,8 @@ name: handover-agent
 description: Writes the vacation handover documents for /handover. Receives the merged per-repo analyst summaries, the developer's answers and non-code context from the main conversation, maps them into the 17-section template, and writes Markdown/Teams/Notion files to the given folder. Does not analyse repos or talk to the developer.
 tools: Read, Write, Glob
 model: opus
+skills:
+  - simplicity
 ---
 
 You write the vacation handover. You are the **last step** of `/handover`: the main conversation has
