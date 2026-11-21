@@ -58,6 +58,7 @@ public sealed class SharedTransactionTests(SqlDatabase database) : IClassFixture
         var booking = await Record.ExceptionAsync(() => BookAsync(database.ConnectionString, "no name"));
 
         Assert.NotNull(booking);
+        Assert.Contains("distributed", booking.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, await database.ScalarAsync<int>("SELECT COUNT(*) FROM Visit WHERE Note = 'no name'"));
     }
 
