@@ -3,6 +3,16 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.45 — round five's no-rules arm on Opus, and effort per agent
+- **Round five's no-rules arm, rerun on Opus** (`tests/evals/fix-labs`): 19/24 findings and 18/18
+  regressions, against 10/24 and 12/18 when those runs had taken Sonnet by default. Most of the old gap was
+  the model. On the same model the rules add one finding over no harness (K08, clock skew), and one
+  no-rules run fixed K05, so it is no longer the skills' alone. `run-round.sh` has a `no-rules` arm.
+- **Effort per agent, measured** (`tests/evals/effort`, bar written first): with the subagents at low the
+  with-proven arm missed K08 ($3.49), at medium it fixed all 8 ($5.02), at high it missed K08 again (about
+  $6.20). No agent names its own effort; they keep the session's. `run-round.sh` takes
+  `EVAL_SUBAGENT_EFFORT` for runs like these.
+
 ## 0.3.44 — a change holds only what its task needs
 - **`tdd-guide`:** the refactor step cleans up the code the task wrote, not the code around it. What it
   notices outside the task (a bug next door, a name, dead code) goes in its report as a follow-up, not into
