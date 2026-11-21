@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.46 — counts in Arabic text
+- **`localization`:** "لديك {0} مواعيد" is right only from 3 to 10. Arabic has six plural forms (zero, one,
+  two, few, many, other) where English has two. `Plurals.For` picks CLDR's category by arithmetic, so it
+  needs no ICU, and `GetCountAsync` reads the key for that form (`Sms.Upcoming.few`) with `.other` as the
+  fallback. Tested for 0, 1, 2, 3, 10, 11, 99, 100, 102, 103, 111 and 1000, with a story test (the reminder
+  job counting a patient's visits) and a production test without ICU. A review-checklist line for a count
+  with one template.
+
 ## 0.3.45 — round five's no-rules arm on Opus, and effort per agent
 - **Round five's no-rules arm, rerun on Opus** (`tests/evals/fix-labs`): 19/24 findings and 18/18
   regressions, against 10/24 and 12/18 when those runs had taken Sonnet by default. Most of the old gap was
