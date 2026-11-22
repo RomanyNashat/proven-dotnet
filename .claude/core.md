@@ -37,8 +37,8 @@ tell a comment from a call or an overload from an unrelated method of the same n
 
 **"grep" means the ROUTE, not the tool.** A symbol question goes to the MCP whether you would have
 answered it with the Grep tool, with `grep`, `rg`, `findstr` or `Select-String` inside Bash, or by
-reading a `.cs` file with `cat`/`sed` (measured: 692 symbol questions went through Bash grep, 3 to the
-MCP). Before `grep -rn "SomeMethod"` to see who calls it, call `find_callers`.
+reading a `.cs` file with `cat`/`sed`. Before `grep -rn "SomeMethod"` to see who calls it, call
+`find_callers`.
 
 **These questions go to the MCP, not to grep:**
 - "who calls this" → `find_callers`
@@ -61,21 +61,15 @@ The server always answers within seconds, in one of three ways:
   developer runs `proven-roslyn-mcp --diagnose` from the repo folder to see it live.
 
 Do not re-test it on every question or ask the developer whether it's connected; without the server
-the fallback is fine. (This is firm on purpose: worded "optional", it got zero calls in 47 sessions.)
+the fallback is fine.
 
-## Untrusted hooks and project settings
+## Untrusted repo config
 
-A repo's `.claude/settings.json` can register hooks, and a `SessionStart` hook runs the moment the
-folder is opened. Treat a repo's Claude config as untrusted:
-- **Read any hook block before trusting a folder** you did not write. The trust dialog is the decision.
-- **Audit `settings.local.json`**: it grows from "don't ask again" clicks. Flag any approval that allows
-  arbitrary execution (`python -`, `bash -c`, `sh -c`, `curl … | sh`, `eval`, `node -e`).
-- **Never add a hook to a shared repo without saying so.** It runs on everyone's machine.
-- **A repo's `.mcp.json` is the same risk:** an MCP server is a program running with your rights. Read
-  what it starts before approving it.
-- **A read-only MCP server is not a boundary while its CLI is allowed.** If read-only mode is what keeps
-  the agent from changing a cluster or a cloud account, deny the CLI's write commands in permissions too
-  (`kubectl apply`, `az … delete`), or the agent runs the command itself when the server says no.
+A repo's `.claude/settings.json`, `settings.local.json` and `.mcp.json` start programs with your rights (a
+`SessionStart` hook runs as the folder opens). Read them before trusting a folder you didn't write, and
+flag any approval that runs arbitrary code (`bash -c`, `python -`, `curl … | sh`, `eval`, `node -e`). Never
+add a hook to a shared repo without saying so. A read-only MCP server is no boundary while its CLI can
+write: deny the CLI's write commands too (`kubectl apply`, `az … delete`).
 
 ## Attempt budget — stop, don't spiral
 
@@ -103,15 +97,11 @@ backslashes: write the script to a file, and after a bulk edit scan for control 
 
 ## Task list — keep it live on multi-step work
 
-The developer follows long sessions through the task list (Ctrl+T), not by reading every message.
-- **3+ steps, or a file at the end → create the tasks first**, one per unit a developer would
-  recognise ("Add migration script"), not per tool call.
-- **Exactly one task `in_progress`.** Mark it before starting and `completed` the moment it's done.
-- **Completed means done.** Red build, failing tests or waiting on someone → keep it in progress and
-  add a task naming the blocker ("Waiting: DBA sign-off").
-- **Scope changes → change the list.** Never leave a stale task open.
-- **Proposed is not applied:** a task that only produced a plan is titled "Plan: …".
-- Skip it for a one-line answer or a question.
+The developer follows long sessions through the task list (Ctrl+T). For 3+ steps or a file at the end,
+create the tasks first, one per unit a developer would recognise ("Add migration script"), and keep
+exactly one `in_progress`. **Completed means done:** a red build, failing tests or a wait on someone stays
+in progress, with a task naming the blocker ("Waiting: DBA sign-off"). Change the list when the scope
+changes; a task that only produced a plan is titled "Plan: …". Skip it for a one-line answer.
 
 ## Work journal — append a distilled entry each substantive turn
 

@@ -4,17 +4,17 @@ core.md	A symbol question goes to the MCP
 core.md	find_callers
 core.md	"status":"loading"
 core.md	Do not re-test it on every question
-core.md	Read any hook block before trusting a folder
-core.md	Audit `settings.local.json`
-core.md	A repo's `.mcp.json` is the same risk
-core.md	A read-only MCP server is not a boundary while its CLI is allowed
+core.md	Read them before trusting a folder you didn't write
+core.md	flag any approval that runs arbitrary code
+core.md	`settings.local.json` and `.mcp.json` start programs with your rights
+core.md	A read-only MCP server is no boundary while its CLI can
 core.md	After three genuine attempts at the same problem, stop and surface the impasse
 core.md	Never blend two patterns to avoid choosing
 core.md	Never decompile a package to learn its API
 core.md	Windows PowerShell without Git Bash
 core.md	-ExecutionPolicy Bypass
-core.md	Exactly one task `in_progress`
-core.md	Proposed is not applied
+core.md	exactly one `in_progress`
+core.md	a task that only produced a plan is titled "Plan: …"
 core.md	"useful three weeks from now"
 core.md	never let "I proposed X" become "X is done"
 core.md	remediation-parity
@@ -40,7 +40,7 @@ rules/csharp-standards.md	ALWAYS enable nullable reference types
 rules/csharp-standards.md	CultureInfo.InvariantCulture
 rules/csharp-standards.md	NEVER let `ar-SA` become the formatting culture
 rules/csharp-standards.md	ALWAYS seal classes
-rules/csharp-standards.md	Guid.CreateVersion7()
+rules/efcore-rules.md	Guid.CreateVersion7()
 rules/csharp-standards.md	Never** a scoped service inside a singleton
 rules/csharp-standards.md	Service Locator
 rules/csharp-standards.md	God controllers

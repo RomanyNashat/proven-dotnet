@@ -1,6 +1,6 @@
 # Performance Standards
 
-- Async all the way, endpoint to database: no sync-over-async, no async-over-sync, no `.Result` or `.Wait()`.
+- Async all the way, endpoint to database: no sync-over-async, no async-over-sync.
 - A `CancellationToken` on every async method that touches I/O, passed all the way through.
 - `Task.WhenAll()` for independent I/O, not one await after another.
 - `IHttpClientFactory` or typed clients (pooled handlers that follow DNS changes), with a timeout on every

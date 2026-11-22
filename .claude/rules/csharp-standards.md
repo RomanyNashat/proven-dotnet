@@ -20,7 +20,6 @@
 - NEVER call `.Result` or `.Wait()` on tasks: async all the way down.
 - NEVER instantiate `HttpClient` directly: `IHttpClientFactory` or typed clients.
 - NEVER use `DateTime.Now` or `DateTime.UtcNow`: inject `TimeProvider`.
-- NEVER use `BinaryFormatter`: `System.Text.Json`.
 - NEVER use `Thread.Sleep()`: `await Task.Delay()` with `TimeProvider`.
 - ALWAYS enable nullable reference types, with CS8600, CS8602 and CS8603 as errors.
 - ALWAYS use `CultureInfo.InvariantCulture` for parsing and formatting data no person reads.
@@ -28,9 +27,7 @@
   machine's ICU, and its numbers can use Arabic separators. A language header sets the UI culture only;
   a date a person reads names its calendar (`localization`).
 - ALWAYS seal classes unless they are designed for inheritance.
-- Primary keys are `int` identity (`bigint` for very large tables) unless your team's rules say
-  otherwise (`rules/efcore-rules.md`). A GUID only for an id made outside the database, and then
-  `Guid.CreateVersion7()`, never a random v4.
+- Keys: `int` identity by default; the full rule, GUIDs included, is `rules/efcore-rules.md`.
 
 ## Banned patterns
 - Service Locator: constructor injection only.
