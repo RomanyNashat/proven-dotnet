@@ -2,6 +2,7 @@
 import contextlib
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -106,6 +107,19 @@ class LayerTests(unittest.TestCase):
         self.assertEqual({"commit": ""}, s["attribution"])
         self.assertIn("Bash(git push:*)", s["permissions"]["ask"])
         self.assert_user_things_intact()
+
+    def test_story_a_layers_mods_load_in_every_session_from_one_env_entry(self):
+        # Given a layer that ships two plugins (mods) in files/ and names both in CLAUDE_CODE_PLUGIN_DIRS
+        src = make_layer(self.root / "mods-src", "company", "1.0.0",
+                         {"files/mods/radar/.claude-plugin/plugin.json": "{}", "files/mods/pane/.claude-plugin/plugin.json": "{}"},
+                         {"env": {"CLAUDE_CODE_PLUGIN_DIRS": "{FILES}/mods/radar{PATHSEP}{FILES}/mods/pane"}})
+        # When it is installed
+        self.install(src)
+        # Then the entry is the two folders, joined the way this machine separates paths
+        folders = self.settings()["env"]["CLAUDE_CODE_PLUGIN_DIRS"].split(os.pathsep)
+        files = (self.claude / "company").resolve().as_posix()
+        self.assertEqual([f"{files}/mods/radar", f"{files}/mods/pane"], folders)
+        self.assertTrue(all(Path(f, ".claude-plugin/plugin.json").is_file() for f in folders))
 
     def test_an_agents_own_hook_gets_the_layers_hook_folder_and_python(self):
         src = make_layer(self.root, "proven", "1.0.0", {

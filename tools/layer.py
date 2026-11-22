@@ -26,7 +26,9 @@ What the layer owns is recorded in .layers/registry.json. Install is also update
     only while it still holds the value the layer wrote. Hook entries are this layer's when their command
     runs a script from hooks/<id>/.
 Placeholders in settings.json and in agents' frontmatter hooks: {HOOKS} -> ~/.claude/hooks/<id>, {FILES} -> the absolute path of <id>/
-(forward slashes, which Windows accepts), {PYTHON} -> how this machine starts Python 3.
+(forward slashes, which Windows accepts), {PYTHON} -> how this machine starts Python 3, {PATHSEP} -> this
+machine's path-list separator (; on Windows, : elsewhere), for an env entry that lists folders, such as
+CLAUDE_CODE_PLUGIN_DIRS naming the plugins (mods) a layer ships in files/.
 """
 from __future__ import annotations
 
@@ -182,7 +184,7 @@ def fill_placeholders(value, layer_id: str, claude: Path):
     if isinstance(value, str):
         files = (claude / layer_id).resolve().as_posix()
         return (value.replace("{HOOKS}", f"~/.claude/hooks/{layer_id}").replace("{FILES}", files)
-                .replace("{PYTHON}", python_command()))
+                .replace("{PYTHON}", python_command()).replace("{PATHSEP}", os.pathsep))
     if isinstance(value, list):
         return [fill_placeholders(v, layer_id, claude) for v in value]
     if isinstance(value, dict):
