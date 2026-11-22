@@ -3,6 +3,12 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.57 — a layer can ship plugins that load in every session
+- **`{PATHSEP}` in a layer's `settings.json`** becomes this machine's path-list separator (`;` on Windows,
+  `:` elsewhere). With it a layer names the plugins (mods) it ships in `files/` in one env entry,
+  `CLAUDE_CODE_PLUGIN_DIRS`, which Claude Code reads from `~/.claude/settings.json` and loads in every
+  session, as `--plugin-dir` does for one. Tested in `tests/installer`.
+
 ## 0.3.56 — the always-loaded rules, 1,170 characters shorter, no rule dropped
 - **`core.md`:** the Roslyn section keeps its rule, its tool list and its loading and failure paths, and
   drops the history behind its firm wording (the 692-to-3 count and the 47 sessions), which moves to
