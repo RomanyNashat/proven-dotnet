@@ -3,6 +3,18 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.56 — the always-loaded rules, 1,170 characters shorter, no rule dropped
+- **`core.md`:** the Roslyn section keeps its rule, its tool list and its loading and failure paths, and
+  drops the history behind its firm wording (the 692-to-3 count and the 47 sessions), which moves to
+  `docs/decisions/roslyn-firm-wording.md`. "Untrusted hooks" is one paragraph for the same five points, and the task list
+  one paragraph for its six.
+- **Rules said twice, now said once:** direct `HttpClient` stays in `csharp-standards` (out of `security`'s
+  banned list), `BinaryFormatter` in `security` (out of `csharp-standards`), `.Result` and `.Wait()` in
+  `csharp-standards` (out of `performance`), and the key rule in `efcore-rules`, with a one-line pointer
+  left in `csharp-standards`.
+- `tests/rules/inventory.tsv` follows the new wording, so every rule the inventory lists is still checked
+  word for word. Always-loaded: 28,510 of 30,000 characters (was 29,680).
+
 ## 0.3.55 — a done gate for the main session
 - **A turn that changed C# is sent back once** when no `dotnet test` has passed since the last edit (or the
   last run was red): run the tests that cover the change, or say which weren't run and why. Then it ends;

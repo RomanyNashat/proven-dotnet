@@ -64,6 +64,5 @@
 ## Banned
 - `BinaryFormatter` — insecure deserialization (remote code execution); removed from .NET 9
 - `System.Web` namespace in ASP.NET Core applications
-- Direct `HttpClient` instantiation (socket exhaustion, DNS caching issues)
 - `[ValidateAntiForgeryToken]` bypass — always validate on state-changing operations
 - Disabling SSL validation in HttpClient handlers (even "temporarily")
