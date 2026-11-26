@@ -224,3 +224,77 @@ class Production(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReviewedSession(MainSession):
+    """The main session with its transcript, so the gate can read what the answer hands over."""
+
+    def answer(self, text):
+        path = os.path.join(self.folder, "transcript.jsonl")
+        rows = [{"type": "user", "message": {"role": "user", "content": "fix the review comments and give me the commands"}},
+                {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Bash", "input": {}}]}},
+                {"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "content": "ok"}]}},
+                {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": text}]}}]
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(json.dumps(r) for r in rows))
+        return path
+
+    def reviewed(self, agent="code-reviewer"):
+        return self.send("post", {"hook_event_name": "PostToolUse", "tool_name": "Agent",
+                                  "tool_input": {"subagent_type": agent, "prompt": "review the diff"}})
+
+    def done_after(self, text, active=False):
+        return self.send("done", {"hook_event_name": "Stop", "stop_hook_active": active,
+                                  "transcript_path": self.answer(text)})
+
+
+PUSH = "Run these:\n```powershell\ngit add -A\ngit commit -m \"fix(merit-medals): apply the review\"\ngit push\n```"
+
+
+class ReviewGate(unittest.TestCase):
+    def setUp(self):
+        self.folder = tempfile.mkdtemp(prefix="review gate ")
+        self.s = ReviewedSession(self.folder)
+        self.s.edit(f"{REPO}/src/Visits.Domain/Batch.cs")
+        self.s.test_run(PASSED, failed=False)
+
+    def tearDown(self):
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    def test_story_push_commands_for_an_unreviewed_change_are_sent_back_once(self):
+        # Given the code changed and its tests are green, but no reviewer looked at it
+        # When the answer hands the developer push commands
+        first = self.s.done_after(PUSH)
+        # Then it is sent back once, to run the review or say why not
+        self.assertEqual(2, first.returncode)
+        self.assertIn("Review gate", first.stderr)
+        self.assertIn("/full-review", first.stderr)
+        self.assertEqual(0, self.s.done_after(PUSH).returncode)
+
+    def test_story_a_review_after_the_last_edit_lets_the_handover_through(self):
+        self.s.reviewed()
+        self.assertEqual(0, self.s.done_after(PUSH).returncode)
+
+    def test_an_mr_description_counts_as_a_handover(self):
+        self.assertEqual(2, self.s.done_after("Here is the MR description for the base:\n\n## What changed").returncode)
+
+    def test_an_answer_that_hands_nothing_over_is_not_held(self):
+        self.assertEqual(0, self.s.done_after("The tests pass. The entity now checks its moves first.").returncode)
+
+    def test_an_edit_after_the_review_needs_another(self):
+        self.s.reviewed()
+        self.s.edit(f"{REPO}/src/Visits.Domain/Batch.cs")
+        self.s.test_run(PASSED, failed=False)
+        self.assertEqual(2, self.s.done_after(PUSH).returncode)
+
+    def test_another_agent_does_not_count_as_a_review(self):
+        self.s.reviewed(agent="Explore")
+        self.assertEqual(2, self.s.done_after(PUSH).returncode)
+
+    def test_a_subagents_edit_still_needs_a_review_before_the_handover(self):
+        helper = Session(self.folder)
+        helper.send = lambda mode, event, env=None: Session.send(helper, mode, {**event, "session_id": "s-2"}, env)
+        self.s.reviewed()
+        helper.test_run(FAILED, failed=True)
+        helper.edit(f"{REPO}/src/Visits.Domain/Batch.cs")
+        self.assertEqual(2, self.s.done_after(PUSH).returncode)

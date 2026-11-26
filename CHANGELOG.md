@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.58 — a review before the handover
+- **The review gate**, in the done gate (`tdd-gate.py done`, no new launch at the end of a turn): an answer
+  that hands over push commands or an MR's text (`git push`, `glab mr create`, an MR description) while
+  production C# changed since `code-reviewer` last ran is sent back once, to run `/full-review` or say why
+  not. Edits in any agent of the session count; a `code-reviewer` agent run clears it, and the next edit
+  asks again. Agent calls reach the gate through a `PostToolUse` entry on `Agent|Task`. Why: a merge request
+  went up with no reviewer run, and its reviewer found a state check missing that one would have caught.
+  Tested in `tests/hooks/test_tdd_gate.py` (`ReviewGate`).
+
 ## 0.3.57 — a layer can ship plugins that load in every session
 - **`{PATHSEP}` in a layer's `settings.json`** becomes this machine's path-list separator (`;` on Windows,
   `:` elsewhere). With it a layer names the plugins (mods) it ships in `files/` in one env entry,

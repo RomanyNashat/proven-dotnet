@@ -7,6 +7,10 @@ allowed-tools: Read, Grep, Glob, Bash, Agent
 
 ## Reviewing a change: `--diff`
 
+Before code goes up for review, this runs on it: an answer that hands over push commands or an MR's text
+while production C# changed since `code-reviewer` last ran is sent back once by the review gate
+(`tdd-gate.py done`). Run the reviewers as agents, so the gate sees that they ran.
+
 Without arguments this reviews the whole service. With `--diff` (or when the developer asks to review a
 branch, a merge request or "my changes"), it reviews **the change**, and everything below runs in that
 mode:

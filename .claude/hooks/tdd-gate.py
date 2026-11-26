@@ -17,6 +17,9 @@ gate for the main session, wired in settings.json.
 - done: the main session, where the developer is there to judge. When production code changed since the
   last green test run, the turn is sent back once, to run the tests or say why not; then it ends. The next
   edit or test run makes it ask again. Nothing is held back before the code is written.
+  It also holds a handover: an answer that gives push commands or an MR's text while production code
+  changed (in any agent of the session) since code-reviewer last ran is sent back once, to run
+  /full-review or say why not. A change that reaches review unreviewed is what reviewers then have to catch.
 
 State lives in the temp folder, one file per agent run. pre fails closed on input it can't read; post
 and stop let it through, since they guard nothing on their own.
@@ -43,6 +46,10 @@ DOTNET_TEST = re.compile(r"(^|[\s;&|(])dotnet(\.exe)?\s+test\b")
 RED = re.compile(r"\bFailed!|\bTest Run Failed\b|\berror CS\d{4}\b|\bBuild FAILED\b|\bFailed:\s+[1-9]|\[FAIL\]")
 GREEN = re.compile(r"\bPassed!|\bTest Run Successful\b")
 EDITS = {"Write", "Edit", "MultiEdit"}
+REVIEWERS = {"code-reviewer"}
+# What a handover to the developer looks like: commands that publish the branch, or an MR's own text.
+HANDOVER = re.compile(r"\bgit push\b|\bglab mr create\b|\bMR (?:description|title)s?\b|\bmerge request description\b"
+                      r"|\bopen (?:the|an|two|\d+) (?:new )?MRs?\b", re.I)
 
 
 def state_path(event: dict) -> Path:
@@ -97,7 +104,54 @@ def pre(event: dict, state: dict) -> int:
     return 2
 
 
+def review_path(event: dict) -> Path:
+    """One record per session, whichever agent made the change."""
+    return state_path({"session_id": event.get("session_id", ""), "agent_type": "review"})
+
+
+def note_review(event: dict) -> None:
+    tool, tool_input = event.get("tool_name"), event.get("tool_input") or {}
+    if tool in EDITS and production_file(event):
+        change = {"unreviewed": True, "reminded": False}
+    elif tool in ("Agent", "Task") and tool_input.get("subagent_type") in REVIEWERS:
+        change = {"unreviewed": False}
+    else:
+        return
+    path = review_path(event)
+    save(path, {**load_review(path), **change})
+
+
+def load_review(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"unreviewed": False, "reminded": False}
+
+
+def last_answer(transcript: str) -> str:
+    """The text the session wrote since the developer's last message."""
+    try:
+        lines = Path(transcript).read_text(encoding="utf-8").splitlines()
+    except (OSError, TypeError, ValueError):
+        return ""
+    texts: list[str] = []
+    for line in lines:
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        content = (row.get("message") or {}).get("content")
+        if row.get("type") == "user":
+            asked = isinstance(content, str) or any(isinstance(b, dict) and b.get("type") == "text" for b in content or [])
+            if asked:
+                texts = []
+        elif row.get("type") == "assistant" and isinstance(content, list):
+            texts += [b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"]
+    return "\n".join(texts)
+
+
 def post(event: dict, state: dict) -> None:
+    note_review(event)
     tool = event.get("tool_name")
     if tool in EDITS and production_file(event):
         state["edited"], state["stale"], state["reminded"] = True, True, False
@@ -122,14 +176,26 @@ def stop(event: dict, state: dict) -> int:
 
 
 def done(event: dict, state: dict) -> int:
-    if not state["edited"] or (state["last"] == "green" and not state["stale"]):
-        return 0
-    if state.get("reminded") or event.get("stop_hook_active"):
+    if event.get("stop_hook_active"):
         return 0  # said once: the developer reads the answer and decides
-    state["reminded"] = True
-    why = ("C# changed and no test has run since" if state["stale"] else "the last `dotnet test` was red")
-    print(f"Done gate: {why}. Run the tests that cover the change (`dotnet test`) before calling it done, "
-          "or say in your answer which tests you didn't run and why.", file=sys.stderr)
+    if state["edited"] and not (state["last"] == "green" and not state["stale"]) and not state.get("reminded"):
+        state["reminded"] = True
+        why = ("C# changed and no test has run since" if state["stale"] else "the last `dotnet test` was red")
+        print(f"Done gate: {why}. Run the tests that cover the change (`dotnet test`) before calling it done, "
+              "or say in your answer which tests you didn't run and why.", file=sys.stderr)
+        return 2
+    return review_gate(event)
+
+
+def review_gate(event: dict) -> int:
+    path = review_path(event)
+    review = load_review(path)
+    if not review["unreviewed"] or review["reminded"] or not HANDOVER.search(last_answer(event.get("transcript_path"))):
+        return 0
+    save(path, {**review, "reminded": True})
+    print("Review gate: this answer hands over push commands or an MR, and production C# changed since "
+          "code-reviewer last looked. Run `/full-review --diff <base>` on it first, or say in the answer why "
+          "it can't run.", file=sys.stderr)
     return 2
 
 

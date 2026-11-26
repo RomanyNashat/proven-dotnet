@@ -49,6 +49,15 @@
             "command": "{PYTHON} {HOOKS}/tdd-gate.py post"
           }
         ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{PYTHON} {HOOKS}/tdd-gate.py post"
+          }
+        ]
       }
     ],
     "PreCompact": [
