@@ -14,8 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{PYTHON} {HOOKS}/session-start.py",
-            "async": true
+            "command": "{PYTHON} {HOOKS}/session-start.py"
           }
         ]
       },

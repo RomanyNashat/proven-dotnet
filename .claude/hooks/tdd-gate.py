@@ -13,10 +13,10 @@ gate for the main session, wired in settings.json.
   never held back. Tests qa-engineer wrote beforehand count: run them, see them fail, then implement.
 - post: records each `dotnet test` result, and each production edit (which makes the last result stale).
   Known failures were red before the change: the names in the repo's `.claude/known-failing-tests.txt`
-  (one per line; a method name covers its theory cases), and in the main session the tests that failed
-  before anything was edited or an agent that writes tests ran. Not inside an agent, whose first red run
-  is often qa-engineer's tests. A red run whose failures are all known counts as green; it never unlocks
-  pre, and a build that doesn't compile is never known.
+  (known-failures.py writes it from the main session's first run, before anything was edited or an agent
+  that writes tests ran, on a tree with nothing uncommitted), and that run's failures. Not inside an
+  agent, whose first red run is often qa-engineer's tests. A red run whose failures are all known counts
+  as green; it never unlocks pre, and a build that doesn't compile is never known.
 - stop: once production code was edited, the agent can't finish until the last test run after the last
   edit is green. It asks three times, then lets the agent finish so it can report what is still red.
 - done: the main session, where the developer is there to judge. When production code changed since the
@@ -45,18 +45,16 @@ _spec = importlib.util.spec_from_file_location("read_only_guard", HERE / "read-o
 _guard = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_guard)
 is_test_path, relative_to = _guard.is_test_path, _guard.relative_to
+_spec = importlib.util.spec_from_file_location("known_failures", HERE / "known-failures.py")
+known_failures = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(known_failures)
 
 MAX_STOPS = 3
 DOTNET_TEST = re.compile(r"(^|[\s;&|(])dotnet(\.exe)?\s+test\b")
 RED = re.compile(r"\bFailed!|\bTest Run Failed\b|\berror CS\d{4}\b|\bBuild FAILED\b|\bFailed:\s+[1-9]|\[FAIL\]")
 GREEN = re.compile(r"\bPassed!|\bTest Run Successful\b")
-COMPILE_ERROR = re.compile(r"\berror CS\d{4}\b|\bBuild FAILED\b")
-# One failing test per line: vstest ("Failed Ns.Class.Test [12 ms]"), the xUnit runner ("Ns.Class.Test [FAIL]")
-# and Microsoft.Testing.Platform ("failed Ns.Class.Test (12ms)").
-FAILED_TEST = re.compile(r"^\s*(?:Failed (?P<vstest>.+?) \[[^\]]*\]"
-                         r"|(?:\[xUnit\.net [^\]]*\]\s*)?(?P<xunit>\S.*?) \[FAIL\]"
-                         r"|failed (?P<mtp>.+?) \(\d[^)]*\))\s*$", re.M)
-KNOWN_LIST = Path(".claude") / "known-failing-tests.txt"
+COMPILE_ERROR = known_failures.COMPILE_ERROR
+KNOWN_LIST = known_failures.LIST
 EDITS = {"Write", "Edit", "MultiEdit"}
 REVIEWERS = {"code-reviewer"}
 TEST_WRITERS = {"qa-engineer", "adversary", "tdd-guide"}  # once one ran, a red test may be its new one
@@ -163,23 +161,8 @@ def last_answer(transcript: str) -> str:
     return "\n".join(texts)
 
 
-def failing_tests(text: str) -> list[str]:
-    return [next(g for g in m.groups() if g) for m in FAILED_TEST.finditer(text.replace("\r\n", "\n"))]
-
-
-def listed_known(cwd: str) -> set[str]:
-    try:
-        lines = (Path(cwd) / KNOWN_LIST).read_text(encoding="utf-8-sig").splitlines()
-    except (OSError, ValueError):
-        return set()
-    return {line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")}
-
-
-def is_known(name: str, known: set[str]) -> bool:
-    return name in known or name.split("(", 1)[0] in known
-
-
-def post(event: dict, state: dict) -> None:
+def post(event: dict, state: dict) -> str | None:
+    """Records the event; returns what to tell the session, if anything."""
     note_review(event)
     tool = event.get("tool_name")
     tool_input = event.get("tool_input") or {}
@@ -190,16 +173,21 @@ def post(event: dict, state: dict) -> None:
     elif tool in ("Agent", "Task") and tool_input.get("subagent_type") in TEST_WRITERS:
         state["touched"] = True
     elif tool == "Bash" and DOTNET_TEST.search(tool_input.get("command") or ""):
-        record_run(output_of(event), event.get("cwd") or "", state, baseline=not event.get("agent_id"))
+        text, cwd = output_of(event), event.get("cwd") or ""
+        baseline = not event.get("agent_id") and not state.get("touched")
+        record_run(text, cwd, state, baseline)
+        if baseline and (RED.search(text) or GREEN.search(text)):
+            return known_failures.record_baseline(cwd, tool_input.get("command") or "", text)
+    return None
 
 
 def record_run(text: str, cwd: str, state: dict, baseline: bool) -> None:
     if RED.search(text):
-        failing = failing_tests(text)
-        if baseline and not state.get("touched") and not COMPILE_ERROR.search(text):
+        failing = known_failures.failing_tests(text)
+        if baseline and not COMPILE_ERROR.search(text):
             state["known"] = sorted(set(state.get("known", [])) | set(failing))  # red before the change
-        known = set(state.get("known", [])) | listed_known(cwd)
-        new = [name for name in failing if not is_known(name, known)]
+        known = set(state.get("known", [])) | known_failures.listed(cwd)
+        new = [name for name in failing if not known_failures.is_known(name, known)]
         state["failing"] = new[:5] + ([f"and {len(new) - 5} more"] if len(new) > 5 else [])
         if failing and not new and not COMPILE_ERROR.search(text):
             state["last"], state["stale"] = "green", False  # only what was red before: the change broke nothing
@@ -233,8 +221,8 @@ def done(event: dict, state: dict) -> int:
         else:
             names = ", ".join(state.get("failing") or []) or "names not in the output"
             print(f"Done gate: the last `dotnet test` was red ({names}). Fix what the change broke, or say in your "
-                  "answer which of these failed before it. Tests red on the main branch can go in "
-                  f"`{KNOWN_LIST.as_posix()}`, one name per line, and stop counting.", file=sys.stderr)
+                  "answer which of these failed before it. A full `dotnet test` run before the first edit, on a tree "
+                  f"with nothing uncommitted, lists what was already red in `{KNOWN_LIST.as_posix()}`.", file=sys.stderr)
         return 2
     return review_gate(event)
 
@@ -267,8 +255,11 @@ def main() -> int:
     if mode == "pre":
         return pre(event, state)
     if mode == "post":
-        post(event, state)
+        said = post(event, state)
         save(path, state)
+        if said:
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": event.get("hook_event_name") or "PostToolUse",
+                                                     "additionalContext": said}}))
         return 0
     if mode in ("stop", "done"):
         code = stop(event, state) if mode == "stop" else done(event, state)

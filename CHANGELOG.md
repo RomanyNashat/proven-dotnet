@@ -20,6 +20,14 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   known failures never unlock the code. A build that doesn't compile is never known. Why: a service with
   five tests red on its main branch sent back nearly every turn that touched it. Tested in
   `tests/hooks/test_tdd_gate.py` (`KnownFailures`, `KnownFailuresInTddGuide`).
+- **The list makes itself** (`known-failures.py`). At session start in a .NET repo with no list, or one made
+  at another commit, the session is asked to run `dotnet test` once, unfiltered, before its first C# edit.
+  That run, on a tree with nothing uncommitted, writes the list with the commit and the day each test was
+  first seen red; tests passing again drop off, so a moved `master` refreshes it. The file is local (its
+  path goes in `.git/info/exclude`). `session-start.py` now runs in line, so its note reaches the session:
+  the same one launch, waited for. **`/known-failures`** lists the tests, rechecks only them and drops the
+  ones that pass, and plans fixing the rest, asking before it opens any issue. Tested in
+  `tests/hooks/test_known_failures.py`.
 
 ## 0.3.57 — a layer can ship plugins that load in every session
 - **`{PATHSEP}` in a layer's `settings.json`** becomes this machine's path-list separator (`;` on Windows,
