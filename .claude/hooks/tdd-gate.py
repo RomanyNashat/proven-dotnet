@@ -12,6 +12,11 @@ gate for the main session, wired in settings.json.
   (a failing test, or a test that doesn't compile yet). Tests, `story.md`, projects and settings are
   never held back. Tests qa-engineer wrote beforehand count: run them, see them fail, then implement.
 - post: records each `dotnet test` result, and each production edit (which makes the last result stale).
+  Known failures were red before the change: the names in the repo's `.claude/known-failing-tests.txt`
+  (one per line; a method name covers its theory cases), and in the main session the tests that failed
+  before anything was edited or an agent that writes tests ran. Not inside an agent, whose first red run
+  is often qa-engineer's tests. A red run whose failures are all known counts as green; it never unlocks
+  pre, and a build that doesn't compile is never known.
 - stop: once production code was edited, the agent can't finish until the last test run after the last
   edit is green. It asks three times, then lets the agent finish so it can report what is still red.
 - done: the main session, where the developer is there to judge. When production code changed since the
@@ -45,8 +50,16 @@ MAX_STOPS = 3
 DOTNET_TEST = re.compile(r"(^|[\s;&|(])dotnet(\.exe)?\s+test\b")
 RED = re.compile(r"\bFailed!|\bTest Run Failed\b|\berror CS\d{4}\b|\bBuild FAILED\b|\bFailed:\s+[1-9]|\[FAIL\]")
 GREEN = re.compile(r"\bPassed!|\bTest Run Successful\b")
+COMPILE_ERROR = re.compile(r"\berror CS\d{4}\b|\bBuild FAILED\b")
+# One failing test per line: vstest ("Failed Ns.Class.Test [12 ms]"), the xUnit runner ("Ns.Class.Test [FAIL]")
+# and Microsoft.Testing.Platform ("failed Ns.Class.Test (12ms)").
+FAILED_TEST = re.compile(r"^\s*(?:Failed (?P<vstest>.+?) \[[^\]]*\]"
+                         r"|(?:\[xUnit\.net [^\]]*\]\s*)?(?P<xunit>\S.*?) \[FAIL\]"
+                         r"|failed (?P<mtp>.+?) \(\d[^)]*\))\s*$", re.M)
+KNOWN_LIST = Path(".claude") / "known-failing-tests.txt"
 EDITS = {"Write", "Edit", "MultiEdit"}
 REVIEWERS = {"code-reviewer"}
+TEST_WRITERS = {"qa-engineer", "adversary", "tdd-guide"}  # once one ran, a red test may be its new one
 # What a handover to the developer looks like: commands that publish the branch, or an MR's own text.
 HANDOVER = re.compile(r"\bgit push\b|\bglab mr create\b|\bMR (?:description|title)s?\b|\bmerge request description\b"
                       r"|\bopen (?:the|an|two|\d+) (?:new )?MRs?\b", re.I)
@@ -150,17 +163,50 @@ def last_answer(transcript: str) -> str:
     return "\n".join(texts)
 
 
+def failing_tests(text: str) -> list[str]:
+    return [next(g for g in m.groups() if g) for m in FAILED_TEST.finditer(text.replace("\r\n", "\n"))]
+
+
+def listed_known(cwd: str) -> set[str]:
+    try:
+        lines = (Path(cwd) / KNOWN_LIST).read_text(encoding="utf-8-sig").splitlines()
+    except (OSError, ValueError):
+        return set()
+    return {line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")}
+
+
+def is_known(name: str, known: set[str]) -> bool:
+    return name in known or name.split("(", 1)[0] in known
+
+
 def post(event: dict, state: dict) -> None:
     note_review(event)
     tool = event.get("tool_name")
-    if tool in EDITS and production_file(event):
-        state["edited"], state["stale"], state["reminded"] = True, True, False
-    elif tool == "Bash" and DOTNET_TEST.search((event.get("tool_input") or {}).get("command") or ""):
-        text = output_of(event)
-        if RED.search(text):
+    tool_input = event.get("tool_input") or {}
+    if tool in EDITS:
+        state["touched"] = True
+        if production_file(event):
+            state["edited"], state["stale"], state["reminded"] = True, True, False
+    elif tool in ("Agent", "Task") and tool_input.get("subagent_type") in TEST_WRITERS:
+        state["touched"] = True
+    elif tool == "Bash" and DOTNET_TEST.search(tool_input.get("command") or ""):
+        record_run(output_of(event), event.get("cwd") or "", state, baseline=not event.get("agent_id"))
+
+
+def record_run(text: str, cwd: str, state: dict, baseline: bool) -> None:
+    if RED.search(text):
+        failing = failing_tests(text)
+        if baseline and not state.get("touched") and not COMPILE_ERROR.search(text):
+            state["known"] = sorted(set(state.get("known", [])) | set(failing))  # red before the change
+        known = set(state.get("known", [])) | listed_known(cwd)
+        new = [name for name in failing if not is_known(name, known)]
+        state["failing"] = new[:5] + ([f"and {len(new) - 5} more"] if len(new) > 5 else [])
+        if failing and not new and not COMPILE_ERROR.search(text):
+            state["last"], state["stale"] = "green", False  # only what was red before: the change broke nothing
+        else:
             state["last"], state["unlocked"], state["stale"], state["reminded"] = "red", True, False, False
-        elif GREEN.search(text):
-            state["last"], state["stale"] = "green", False
+    elif GREEN.search(text):
+        state["last"], state["stale"] = "green", False
 
 
 def stop(event: dict, state: dict) -> int:
@@ -180,9 +226,15 @@ def done(event: dict, state: dict) -> int:
         return 0  # said once: the developer reads the answer and decides
     if state["edited"] and not (state["last"] == "green" and not state["stale"]) and not state.get("reminded"):
         state["reminded"] = True
-        why = ("C# changed and no test has run since" if state["stale"] else "the last `dotnet test` was red")
-        print(f"Done gate: {why}. Run the tests that cover the change (`dotnet test`) before calling it done, "
-              "or say in your answer which tests you didn't run and why.", file=sys.stderr)
+        if state["stale"]:
+            print("Done gate: C# changed and no test has run since. Run the tests that cover the change "
+                  "(`dotnet test`) before calling it done, or say in your answer which tests you didn't run and why.",
+                  file=sys.stderr)
+        else:
+            names = ", ".join(state.get("failing") or []) or "names not in the output"
+            print(f"Done gate: the last `dotnet test` was red ({names}). Fix what the change broke, or say in your "
+                  "answer which of these failed before it. Tests red on the main branch can go in "
+                  f"`{KNOWN_LIST.as_posix()}`, one name per line, and stop counting.", file=sys.stderr)
         return 2
     return review_gate(event)
 

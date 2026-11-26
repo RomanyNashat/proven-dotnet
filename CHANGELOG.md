@@ -3,7 +3,7 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
-## 0.3.58 — a review before the handover
+## 0.3.58 — a review before the handover, and tests that were already red
 - **The review gate**, in the done gate (`tdd-gate.py done`, no new launch at the end of a turn): an answer
   that hands over push commands or an MR's text (`git push`, `glab mr create`, an MR description) while
   production C# changed since `code-reviewer` last ran is sent back once, to run `/full-review` or say why
@@ -11,6 +11,15 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   asks again. Agent calls reach the gate through a `PostToolUse` entry on `Agent|Task`. Why: a merge request
   went up with no reviewer run, and its reviewer found a state check missing that one would have caught.
   Tested in `tests/hooks/test_tdd_gate.py` (`ReviewGate`).
+- **Tests that were red before the change no longer hold the turn.** The done gate reads the failing test
+  names from the run (vstest, the xUnit runner and Microsoft.Testing.Platform output). Tests that failed in
+  the main session before anything was edited or a test-writing agent ran are known, and so are the names
+  in the repo's `.claude/known-failing-tests.txt` (one per line; a method name covers its theory cases). A
+  red run whose failures are all known counts as green. A held turn now names the failures it doesn't
+  know. Inside tdd-guide only the list counts, since its first red run is often qa-engineer's tests, and
+  known failures never unlock the code. A build that doesn't compile is never known. Why: a service with
+  five tests red on its main branch sent back nearly every turn that touched it. Tested in
+  `tests/hooks/test_tdd_gate.py` (`KnownFailures`, `KnownFailuresInTddGuide`).
 
 ## 0.3.57 — a layer can ship plugins that load in every session
 - **`{PATHSEP}` in a layer's `settings.json`** becomes this machine's path-list separator (`;` on Windows,

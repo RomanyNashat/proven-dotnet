@@ -134,8 +134,8 @@ class MainSession(Session):
     """The developer's own session: no agent id, the Stop event from settings.json, and edits recorded by
     the format hook (the one launch per edit) instead of the agent's own post."""
 
-    def __init__(self, folder):
-        super().__init__(folder)
+    def __init__(self, folder, cwd=REPO):
+        super().__init__(folder, cwd=cwd)
 
     def send(self, mode, event, env=None):
         event = {"session_id": "s-2", "cwd": self.cwd, **event}
@@ -206,6 +206,125 @@ class DoneGate(unittest.TestCase):
         self.assertIn(("Edit|Write|MultiEdit", None, "{PYTHON} {HOOKS}/post-edit-format.py", True), commands("PostToolUse"))
 
 
+OLD_RED = ("Failed Visits.Infrastructure.Tests.OutboxTests.Relay_BrokerDown_Retries [3 s]\n"
+           "Failed Visits.Infrastructure.Tests.OutboxTests.Relay_TwoPods_OneSends [1 s]\n"
+           "Failed!  - Failed:     2, Passed:    40, Skipped:     0, Total:    42, Duration: 9 s")
+NEW_RED = OLD_RED + "\nFailed Visits.Tests.CancelVisitTests.Cancel_AnHourBefore_FreesTheSlot [12 ms]"
+XUNIT_RED = ('[xUnit.net 00:00:02.10]     Visits.Tests.SlotTests.Parse_Edge(value: "a b") [FAIL]\n'
+             "Test Run Failed.")
+
+
+class KnownFailures(unittest.TestCase):
+    """Tests that were red before the change: the done gate counts a run whose failures are all known as
+    green, and names the failures it doesn't know."""
+
+    def setUp(self):
+        self.folder = tempfile.mkdtemp(prefix="known failures ")
+        self.repo = os.path.join(self.folder, "visits-service")
+        os.makedirs(os.path.join(self.repo, ".claude"))
+        self.s = MainSession(self.folder, cwd=self.repo)
+        self.code = os.path.join(self.repo, "src", "Visits.Application", "CancelVisit.cs")
+
+    def tearDown(self):
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    def test_story_tests_red_on_master_before_the_change_dont_hold_the_turn(self):
+        # Given two outbox tests already fail on master, and the session runs the tests before touching anything
+        self.s.test_run(OLD_RED, failed=True)
+        # When the handler is changed and the same two still fail, nothing else
+        self.s.edit(self.code)
+        self.s.test_run(OLD_RED, failed=True)
+        # Then the turn ends: the change broke nothing
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_story_a_new_failure_on_top_of_the_old_ones_is_named(self):
+        self.s.test_run(OLD_RED, failed=True)
+        self.s.edit(self.code)
+        self.s.test_run(NEW_RED, failed=True)
+        held = self.s.done()
+        self.assertEqual(2, held.returncode)
+        self.assertIn("CancelVisitTests.Cancel_AnHourBefore_FreesTheSlot", held.stderr)
+        self.assertNotIn("Relay_BrokerDown_Retries", held.stderr)
+
+    def test_story_the_repos_known_list_covers_a_run_after_the_first_edit(self):
+        # Given the developer listed the tests that fail on master, and the first run comes after the edit
+        with open(os.path.join(self.repo, ".claude", "known-failing-tests.txt"), "w", encoding="utf-8") as f:
+            f.write("# red on master since the broker upgrade\n"
+                    "Visits.Infrastructure.Tests.OutboxTests.Relay_BrokerDown_Retries\n"
+                    "Visits.Infrastructure.Tests.OutboxTests.Relay_TwoPods_OneSends\n")
+        self.s.edit(self.code)
+        self.s.test_run(OLD_RED, failed=True)
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_a_red_run_after_the_first_edit_with_no_list_names_every_failure(self):
+        self.s.edit(self.code)
+        self.s.test_run(OLD_RED, failed=True)
+        held = self.s.done()
+        self.assertEqual(2, held.returncode)
+        self.assertIn("Relay_BrokerDown_Retries", held.stderr)
+        self.assertIn("known-failing-tests.txt", held.stderr)
+
+    def test_a_listed_method_covers_each_of_its_theory_cases_in_xunit_output(self):
+        with open(os.path.join(self.repo, ".claude", "known-failing-tests.txt"), "w", encoding="utf-8") as f:
+            f.write("Visits.Tests.SlotTests.Parse_Edge\n")
+        self.s.edit(self.code)
+        self.s.test_run(XUNIT_RED, failed=True)
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_a_red_run_after_qa_engineer_wrote_tests_is_not_taken_as_old(self):
+        # Given qa-engineer wrote the story's failing tests, and the session runs them before the code
+        self.s.send("post", {"hook_event_name": "PostToolUse", "tool_name": "Agent",
+                             "tool_input": {"subagent_type": "qa-engineer", "prompt": "write the tests"}})
+        self.s.test_run(NEW_RED, failed=True)
+        # When the code is written and its test still fails, the turn is held
+        self.s.edit(self.code)
+        self.s.test_run(NEW_RED, failed=True)
+        self.assertEqual(2, self.s.done().returncode)
+
+    def test_a_build_that_doesnt_compile_is_never_known(self):
+        self.s.test_run(OLD_RED, failed=True)
+        self.s.edit(self.code)
+        self.s.test_run(OLD_RED + "\n" + NO_COMPILE, failed=True)
+        self.assertEqual(2, self.s.done().returncode)
+
+    def test_a_red_summary_whose_names_were_cut_off_stays_red(self):
+        self.s.test_run(OLD_RED, failed=True)
+        self.s.edit(self.code)
+        self.s.test_run("Failed!  - Failed:     3, Passed:    40, Skipped:     0, Total:    43", failed=True)
+        self.assertEqual(2, self.s.done().returncode)
+
+
+class KnownFailuresInTddGuide(unittest.TestCase):
+    """Inside the agent only the repo's list is known: its first red run is often qa-engineer's tests."""
+
+    def setUp(self):
+        self.folder = tempfile.mkdtemp(prefix="tdd gate known ")
+        self.repo = os.path.join(self.folder, "visits-service")
+        os.makedirs(os.path.join(self.repo, ".claude"))
+        with open(os.path.join(self.repo, ".claude", "known-failing-tests.txt"), "w", encoding="utf-8") as f:
+            f.write("Visits.Infrastructure.Tests.OutboxTests.Relay_BrokerDown_Retries\n"
+                    "Visits.Infrastructure.Tests.OutboxTests.Relay_TwoPods_OneSends\n")
+        self.s = Session(self.folder, cwd=self.repo)
+        self.code = os.path.join(self.repo, "src", "Visits.Application", "CancelVisit.cs")
+
+    def tearDown(self):
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    def test_story_only_listed_failures_never_unlock_the_code(self):
+        # Given tdd-guide runs the suite first and only the tests listed as red on master fail
+        self.s.test_run(OLD_RED, failed=True)
+        # Then that is no failing test for this change: the code still waits
+        self.assertEqual(2, self.s.edit(self.code).returncode)
+
+    def test_story_its_new_test_still_red_after_the_code_keeps_it_from_finishing(self):
+        self.s.test_run(NEW_RED, failed=True)  # qa-engineer's test fails beside the listed two: unlocked
+        self.assertEqual(0, self.s.edit(self.code).returncode)
+        self.s.test_run(NEW_RED, failed=True)
+        self.assertEqual(2, self.s.stop().returncode)
+        self.s.test_run(OLD_RED, failed=True)  # its test passes now; the other two are master's
+        self.assertEqual(0, self.s.stop().returncode)
+
+
 class Production(unittest.TestCase):
     def test_a_windows_session_with_backslash_paths_and_dotnet_exe(self):
         folder = tempfile.mkdtemp(prefix="tdd gate win ")
@@ -216,6 +335,12 @@ class Production(unittest.TestCase):
                             "tool_input": {"command": "dotnet.exe test tests\\Visits.Tests"}, "error": "Exit code 1\r\n" + FAILED.replace("\n", "\r\n")})
             self.assertEqual(0, s.edit("C:\\work\\visits-service\\src\\Visits.Application\\CancelVisit.cs").returncode)
             # A repo cloned under a folder named tests is still production code inside it
+            # A Windows run prints CRLF; the names still match the baseline
+            k = MainSession(folder, cwd="C:\\work\\visits-service")
+            k.test_run(OLD_RED.replace("\n", "\r\n"), failed=True)
+            k.edit("C:\\work\\visits-service\\src\\Visits.Application\\CancelVisit.cs")
+            k.test_run(OLD_RED.replace("\n", "\r\n"), failed=True)
+            self.assertEqual(0, k.done().returncode)
             t = Session(folder, agent="c1", cwd="C:\\tests\\visits-service")
             self.assertEqual(2, t.edit("C:\\tests\\visits-service\\src\\CancelVisit.cs").returncode)
         finally:
