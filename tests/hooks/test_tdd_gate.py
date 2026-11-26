@@ -134,8 +134,8 @@ class MainSession(Session):
     """The developer's own session: no agent id, the Stop event from settings.json, and edits recorded by
     the format hook (the one launch per edit) instead of the agent's own post."""
 
-    def __init__(self, folder):
-        super().__init__(folder)
+    def __init__(self, folder, cwd=REPO):
+        super().__init__(folder, cwd=cwd)
 
     def send(self, mode, event, env=None):
         event = {"session_id": "s-2", "cwd": self.cwd, **event}
@@ -168,7 +168,7 @@ class DoneGate(unittest.TestCase):
         # When the turn would end, it is sent back once, saying what to do
         first = self.s.done()
         self.assertEqual(2, first.returncode)
-        self.assertIn("C# changed and no test has run since", first.stderr)
+        self.assertIn("C# changed and no test result came after it", first.stderr)
         # Then the answer it gives ends the turn, whatever it says: the developer is there to judge it
         self.assertEqual(0, self.s.done(active=True).returncode)
         self.assertEqual(0, self.s.done().returncode)
@@ -206,6 +206,208 @@ class DoneGate(unittest.TestCase):
         self.assertIn(("Edit|Write|MultiEdit", None, "{PYTHON} {HOOKS}/post-edit-format.py", True), commands("PostToolUse"))
 
 
+OLD_RED = ("Failed Visits.Infrastructure.Tests.OutboxTests.Relay_BrokerDown_Retries [3 s]\n"
+           "Failed Visits.Infrastructure.Tests.OutboxTests.Relay_TwoPods_OneSends [1 s]\n"
+           "Failed!  - Failed:     2, Passed:    40, Skipped:     0, Total:    42, Duration: 9 s")
+NEW_RED = OLD_RED + "\nFailed Visits.Tests.CancelVisitTests.Cancel_AnHourBefore_FreesTheSlot [12 ms]"
+XUNIT_RED = ('[xUnit.net 00:00:02.10]     Visits.Tests.SlotTests.Parse_Edge(value: "a b") [FAIL]\n'
+             "Test Run Failed.")
+
+
+class KnownFailures(unittest.TestCase):
+    """Tests that were red before the change: the done gate counts a run whose failures are all known as
+    green, and names the failures it doesn't know."""
+
+    def setUp(self):
+        self.folder = tempfile.mkdtemp(prefix="known failures ")
+        self.repo = os.path.join(self.folder, "visits-service")
+        os.makedirs(os.path.join(self.repo, ".claude"))
+        self.s = MainSession(self.folder, cwd=self.repo)
+        self.code = os.path.join(self.repo, "src", "Visits.Application", "CancelVisit.cs")
+
+    def tearDown(self):
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    def test_story_tests_red_on_master_before_the_change_dont_hold_the_turn(self):
+        # Given two outbox tests already fail on master, and the session runs the tests before touching anything
+        self.s.test_run(OLD_RED, failed=True)
+        # When the handler is changed and the same two still fail, nothing else
+        self.s.edit(self.code)
+        self.s.test_run(OLD_RED, failed=True)
+        # Then the turn ends: the change broke nothing
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_story_a_new_failure_on_top_of_the_old_ones_is_named(self):
+        self.s.test_run(OLD_RED, failed=True)
+        self.s.edit(self.code)
+        self.s.test_run(NEW_RED, failed=True)
+        held = self.s.done()
+        self.assertEqual(2, held.returncode)
+        self.assertIn("CancelVisitTests.Cancel_AnHourBefore_FreesTheSlot", held.stderr)
+        self.assertNotIn("Relay_BrokerDown_Retries", held.stderr)
+
+    def test_story_the_repos_known_list_covers_a_run_after_the_first_edit(self):
+        # Given the developer listed the tests that fail on master, and the first run comes after the edit
+        with open(os.path.join(self.repo, ".claude", "known-failing-tests.txt"), "w", encoding="utf-8") as f:
+            f.write("# red on master since the broker upgrade\n"
+                    "Visits.Infrastructure.Tests.OutboxTests.Relay_BrokerDown_Retries\n"
+                    "Visits.Infrastructure.Tests.OutboxTests.Relay_TwoPods_OneSends\n")
+        self.s.edit(self.code)
+        self.s.test_run(OLD_RED, failed=True)
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_a_red_run_after_the_first_edit_with_no_list_names_every_failure(self):
+        self.s.edit(self.code)
+        self.s.test_run(OLD_RED, failed=True)
+        held = self.s.done()
+        self.assertEqual(2, held.returncode)
+        self.assertIn("Relay_BrokerDown_Retries", held.stderr)
+        self.assertIn("known-failing-tests.txt", held.stderr)
+
+    def test_a_listed_method_covers_each_of_its_theory_cases_in_xunit_output(self):
+        with open(os.path.join(self.repo, ".claude", "known-failing-tests.txt"), "w", encoding="utf-8") as f:
+            f.write("Visits.Tests.SlotTests.Parse_Edge\n")
+        self.s.edit(self.code)
+        self.s.test_run(XUNIT_RED, failed=True)
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_a_red_run_after_qa_engineer_wrote_tests_is_not_taken_as_old(self):
+        # Given qa-engineer wrote the story's failing tests, and the session runs them before the code
+        self.s.send("post", {"hook_event_name": "PostToolUse", "tool_name": "Agent",
+                             "tool_input": {"subagent_type": "qa-engineer", "prompt": "write the tests"}})
+        self.s.test_run(NEW_RED, failed=True)
+        # When the code is written and its test still fails, the turn is held
+        self.s.edit(self.code)
+        self.s.test_run(NEW_RED, failed=True)
+        self.assertEqual(2, self.s.done().returncode)
+
+    def test_a_build_that_doesnt_compile_is_never_known(self):
+        self.s.test_run(OLD_RED, failed=True)
+        self.s.edit(self.code)
+        self.s.test_run(OLD_RED + "\n" + NO_COMPILE, failed=True)
+        self.assertEqual(2, self.s.done().returncode)
+
+    def test_a_red_summary_whose_names_were_cut_off_stays_red(self):
+        self.s.test_run(OLD_RED, failed=True)
+        self.s.edit(self.code)
+        self.s.test_run("Failed!  - Failed:     3, Passed:    40, Skipped:     0, Total:    43", failed=True)
+        self.assertEqual(2, self.s.done().returncode)
+
+
+class KnownFailuresInTddGuide(unittest.TestCase):
+    """Inside the agent only the repo's list is known: its first red run is often qa-engineer's tests."""
+
+    def setUp(self):
+        self.folder = tempfile.mkdtemp(prefix="tdd gate known ")
+        self.repo = os.path.join(self.folder, "visits-service")
+        os.makedirs(os.path.join(self.repo, ".claude"))
+        with open(os.path.join(self.repo, ".claude", "known-failing-tests.txt"), "w", encoding="utf-8") as f:
+            f.write("Visits.Infrastructure.Tests.OutboxTests.Relay_BrokerDown_Retries\n"
+                    "Visits.Infrastructure.Tests.OutboxTests.Relay_TwoPods_OneSends\n")
+        self.s = Session(self.folder, cwd=self.repo)
+        self.code = os.path.join(self.repo, "src", "Visits.Application", "CancelVisit.cs")
+
+    def tearDown(self):
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    def test_story_only_listed_failures_never_unlock_the_code(self):
+        # Given tdd-guide runs the suite first and only the tests listed as red on master fail
+        self.s.test_run(OLD_RED, failed=True)
+        # Then that is no failing test for this change: the code still waits
+        self.assertEqual(2, self.s.edit(self.code).returncode)
+
+    def test_story_its_new_test_still_red_after_the_code_keeps_it_from_finishing(self):
+        self.s.test_run(NEW_RED, failed=True)  # qa-engineer's test fails beside the listed two: unlocked
+        self.assertEqual(0, self.s.edit(self.code).returncode)
+        self.s.test_run(NEW_RED, failed=True)
+        self.assertEqual(2, self.s.stop().returncode)
+        self.s.test_run(OLD_RED, failed=True)  # its test passes now; the other two are master's
+        self.assertEqual(0, self.s.stop().returncode)
+
+
+def transcript(folder, *rows):
+    path = os.path.join(folder, "transcript.jsonl")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(json.dumps(r) for r in rows))
+    return path
+
+
+def tool_use(name, **tool_input):
+    return {"type": "assistant", "message": {"role": "assistant",
+            "content": [{"type": "tool_use", "id": "t" + str(abs(hash(json.dumps(tool_input))) % 10000), "name": name,
+                         "input": tool_input}]}}
+
+
+def tool_result(text, as_blocks=False):
+    content = [{"type": "text", "text": text}] if as_blocks else text
+    return {"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t1",
+                                                                      "content": content}]}}
+
+
+class RunsTheGateDidntSeeAtTheTime(unittest.TestCase):
+    """A run the post hook couldn't read when it happened: in the background, or inside an agent."""
+
+    def setUp(self):
+        self.folder = tempfile.mkdtemp(prefix="unseen runs ")
+        self.s = MainSession(self.folder)
+        self.code = f"{REPO}/src/Visits.Application/CancelVisit.cs"
+
+    def tearDown(self):
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    def done(self, path):
+        return self.s.send("done", {"hook_event_name": "Stop", "stop_hook_active": False, "transcript_path": path})
+
+    def test_story_a_run_in_the_background_counts_once_its_output_was_read(self):
+        # Given the handler is changed and the tests start in the background: the hook sees no result yet
+        self.s.edit(self.code)
+        self.s.test_run("Command running in background with ID: b1.", failed=False)
+        # When the session reads the run's output file later and it is green
+        path = transcript(self.folder,
+                          tool_use("Edit", file_path=self.code, old_string="a", new_string="b"),
+                          tool_use("Bash", command="dotnet test", run_in_background=True),
+                          tool_result("Command running in background with ID: b1."),
+                          tool_use("Read", file_path="/tmp/tasks/b1.output"),
+                          tool_result("Build succeeded.\n" + PASSED, as_blocks=True))
+        # Then the turn ends
+        self.assertEqual(0, self.done(path).returncode)
+
+    def test_a_green_summary_from_before_the_last_edit_doesnt_count(self):
+        self.s.edit(self.code)
+        path = transcript(self.folder, tool_result(PASSED),
+                          tool_use("Edit", file_path=self.code, old_string="a", new_string="b"))
+        self.assertEqual(2, self.done(path).returncode)
+
+    def test_a_red_output_read_later_is_named(self):
+        self.s.edit(self.code)
+        path = transcript(self.folder, tool_use("Edit", file_path=self.code, old_string="a", new_string="b"),
+                          tool_result(FAILED))
+        held = self.done(path)
+        self.assertEqual(2, held.returncode)
+        self.assertIn("Cancel_AnHourBefore_FreesTheSlot", held.stderr)
+
+    def test_story_tests_run_by_an_agent_after_the_change_count(self):
+        # Given the main session changes the handler and hands the test run to an agent
+        self.s.edit(self.code)
+        helper = Session(self.folder, agent="e2e1")
+        helper.send = lambda mode, event, env=None: Session.send(helper, mode, {**event, "session_id": "s-2"}, env)
+        helper.test_run(PASSED, failed=False)
+        # Then its green run ends the main session's turn
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_an_agents_run_from_before_the_change_doesnt_count(self):
+        helper = Session(self.folder, agent="e2e1")
+        helper.send = lambda mode, event, env=None: Session.send(helper, mode, {**event, "session_id": "s-2"}, env)
+        helper.test_run(PASSED, failed=False)
+        self.s.edit(self.code)
+        self.assertEqual(2, self.s.done().returncode)
+
+    def test_the_message_says_where_a_run_it_missed_could_be(self):
+        self.s.edit(self.code)
+        held = self.s.done()
+        self.assertIn("in the background", held.stderr)
+
+
 class Production(unittest.TestCase):
     def test_a_windows_session_with_backslash_paths_and_dotnet_exe(self):
         folder = tempfile.mkdtemp(prefix="tdd gate win ")
@@ -216,6 +418,12 @@ class Production(unittest.TestCase):
                             "tool_input": {"command": "dotnet.exe test tests\\Visits.Tests"}, "error": "Exit code 1\r\n" + FAILED.replace("\n", "\r\n")})
             self.assertEqual(0, s.edit("C:\\work\\visits-service\\src\\Visits.Application\\CancelVisit.cs").returncode)
             # A repo cloned under a folder named tests is still production code inside it
+            # A Windows run prints CRLF; the names still match the baseline
+            k = MainSession(folder, cwd="C:\\work\\visits-service")
+            k.test_run(OLD_RED.replace("\n", "\r\n"), failed=True)
+            k.edit("C:\\work\\visits-service\\src\\Visits.Application\\CancelVisit.cs")
+            k.test_run(OLD_RED.replace("\n", "\r\n"), failed=True)
+            self.assertEqual(0, k.done().returncode)
             t = Session(folder, agent="c1", cwd="C:\\tests\\visits-service")
             self.assertEqual(2, t.edit("C:\\tests\\visits-service\\src\\CancelVisit.cs").returncode)
         finally:
@@ -224,3 +432,77 @@ class Production(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReviewedSession(MainSession):
+    """The main session with its transcript, so the gate can read what the answer hands over."""
+
+    def answer(self, text):
+        path = os.path.join(self.folder, "transcript.jsonl")
+        rows = [{"type": "user", "message": {"role": "user", "content": "fix the review comments and give me the commands"}},
+                {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Bash", "input": {}}]}},
+                {"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "content": "ok"}]}},
+                {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": text}]}}]
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(json.dumps(r) for r in rows))
+        return path
+
+    def reviewed(self, agent="code-reviewer"):
+        return self.send("post", {"hook_event_name": "PostToolUse", "tool_name": "Agent",
+                                  "tool_input": {"subagent_type": agent, "prompt": "review the diff"}})
+
+    def done_after(self, text, active=False):
+        return self.send("done", {"hook_event_name": "Stop", "stop_hook_active": active,
+                                  "transcript_path": self.answer(text)})
+
+
+PUSH = "Run these:\n```powershell\ngit add -A\ngit commit -m \"fix(merit-medals): apply the review\"\ngit push\n```"
+
+
+class ReviewGate(unittest.TestCase):
+    def setUp(self):
+        self.folder = tempfile.mkdtemp(prefix="review gate ")
+        self.s = ReviewedSession(self.folder)
+        self.s.edit(f"{REPO}/src/Visits.Domain/Batch.cs")
+        self.s.test_run(PASSED, failed=False)
+
+    def tearDown(self):
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    def test_story_push_commands_for_an_unreviewed_change_are_sent_back_once(self):
+        # Given the code changed and its tests are green, but no reviewer looked at it
+        # When the answer hands the developer push commands
+        first = self.s.done_after(PUSH)
+        # Then it is sent back once, to run the review or say why not
+        self.assertEqual(2, first.returncode)
+        self.assertIn("Review gate", first.stderr)
+        self.assertIn("/full-review", first.stderr)
+        self.assertEqual(0, self.s.done_after(PUSH).returncode)
+
+    def test_story_a_review_after_the_last_edit_lets_the_handover_through(self):
+        self.s.reviewed()
+        self.assertEqual(0, self.s.done_after(PUSH).returncode)
+
+    def test_an_mr_description_counts_as_a_handover(self):
+        self.assertEqual(2, self.s.done_after("Here is the MR description for the base:\n\n## What changed").returncode)
+
+    def test_an_answer_that_hands_nothing_over_is_not_held(self):
+        self.assertEqual(0, self.s.done_after("The tests pass. The entity now checks its moves first.").returncode)
+
+    def test_an_edit_after_the_review_needs_another(self):
+        self.s.reviewed()
+        self.s.edit(f"{REPO}/src/Visits.Domain/Batch.cs")
+        self.s.test_run(PASSED, failed=False)
+        self.assertEqual(2, self.s.done_after(PUSH).returncode)
+
+    def test_another_agent_does_not_count_as_a_review(self):
+        self.s.reviewed(agent="Explore")
+        self.assertEqual(2, self.s.done_after(PUSH).returncode)
+
+    def test_a_subagents_edit_still_needs_a_review_before_the_handover(self):
+        helper = Session(self.folder)
+        helper.send = lambda mode, event, env=None: Session.send(helper, mode, {**event, "session_id": "s-2"}, env)
+        self.s.reviewed()
+        helper.test_run(FAILED, failed=True)
+        helper.edit(f"{REPO}/src/Visits.Domain/Batch.cs")
+        self.assertEqual(2, self.s.done_after(PUSH).returncode)

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""SessionStart hook — loads previous session state to maintain continuity.
+"""SessionStart hook — loads previous session state to maintain continuity, and in a .NET repo asks for the
+one test run that lists the tests already red (known-failures.py). It runs in line, not async, so that
+note reaches the session as context.
 Profile: minimal, standard, strict (runs in all profiles)."""
 
 import os
@@ -10,6 +12,18 @@ from utils import (  # noqa: E402
     should_run, get_session_path, read_json, write_json, append_log,
     SESSIONS_DIR, _iso_now, warn,
 )
+
+
+def note_known_failures(cwd):
+    import importlib.util
+    import json
+    spec = importlib.util.spec_from_file_location(
+        'known_failures', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'known-failures.py'))
+    known = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(known)
+    note = known.start_note(cwd)
+    if note:
+        print(json.dumps({'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': note}}))
 
 
 def main():
@@ -49,6 +63,7 @@ def main():
         if previous and previous.get('preCompactSnapshot'):
             new_state['preCompactSnapshot'] = previous['preCompactSnapshot']
         write_json(state_path, new_state)
+        note_known_failures(payload.get('cwd') or os.getcwd())
     except Exception as e:
         warn('session-start', e)  # non-blocking: the session starts regardless
 

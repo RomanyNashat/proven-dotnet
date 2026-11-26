@@ -14,8 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{PYTHON} {HOOKS}/session-start.py",
-            "async": true
+            "command": "{PYTHON} {HOOKS}/session-start.py"
           }
         ]
       },
@@ -46,6 +45,15 @@
           {
             "type": "command",
             "if": "Bash(dotnet *)",
+            "command": "{PYTHON} {HOOKS}/tdd-gate.py post"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
             "command": "{PYTHON} {HOOKS}/tdd-gate.py post"
           }
         ]
