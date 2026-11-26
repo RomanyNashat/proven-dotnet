@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.59 — a team's style choices are the reviewer's bar
+- **`code-reviewer` reviews against a team layer's style choices.** Where an installed team layer replaces a
+  style item for the repo in hand (`sealed`, primary constructors, the clock), its choice is the bar, and the
+  review doesn't ask for both. Its checklist lines for `sealed` and primary constructors now say so, and so
+  does the sealing rule in `csharp-standards`. A layer is not repo content: the repo's own CLAUDE.md still
+  never lowers the bar. Why: a team that chose unsealed classes and explicit constructors got both asked for
+  in the same review.
+
 ## 0.3.58 — a review before the handover, and tests that were already red
 - **The review gate**, in the done gate (`tdd-gate.py done`, no new launch at the end of a turn): an answer
   that hands over push commands or an MR's text (`git push`, `glab mr create`, an MR description) while

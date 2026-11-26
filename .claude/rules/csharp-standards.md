@@ -26,7 +26,7 @@
 - NEVER let `ar-SA` become the formatting culture: its calendar is Hijri or Gregorian depending on the
   machine's ICU, and its numbers can use Arabic separators. A language header sets the UI culture only;
   a date a person reads names its calendar (`localization`).
-- ALWAYS seal classes unless they are designed for inheritance.
+- ALWAYS seal classes unless they are designed for inheritance (unless your team's rules say otherwise).
 - Keys: `int` identity by default; the full rule, GUIDs included, is `rules/efcore-rules.md`.
 
 ## Banned patterns
