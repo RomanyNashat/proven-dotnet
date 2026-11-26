@@ -2,6 +2,7 @@
 name: known-failures
 description: "The tests already red in this repo before any change: list them, recheck them, drop the ones that pass, and plan fixing the rest."
 allowed-tools: Read, Bash, Grep, Glob
+disable-model-invocation: true
 ---
 
 # /known-failures
