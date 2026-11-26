@@ -168,7 +168,7 @@ class DoneGate(unittest.TestCase):
         # When the turn would end, it is sent back once, saying what to do
         first = self.s.done()
         self.assertEqual(2, first.returncode)
-        self.assertIn("C# changed and no test has run since", first.stderr)
+        self.assertIn("C# changed and no test result came after it", first.stderr)
         # Then the answer it gives ends the turn, whatever it says: the developer is there to judge it
         self.assertEqual(0, self.s.done(active=True).returncode)
         self.assertEqual(0, self.s.done().returncode)
@@ -323,6 +323,89 @@ class KnownFailuresInTddGuide(unittest.TestCase):
         self.assertEqual(2, self.s.stop().returncode)
         self.s.test_run(OLD_RED, failed=True)  # its test passes now; the other two are master's
         self.assertEqual(0, self.s.stop().returncode)
+
+
+def transcript(folder, *rows):
+    path = os.path.join(folder, "transcript.jsonl")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(json.dumps(r) for r in rows))
+    return path
+
+
+def tool_use(name, **tool_input):
+    return {"type": "assistant", "message": {"role": "assistant",
+            "content": [{"type": "tool_use", "id": "t" + str(abs(hash(json.dumps(tool_input))) % 10000), "name": name,
+                         "input": tool_input}]}}
+
+
+def tool_result(text, as_blocks=False):
+    content = [{"type": "text", "text": text}] if as_blocks else text
+    return {"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t1",
+                                                                      "content": content}]}}
+
+
+class RunsTheGateDidntSeeAtTheTime(unittest.TestCase):
+    """A run the post hook couldn't read when it happened: in the background, or inside an agent."""
+
+    def setUp(self):
+        self.folder = tempfile.mkdtemp(prefix="unseen runs ")
+        self.s = MainSession(self.folder)
+        self.code = f"{REPO}/src/Visits.Application/CancelVisit.cs"
+
+    def tearDown(self):
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    def done(self, path):
+        return self.s.send("done", {"hook_event_name": "Stop", "stop_hook_active": False, "transcript_path": path})
+
+    def test_story_a_run_in_the_background_counts_once_its_output_was_read(self):
+        # Given the handler is changed and the tests start in the background: the hook sees no result yet
+        self.s.edit(self.code)
+        self.s.test_run("Command running in background with ID: b1.", failed=False)
+        # When the session reads the run's output file later and it is green
+        path = transcript(self.folder,
+                          tool_use("Edit", file_path=self.code, old_string="a", new_string="b"),
+                          tool_use("Bash", command="dotnet test", run_in_background=True),
+                          tool_result("Command running in background with ID: b1."),
+                          tool_use("Read", file_path="/tmp/tasks/b1.output"),
+                          tool_result("Build succeeded.\n" + PASSED, as_blocks=True))
+        # Then the turn ends
+        self.assertEqual(0, self.done(path).returncode)
+
+    def test_a_green_summary_from_before_the_last_edit_doesnt_count(self):
+        self.s.edit(self.code)
+        path = transcript(self.folder, tool_result(PASSED),
+                          tool_use("Edit", file_path=self.code, old_string="a", new_string="b"))
+        self.assertEqual(2, self.done(path).returncode)
+
+    def test_a_red_output_read_later_is_named(self):
+        self.s.edit(self.code)
+        path = transcript(self.folder, tool_use("Edit", file_path=self.code, old_string="a", new_string="b"),
+                          tool_result(FAILED))
+        held = self.done(path)
+        self.assertEqual(2, held.returncode)
+        self.assertIn("Cancel_AnHourBefore_FreesTheSlot", held.stderr)
+
+    def test_story_tests_run_by_an_agent_after_the_change_count(self):
+        # Given the main session changes the handler and hands the test run to an agent
+        self.s.edit(self.code)
+        helper = Session(self.folder, agent="e2e1")
+        helper.send = lambda mode, event, env=None: Session.send(helper, mode, {**event, "session_id": "s-2"}, env)
+        helper.test_run(PASSED, failed=False)
+        # Then its green run ends the main session's turn
+        self.assertEqual(0, self.s.done().returncode)
+
+    def test_an_agents_run_from_before_the_change_doesnt_count(self):
+        helper = Session(self.folder, agent="e2e1")
+        helper.send = lambda mode, event, env=None: Session.send(helper, mode, {**event, "session_id": "s-2"}, env)
+        helper.test_run(PASSED, failed=False)
+        self.s.edit(self.code)
+        self.assertEqual(2, self.s.done().returncode)
+
+    def test_the_message_says_where_a_run_it_missed_could_be(self):
+        self.s.edit(self.code)
+        held = self.s.done()
+        self.assertIn("in the background", held.stderr)
 
 
 class Production(unittest.TestCase):

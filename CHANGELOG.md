@@ -28,6 +28,11 @@ from you. Until v1.0.0 nothing is meant to be installed yet.
   the same one launch, waited for. **`/known-failures`** lists the tests, rechecks only them and drops the
   ones that pass, and plans fixing the rest, asking before it opens any issue. Tested in
   `tests/hooks/test_known_failures.py`.
+- **The done gate sees the runs it used to miss.** Before holding a turn for "no test since the change", it
+  looks for a run made after the last C# edit inside an agent (tdd-guide, e2e-runner, any) and for a test
+  summary the session read after it: a run in the background, its output read from a file. Its message
+  says both count. Why: a change tested in the background or by an agent was sent back as untested.
+  Tested in `tests/hooks/test_tdd_gate.py` (`RunsTheGateDidntSeeAtTheTime`).
 
 ## 0.3.57 — a layer can ship plugins that load in every session
 - **`{PATHSEP}` in a layer's `settings.json`** becomes this machine's path-list separator (`;` on Windows,

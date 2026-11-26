@@ -38,6 +38,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -170,12 +171,15 @@ def post(event: dict, state: dict) -> str | None:
         state["touched"] = True
         if production_file(event):
             state["edited"], state["stale"], state["reminded"] = True, True, False
+            state["edited_at"] = time.time()
     elif tool in ("Agent", "Task") and tool_input.get("subagent_type") in TEST_WRITERS:
         state["touched"] = True
     elif tool == "Bash" and DOTNET_TEST.search(tool_input.get("command") or ""):
         text, cwd = output_of(event), event.get("cwd") or ""
         baseline = not event.get("agent_id") and not state.get("touched")
         record_run(text, cwd, state, baseline)
+        if event.get("agent_id") and (RED.search(text) or GREEN.search(text)):
+            note_agent_run(event, state)
         if baseline and (RED.search(text) or GREEN.search(text)):
             return known_failures.record_baseline(cwd, tool_input.get("command") or "", text)
     return None
@@ -197,6 +201,59 @@ def record_run(text: str, cwd: str, state: dict, baseline: bool) -> None:
         state["last"], state["stale"] = "green", False
 
 
+def runs_path(event: dict) -> Path:
+    """The session's latest test run made inside an agent, which the main session's own record never sees."""
+    return state_path({"session_id": event.get("session_id", ""), "agent_type": "agent-runs"})
+
+
+def note_agent_run(event: dict, state: dict) -> None:
+    save(runs_path(event), {"last": state["last"], "failing": state.get("failing", []), "at": time.time()})
+
+
+def catch_up(event: dict, state: dict) -> None:
+    """Before holding a turn for a run it didn't see: one an agent made after the last edit, then a test
+    summary the session read after it (a run in the background, its output read from a file)."""
+    try:
+        run = json.loads(runs_path(event).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        run = None
+    if run and run.get("at", 0) > state.get("edited_at", 0):
+        state["last"], state["stale"], state["failing"] = run["last"], False, run.get("failing", [])
+    summary = summary_after_last_edit(event)
+    if summary:
+        record_run(summary, event.get("cwd") or "", state, baseline=False)
+
+
+def summary_after_last_edit(event: dict) -> str:
+    try:
+        lines = Path(event.get("transcript_path") or "").read_text(encoding="utf-8").splitlines()
+    except (OSError, TypeError, ValueError):
+        return ""
+    found = ""
+    for line in lines:
+        try:
+            content = (json.loads(line).get("message") or {}).get("content")
+        except ValueError:
+            continue
+        for block in content if isinstance(content, list) else []:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use" and block.get("name") in EDITS and \
+                    production_file({"tool_input": block.get("input") or {}, "cwd": event.get("cwd") or ""}):
+                found = ""
+            elif block.get("type") == "tool_result":
+                text = block_text(block.get("content"))
+                if RED.search(text) or GREEN.search(text):
+                    found = text
+    return found
+
+
+def block_text(content) -> str:
+    if isinstance(content, str):
+        return content
+    return "\n".join(b.get("text", "") for b in content or [] if isinstance(b, dict))
+
+
 def stop(event: dict, state: dict) -> int:
     if not state["edited"] or (state["last"] == "green" and not state["stale"]):
         return 0
@@ -212,11 +269,14 @@ def stop(event: dict, state: dict) -> int:
 def done(event: dict, state: dict) -> int:
     if event.get("stop_hook_active"):
         return 0  # said once: the developer reads the answer and decides
+    if state["edited"] and not (state["last"] == "green" and not state["stale"]):
+        catch_up(event, state)
     if state["edited"] and not (state["last"] == "green" and not state["stale"]) and not state.get("reminded"):
         state["reminded"] = True
         if state["stale"]:
-            print("Done gate: C# changed and no test has run since. Run the tests that cover the change "
-                  "(`dotnet test`) before calling it done, or say in your answer which tests you didn't run and why.",
+            print("Done gate: C# changed and no test result came after it. Run the tests that cover the change "
+                  "(`dotnet test`) before calling it done, or say in your answer which tests you didn't run and why. "
+                  "A run in the background counts once its output is read; one in an agent, once it ends.",
                   file=sys.stderr)
         else:
             names = ", ".join(state.get("failing") or []) or "names not in the output"
