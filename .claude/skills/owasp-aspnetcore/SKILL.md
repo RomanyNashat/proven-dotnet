@@ -244,6 +244,19 @@ public sealed record InsurancePayment(string PolicyNumber) : PaymentMethod;
 - Internal packages come only from your internal feed: `<packageSourceMapping>` in `nuget.config`, so
   a public package with the same name can't be pulled in its place.
 - CI images pinned by digest and included templates by a fixed ref, not a tag that can move.
+- **The repo's Claude config is code that runs on your machine.** A `.claude/settings.json` hook runs when
+  the folder opens, `settings.local.json` keeps every "don't ask again", `.mcp.json` starts programs, and a
+  `CLAUDE.md` or a skill can carry text aimed at the model. Read them before trusting a folder:
+
+  ```bash
+  python ~/.claude/skills/owasp-aspnetcore/scripts/config_scan.py --repo .
+  ```
+
+  It flags, high first, a hook that downloads and runs code or runs an encoded command, an allow rule that
+  lets any command through (`Bash(*)`, `bash -c`, `python -c`, `node -e`, `curl | sh`), `bypassPermissions`,
+  an MCP server installed unpinned or with a token in the file, and hidden characters or orders to the model
+  in the instruction files (a phrase in quotes is a quotation and is left alone). It only reads, and it exits
+  1 when anything is high, so it can gate CI.
 
 ## 7. Exceptional conditions: fail closed (A10)
 

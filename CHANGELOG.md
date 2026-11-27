@@ -3,6 +3,18 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.62 — the repo's Claude config, read before it's trusted
+- **`config_scan.py` (`owasp-aspnetcore`, section 6; step 4 of `/security-scan`, alone as
+  `/security-scan config`).** It reads a repo's `.claude/settings.json`, `settings.local.json`, `.mcp.json`,
+  `CLAUDE.md`, `AGENTS.md` and the `.md` files under `.claude/`, and flags, high first: a hook that downloads
+  and runs code or runs an encoded command; an allow rule that lets any command through (`Bash(*)`,
+  `bash -c`, `python -c`, `node -e`, `curl | sh`); `bypassPermissions`; an MCP server with a token written in
+  the file; hidden characters (zero-width, right-to-left overrides, tag characters) and orders to the model
+  in the instruction files. Medium: a hook or MCP server that runs an unpinned package, plain http, every
+  project server switched on. A phrase in quotes or backticks is a quotation and is left alone. It only
+  reads, and exits 1 on anything high. Tested against planted decoys in `tests/configscan`, and CI runs it
+  on this repo, which raises nothing high. Our own words and code: no third-party scanner is installed.
+
 ## 0.3.61 — a fixed problem, found the next time
 - **`docs/solutions/` in each service repo** (`problem-analysis`, `solutions.py`): a root cause that took
   digging is written down with what was seen, why, what fixed it, its tests and its files, and the developer
