@@ -84,6 +84,25 @@ may already answer. Fix each one it lists and run it again. **A check it refuses
 prints once it passes is the report: the ruling (READY, or NOT READY with the questions numbered), then
 where each case is settled.
 
+## Checking the plan, after the story
+
+Once the story is READY and the planner has written `plan.md`, the plan is checked the same way, before any
+code:
+
+```bash
+python ~/.claude/skills/story-check/scripts/plan_check.py plan.md --story story.md --repo .
+```
+
+- **Scope:** every task names the criteria it serves (`**Serves**: AC1, AC3`) or says why the story needs it
+  (`enabler: ...`); every criterion has a task. A task beyond the story is a question for its owner.
+- **Design against what exists:** `## Builds on` cites what the repo already has (`uses: path:line `code``,
+  checked against the file) and gives a reason for each new table or class (`new: ... — because ...`). A
+  new one the repo already defines is named with its place.
+- **The API's callers:** a plan that adds or changes an endpoint shows an example, the errors, and what old
+  app versions see, so the mobile team can build against it before the code exists.
+
+It exits 1 with the gaps numbered. A refused plan goes back to the planner, not to `tdd-guide`.
+
 ## After the check
 - **NOT READY:** the questions go to whoever owns the story. Their answers go into `story.md` as criteria
   (`AC5: ...`), and the story is checked again.

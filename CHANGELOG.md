@@ -3,6 +3,15 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.60 — a plan checked before any code
+- **`plan_check.py` (`story-check`) checks the planner's plan before anyone codes from it.** Scope: each task
+  names the criteria it serves, or why the story needs it, and every criterion has a task, so a task beyond
+  the story stops as a question for its owner. Design: `## Builds on` cites what the repo already has,
+  checked against the file, and gives a reason for each new table or class; one the repo already defines is
+  named with its place. Callers: a plan that adds or changes an endpoint shows an example, the errors and
+  what old app versions see. The planner runs it as its last step, `/plan-feature` names it, and a refused
+  plan goes back to the planner. Tested in `tests/plancheck` against story-check's fixture.
+
 ## 0.3.59 — a team's style choices are the reviewer's bar
 - **`code-reviewer` reviews against a team layer's style choices.** Where an installed team layer replaces a
   style item for the repo in hand (`sealed`, primary constructors, the clock), its choice is the bar, and the
