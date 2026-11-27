@@ -43,6 +43,8 @@ jobs:
         run: python -m unittest discover tests/storycheck -v
       - name: Plan check (plan_check.py)
         run: python -m unittest discover tests/plancheck -v
+      - name: Solutions per repo (solutions.py)
+        run: python -m unittest discover tests/solutions -v
       - name: Business rules (rule_candidates.py)
         run: python -m unittest discover tests/businessrules -v
       - name: Silent failures (silent_failures.py)

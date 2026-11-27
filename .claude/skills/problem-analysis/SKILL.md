@@ -100,6 +100,27 @@ versions. The fact that settles it is the share of active patients on versions w
 (from App-Version in the last 30 days of requests), push; otherwise polling until they update.
 ```
 
+## A fixed problem, for the next person
+
+A root cause that took digging is written down in the service repo, in `docs/solutions/`, so the next
+person (or session) finds it before digging again. One note per problem: what was seen, why, what fixed it,
+the tests that prove it, the files it touched.
+
+```bash
+python ~/.claude/skills/problem-analysis/scripts/solutions.py new --from note.json
+python ~/.claude/skills/problem-analysis/scripts/solutions.py find "redis timeout on start-up" --file src/Cache/RedisSetup.cs
+python ~/.claude/skills/problem-analysis/scripts/solutions.py check
+```
+
+`note.json` holds `title`, `symptoms` (in the words someone will search with: the error, what the user
+saw), `cause`, `fix`, `tests`, `files`, `tags`. A note with no cause or fix is refused; long numbers and
+emails are masked. The developer commits the note with the fix: the note is the repo's, like its code.
+`find` ranks by title, symptoms and tags, and puts first a note on a file the change touches.
+
+`planner` searches it while planning, `tdd-guide` before a bug's reproducing test, `build-error-resolver`
+before diagnosing. Not for what the harness should learn (that is `/lessons`), and never a patient's data,
+a secret or a person's name.
+
 ## Estimating in hours
 
 Each task gets three numbers in hours, best, likely and worst, and the unknown that makes the worst worse.

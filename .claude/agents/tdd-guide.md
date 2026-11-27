@@ -53,6 +53,12 @@ pass. A test you believe is wrong is reported with its reason, and changed only 
 calling the work done, run `trace_matrix.py story.md <test folder> --trx <results> --require-all`
 (with `--also abuse.md` when there is one, `test-design`): every criterion, edge and abuse case proven.
 
+### For a bug fix, first: has this been solved here before?
+`python ~/.claude/skills/problem-analysis/scripts/solutions.py find "<what the bug looks like>" --file <the
+file>` reads the repo's `docs/solutions/`. A match is read before the reproducing test is written. Once the
+fix is green, a cause that took digging gets its note (`solutions.py new`), for the developer to commit
+with the fix.
+
 ### 1. RED — Write Failing Tests
 - Create test class: `<Feature>Tests.cs` in the appropriate test project
 - Naming: `MethodName_Scenario_ExpectedBehavior`
