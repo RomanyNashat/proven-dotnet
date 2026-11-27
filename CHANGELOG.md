@@ -3,6 +3,14 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.61 — a fixed problem, found the next time
+- **`docs/solutions/` in each service repo** (`problem-analysis`, `solutions.py`): a root cause that took
+  digging is written down with what was seen, why, what fixed it, its tests and its files, and the developer
+  commits it with the fix. `planner` searches it while planning, `tdd-guide` before a bug's reproducing test,
+  `build-error-resolver` before diagnosing; `find` ranks by the symptom's words and puts a note on a touched
+  file first. A note without a cause or a fix is refused, and long numbers and emails are masked. Tested in
+  `tests/solutions`.
+
 ## 0.3.60 — a plan checked before any code
 - **`plan_check.py` (`story-check`) checks the planner's plan before anyone codes from it.** Scope: each task
   names the criteria it serves, or why the story needs it, and every criterion has a task, so a task beyond
