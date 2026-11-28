@@ -53,6 +53,18 @@ Lessons files (`~/.claude/lessons/*.md`, written by `/lessons`) are the best sou
 `~/.claude/agent-runs.log` (one line per finished subagent: name, tool calls, Roslyn calls) shows which
 agents never run and which never touch Roslyn.
 
+**What the sessions actually used** comes from the local transcripts, counted, not remembered:
+
+```bash
+python ~/.claude/skills/retrospective/scripts/usage.py --days 30
+```
+
+It counts each skill, agent, slash command and MCP server by uses and sessions, lists the installed skills
+no session used, and puts symbol questions answered by text search on C# files beside the `proven-roslyn`
+calls. It reads only and prints names and counts, never what a session said. A skill unused for 90 days is
+a finding (merge it, describe it better, or move it into the one repo that needs it); one that is used
+often but rewritten each time is another.
+
 ## How it reports — one fix at a time (plan-first)
 
 1. **Scan** everything above (read-only) and build a **prioritized findings list**: each finding is
