@@ -1,7 +1,7 @@
 ---
 name: security-scan
 description: "Security audit against the OWASP Top 10, optionally with healthcare compliance (HIPAA, PDPL)."
-allowed-tools: Read, Grep, Glob, Agent, Bash(dotnet list package *)
+allowed-tools: Read, Grep, Glob, Agent, Bash(dotnet list package *), Bash(python *config_scan.py *), Bash(python3 *config_scan.py *)
 ---
 
 ## Security Scan
@@ -27,4 +27,13 @@ package scan while they work. Then put the three together.
    dotnet list package --vulnerable --include-transitive
    ```
 
-4. Output a consolidated security report with severity levels and specific .NET remediation code.
+4. **The repo's Claude config** (here too, always; `/security-scan config` runs only this step):
+   ```bash
+   python ~/.claude/skills/owasp-aspnetcore/scripts/config_scan.py --repo .
+   ```
+   Hooks that download or run encoded code, allow rules that let any command through, an MCP server
+   unpinned or with a token in the file, hidden characters or orders to the model in `CLAUDE.md` and the
+   `.claude/` files (`owasp-aspnetcore`, section 6). Each high one goes first in the report, with its file
+   and line; the fix for an approval in `settings.local.json` is the developer's (remove the rule).
+
+5. Output a consolidated security report with severity levels and specific .NET remediation code.

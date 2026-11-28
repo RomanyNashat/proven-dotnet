@@ -45,6 +45,10 @@ jobs:
         run: python -m unittest discover tests/plancheck -v
       - name: Solutions per repo (solutions.py)
         run: python -m unittest discover tests/solutions -v
+      - name: Claude config scan (config_scan.py, decoys and this repo)
+        run: |
+          python -m unittest discover tests/configscan -v
+          python .claude/skills/owasp-aspnetcore/scripts/config_scan.py --repo .
       - name: Business rules (rule_candidates.py)
         run: python -m unittest discover tests/businessrules -v
       - name: Silent failures (silent_failures.py)
