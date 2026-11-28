@@ -24,6 +24,8 @@ the things a script can't check.
   code-nav agent not preferring the Roslyn MCP.
 - **Description health** — near-ceiling *and* vague descriptions; weak triggers; chronic budget
   pressure (the signal to move service-specific skills into that service repo's `.claude/skills/`, not more trimming).
+- **What is used** — `usage.py` (`retrospective`): uses per skill, agent, command and MCP server from the
+  local transcripts, the installed skills nobody used, and Roslyn calls against text searches on C# files.
 - **Recurring friction** — when session history is readable: repeated corrections, repeated manual
   steps (command candidates), repeated mis-fires. Skipped honestly when unavailable.
 

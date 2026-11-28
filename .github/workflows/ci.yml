@@ -45,6 +45,8 @@ jobs:
         run: python -m unittest discover tests/plancheck -v
       - name: Solutions per repo (solutions.py)
         run: python -m unittest discover tests/solutions -v
+      - name: Usage counts (usage.py)
+        run: python -m unittest discover tests/usage -v
       - name: Claude config scan (config_scan.py, decoys and this repo)
         run: |
           python -m unittest discover tests/configscan -v

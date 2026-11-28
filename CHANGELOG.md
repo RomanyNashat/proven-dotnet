@@ -3,6 +3,13 @@
 Versions are X.Y.Z: Z a fix or build step, Y a finished feature, X only when updating needs something
 from you. Until v1.0.0 nothing is meant to be installed yet.
 
+## 0.3.63 — what the sessions actually used
+- **`usage.py` (`retrospective`, used by `/improve`)** counts, from the local transcripts, each skill, agent,
+  slash command and MCP server by uses and sessions over a window (`--days`). It lists the installed skills no
+  session used, and puts symbol questions answered by text search on C# files beside the `proven-roslyn`
+  calls, the measure behind the Roslyn rule. It reads only, sends nothing, and prints names and counts, never
+  what a session said. Tested in `tests/usage`.
+
 ## 0.3.62 — the repo's Claude config, read before it's trusted
 - **`config_scan.py` (`owasp-aspnetcore`, section 6; step 4 of `/security-scan`, alone as
   `/security-scan config`).** It reads a repo's `.claude/settings.json`, `settings.local.json`, `.mcp.json`,
